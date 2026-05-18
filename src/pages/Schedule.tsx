@@ -18,7 +18,7 @@ const schema = z.object({
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
 });
 
-const CALENDLY_URL = "https://calendly.com/stratec-consultoria/diagnostico-estrategico";
+const CALENDLY_URL = "https://calendly.com/stratec-consultoria";
 
 const Schedule = () => {
   const { toast } = useToast();
