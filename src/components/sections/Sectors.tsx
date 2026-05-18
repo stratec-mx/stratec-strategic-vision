@@ -1,0 +1,46 @@
+import { motion } from "framer-motion";
+import { Landmark, Factory, Briefcase, HardHat, GraduationCap, Network, Zap, Truck } from "lucide-react";
+
+const sectors = [
+  { icon: Landmark, name: "Gobierno" },
+  { icon: Factory, name: "Industria" },
+  { icon: Briefcase, name: "Corporativos" },
+  { icon: HardHat, name: "Construcción" },
+  { icon: GraduationCap, name: "Educación" },
+  { icon: Network, name: "Infraestructura" },
+  { icon: Zap, name: "Energía" },
+  { icon: Truck, name: "Logística" },
+];
+
+export const Sectors = () => {
+  return (
+    <section id="sectors" className="py-32 bg-gradient-fade">
+      <div className="container-wide">
+        <div className="text-center max-w-2xl mx-auto mb-20">
+          <div className="eyebrow mb-6">— Sectores atendidos</div>
+          <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
+            Experiencia transversal en industrias estratégicas.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border max-w-5xl mx-auto">
+          {sectors.map((s, i) => (
+            <motion.div
+              key={s.name}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="bg-smoke aspect-square flex flex-col items-center justify-center gap-4 group hover:bg-navy transition-colors duration-500 cursor-pointer"
+            >
+              <s.icon className="h-8 w-8 text-steel group-hover:text-olive transition-colors duration-500" strokeWidth={1.2} />
+              <span className="text-sm tracking-widest uppercase text-navy group-hover:text-smoke transition-colors duration-500">
+                {s.name}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
