@@ -46,9 +46,9 @@ export const Footer = () => {
         <div className="pt-8 flex flex-col md:flex-row justify-between gap-4 text-xs text-smoke/40">
           <div>© {new Date().getFullYear()} STRATEC. Todos los derechos reservados.</div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-smoke">Aviso de privacidad</a>
-            <a href="#" className="hover:text-smoke">Términos</a>
-            <a href="#" className="hover:text-smoke">Confidencialidad</a>
+            <a href="/privacy" className="hover:text-smoke">Aviso de privacidad</a>
+            <a href="/terms" className="hover:text-smoke">Términos</a>
+            <a href="/confidentiality" className="hover:text-smoke">Confidencialidad</a>
           </div>
         </div>
       </div>

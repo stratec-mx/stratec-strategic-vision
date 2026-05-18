@@ -34,7 +34,7 @@ export const CTA = () => {
               </a>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-none border-smoke/20 bg-transparent text-smoke hover:bg-smoke/10 hover:text-smoke tracking-wider text-xs uppercase h-14 px-8">
-              <a href="#services">Agendar conversación</a>
+              <a href="/schedule">Agendar conversación</a>
             </Button>
           </div>
         </motion.div>
