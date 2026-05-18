@@ -7,7 +7,7 @@ export const Footer = () => {
       <div className="container-wide">
         <div className="grid lg:grid-cols-12 gap-12 pb-16 border-b border-smoke/10">
           <div className="lg:col-span-4">
-            <Logo variant="light" />
+            <Logo variant="light" size="lg" />
             <p className="mt-6 text-sm leading-relaxed text-smoke/50 max-w-sm font-light">
               Consultoría en seguridad e inteligencia estratégica para instituciones que operan en entornos de alta exigencia.
             </p>

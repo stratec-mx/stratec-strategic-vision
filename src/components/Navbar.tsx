@@ -28,8 +28,8 @@ export const Navbar = () => {
         scrolled ? "bg-smoke/85 backdrop-blur-md border-b border-border" : "bg-transparent"
       }`}
     >
-      <div className="container-wide flex items-center justify-between h-20">
-        <Logo />
+      <div className="container-wide flex items-center justify-between h-24">
+        <Logo size="md" />
         <nav className="hidden lg:flex items-center gap-10">
           {nav.map((item) => (
             <a
