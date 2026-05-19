@@ -44,7 +44,7 @@ const Leads = () => {
     if (!parsed.success) { toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" }); return; }
     setBusy(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("leads").insert({ ...parsed.data, owner_id: user?.id, status: "new" });
+    const { error } = await supabase.from("leads").insert({ ...parsed.data, owner_id: user?.id, status: "new" } as any);
     setBusy(false);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Lead registrado" });
