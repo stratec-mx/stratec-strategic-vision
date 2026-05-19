@@ -20,7 +20,8 @@ const schema = z.object({
 
 // Reemplace con la URL pública de su Google Workspace Appointment Schedule
 // (Calendar → Crear → Horario de citas → Compartir → Copiar enlace de reserva)
-const GOOGLE_BOOKING_URL = "https://calendar.google.com/calendar/u/0/appointments/schedules/REEMPLACE_CON_SU_ID";
+// Notificaciones de citas y contacto → contacto@stratecsecurity.com
+const GOOGLE_BOOKING_URL = "REEMPLAZAR_CON_TU_LINK_DE_GOOGLE_CALENDAR";
 
 const Schedule = () => {
   const { toast } = useToast();
@@ -38,7 +39,7 @@ const Schedule = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast({ title: "Solicitud recibida", description: "Nuestro equipo se pondrá en contacto en menos de 24h hábiles." });
+      toast({ title: "Solicitud recibida", description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Nuestro equipo se pondrá en contacto en menos de 24h hábiles." });
       (e.target as HTMLFormElement).reset();
     }, 800);
   };
