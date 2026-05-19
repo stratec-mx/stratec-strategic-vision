@@ -80,11 +80,13 @@ const Schedule = () => {
                   <div className="text-xs uppercase tracking-[0.3em] text-olive">01 — Calendario</div>
                   <div className="mt-2 font-display text-2xl text-navy">Seleccione un horario</div>
                 </div>
-                <div
-                  className="calendly-inline-widget"
-                  data-url={`${CALENDLY_URL}?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=7b7f42`}
-                  style={{ minWidth: "320px", height: "720px" }}
+                <iframe
+                  src={GOOGLE_BOOKING_URL}
+                  title="Reservar cita con STRATEC"
+                  style={{ width: "100%", minWidth: "320px", height: "720px", border: 0 }}
+                  loading="lazy"
                 />
+
               </div>
             </motion.div>
 
