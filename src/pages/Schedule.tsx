@@ -18,19 +18,14 @@ const schema = z.object({
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
 });
 
-const CALENDLY_URL = "https://calendly.com/stratec-consultoria";
+// Reemplace con la URL pública de su Google Workspace Appointment Schedule
+// (Calendar → Crear → Horario de citas → Compartir → Copiar enlace de reserva)
+const GOOGLE_BOOKING_URL = "https://calendar.google.com/calendar/u/0/appointments/schedules/REEMPLACE_CON_SU_ID";
 
 const Schedule = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const s = document.createElement("script");
-    s.src = "https://assets.calendly.com/assets/external/widget.js";
-    s.async = true;
-    document.body.appendChild(s);
-    return () => { document.body.removeChild(s); };
-  }, []);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
