@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -18,19 +18,14 @@ const schema = z.object({
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
 });
 
-const CALENDLY_URL = "https://calendly.com/stratec-consultoria";
+// Reemplace con la URL pública de su Google Workspace Appointment Schedule
+// (Calendar → Crear → Horario de citas → Compartir → Copiar enlace de reserva)
+const GOOGLE_BOOKING_URL = "https://calendar.google.com/calendar/u/0/appointments/schedules/REEMPLACE_CON_SU_ID";
 
 const Schedule = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const s = document.createElement("script");
-    s.src = "https://assets.calendly.com/assets/external/widget.js";
-    s.async = true;
-    document.body.appendChild(s);
-    return () => { document.body.removeChild(s); };
-  }, []);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -85,11 +80,13 @@ const Schedule = () => {
                   <div className="text-xs uppercase tracking-[0.3em] text-olive">01 — Calendario</div>
                   <div className="mt-2 font-display text-2xl text-navy">Seleccione un horario</div>
                 </div>
-                <div
-                  className="calendly-inline-widget"
-                  data-url={`${CALENDLY_URL}?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=7b7f42`}
-                  style={{ minWidth: "320px", height: "720px" }}
+                <iframe
+                  src={GOOGLE_BOOKING_URL}
+                  title="Reservar cita con STRATEC"
+                  style={{ width: "100%", minWidth: "320px", height: "720px", border: 0 }}
+                  loading="lazy"
                 />
+
               </div>
             </motion.div>
 

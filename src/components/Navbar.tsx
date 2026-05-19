@@ -62,7 +62,10 @@ export const Navbar = () => {
             </a>
           ))}
         </nav>
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex items-center gap-3">
+          <Button asChild variant="ghost" size="sm" className={`rounded-none text-xs uppercase tracking-wider h-10 ${transparent ? "text-smoke hover:text-smoke hover:bg-smoke/10" : "text-navy hover:text-navy hover:bg-secondary"}`}>
+            <a href="/auth">Acceso</a>
+          </Button>
           <Button asChild variant="default" size="sm" className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase px-6 h-10">
             <a href={isHome ? "#contact" : "/#contact"} onClick={(e) => handleNav(e, "#contact")}>Diagnóstico</a>
           </Button>
