@@ -16,7 +16,10 @@ import Dashboard from "./pages/app/Dashboard.tsx";
 import Leads from "./pages/app/Leads.tsx";
 import Clients from "./pages/app/Clients.tsx";
 import Pipeline from "./pages/app/Pipeline.tsx";
-import { Quotes, Agenda, Analytics, Messaging, Settings } from "./pages/app/Placeholders.tsx";
+import Quotes from "./pages/app/Quotes.tsx";
+import Agenda from "./pages/app/Agenda.tsx";
+import Analytics from "./pages/app/Analytics.tsx";
+import { Messaging, Settings } from "./pages/app/Placeholders.tsx";
 
 const queryClient = new QueryClient();
 

@@ -14,8 +14,5 @@ export const ComingSoon = ({ title, eyebrow, description }: { title: string; eye
   </div>
 );
 
-export const Quotes = () => <ComingSoon eyebrow="Comercial" title="Cotizaciones" description="Generación y seguimiento de propuestas económicas." />;
-export const Agenda = () => <ComingSoon eyebrow="Operación" title="Agenda ejecutiva" description="Citas institucionales y disponibilidad consolidada." />;
-export const Analytics = () => <ComingSoon eyebrow="Inteligencia" title="Analítica corporativa" description="Funnel de conversión, cohortes y rendimiento por ejecutivo." />;
 export const Messaging = () => <ComingSoon eyebrow="Comunicaciones" title="Mensajería · WhatsApp & Correo" description="Bandeja unificada de canales institucionales." />;
 export const Settings = () => <ComingSoon eyebrow="Configuración" title="Ajustes" description="Roles, permisos y preferencias de la firma." />;
