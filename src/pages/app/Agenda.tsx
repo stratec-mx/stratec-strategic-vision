@@ -9,6 +9,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Plus, CalendarDays, Clock, MapPin, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+const appointmentSchema = z.object({
+    title: z.string().trim().min(2, "Título requerido (mín. 2 caracteres)").max(200),
+    attendee_name: z.string().trim().max(150).optional(),
+    attendee_email: z.string().trim().email("Correo inválido").max(255).optional().or(z.literal("")),
+    organization: z.string().trim().max(150).optional(),
+    starts_at: z.string().min(1, "Fecha de inicio requerida"),
+    ends_at: z.string().min(1, "Fecha de fin requerida"),
+    location: z.string().trim().max(200).optional(),
+    notes: z.string().trim().max(1000).optional(),
+});
+
 
 const Agenda = () => {
   const { toast } = useToast();
@@ -32,6 +44,11 @@ const Agenda = () => {
       toast({ title: "Datos requeridos", description: "Título e intervalo de fechas.", variant: "destructive" });
       return;
     }
+        const validation = appointmentSchema.safeParse(form);
+        if (!validation.success) {
+                toast({ title: "Datos inválidos", description: validation.error.errors[0].message, variant: "destructive" });
+                return;
+        }
     setSaving(true);
     const { error } = await supabase.from("appointments").insert({
       title: form.title,
@@ -45,7 +62,7 @@ const Agenda = () => {
       owner_id: user?.id,
     });
     setSaving(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+        if (error) { toast({ title: "Error", description: "No se pudo registrar la cita. Intenta de nuevo.", variant: "destructive" }); return; }
     toast({ title: "Cita registrada", description: form.title });
     setOpen(false);
     setForm({ title: "", attendee_name: "", attendee_email: "", organization: "", starts_at: "", ends_at: "", location: "", notes: "" });
