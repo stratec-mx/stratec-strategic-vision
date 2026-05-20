@@ -88,13 +88,31 @@ const Schedule = () => {
                   <div className="text-xs uppercase tracking-[0.3em] text-olive">01 — Calendario</div>
                   <div className="mt-2 font-display text-2xl text-navy">Seleccione un horario</div>
                 </div>
-                <iframe
-                  src={GOOGLE_BOOKING_URL}
-                  title="Reservar cita con STRATEC"
-                  style={{ width: "100%", minWidth: "320px", height: "720px", border: 0 }}
-                  loading="lazy"
-                />
-
+                {/* Google Appointment Schedule no permite ser embebido (X-Frame-Options: DENY).
+                    Se abre en una nueva pestaña para garantizar la reserva. */}
+                <div className="p-10 flex flex-col items-center text-center gap-6">
+                  <div className="h-14 w-14 rounded-full bg-olive/10 flex items-center justify-center">
+                    <CalendarCheck className="h-7 w-7 text-olive" />
+                  </div>
+                  <div className="max-w-md">
+                    <div className="font-display text-2xl text-navy leading-snug">
+                      Reserve directamente en la agenda institucional
+                    </div>
+                    <p className="mt-3 text-sm text-steel leading-relaxed">
+                      Sincronizado con Google Workspace de STRATEC. Recibirá la confirmación
+                      y el enlace de la sesión en su correo institucional.
+                    </p>
+                  </div>
+                  <Button asChild className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase h-12 px-8 group">
+                    <a href={GOOGLE_BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                      Abrir agenda y reservar
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </a>
+                  </Button>
+                  <p className="text-[11px] text-steel/70">
+                    Confirmaciones enviadas a contacto@stratecsecurity.com
+                  </p>
+                </div>
               </div>
             </motion.div>
 
