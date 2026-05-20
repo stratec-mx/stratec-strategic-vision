@@ -64,7 +64,7 @@ as $$
 begin
   insert into public.profiles (id, email, full_name)
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email));
-  insert into public.user_roles (user_id, role) values (new.id, 'executive');
+  -- SECURITY: no asignar rol automáticamente; el admin debe aprobar cada cuenta
   return new;
 end;
 $$;
@@ -218,3 +218,11 @@ create index on public.leads (status, created_at desc);
 create index on public.deals (stage, position);
 create index on public.activities (deal_id, created_at desc);
 create index on public.appointments (starts_at);
+
+-- SECURITY: Restringir acceso a funciones SECURITY DEFINER
+-- Solo usuarios autenticados con rol asignado pueden ejecutarlas
+REVOKE EXECUTE ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.has_any_role(_user_id uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.has_any_role(_user_id uuid) TO authenticated;
