@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/lhabel";
+import { Label } from "@/components/ui/label";
 import { ArrowRight, CalendarCheck, ShieldCheck, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
