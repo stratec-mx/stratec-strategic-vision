@@ -5,10 +5,21 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { z } from "zod";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+const dealSchema = z.object({
+    title: z.string().trim().min(2, "Título del acuerdo requerido").max(200),
+    client_id: z.string().uuid("Cliente inválido").optional().or(z.literal("")),
+    value: z.number().min(0, "El valor no puede ser negativo").optional(),
+    stage: z.enum(["prospeccion", "diagnostico", "propuesta", "negociacion", "cierre"]),
+    probability: z.number().min(0).max(100).optional(),
+    expected_close: z.string().optional(),
+    notes: z.string().trim().max(1000).optional(),
+});
+
 
 const STAGES = [
   { id: "prospeccion", label: "Prospección" },
@@ -35,6 +46,16 @@ const Pipeline = () => {
   };
   useEffect(() => { load(); }, []);
 
+      const validation = dealSchema.safeParse({ title: fd.title, stage: fd.stage || "prospeccion" });
+      if (!validation.success) {
+            const validation = dealSchema.safeParse({ title: fd.title as string, stage: (fd.stage as string) || "prospeccion" });
+            if (!validation.success) {
+                    toast({ title: "Datos inválidos", description: validation.error.errors[0].message, variant: "destructive" });
+                    return;
+            }
+              toast({ title: "Datos inválidos", description: validation.error.errors[0].message, variant: "destructive" });
+              return;
+      }
   const onCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.currentTarget)) as any;
@@ -47,7 +68,7 @@ const Pipeline = () => {
       stage: fd.stage,
       owner_id: user?.id,
     });
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+        if (error) { toast({ title: "Error", description: "No se pudo registrar el acuerdo. Intenta de nuevo.", variant: "destructive" }); return; }
     setOpen(false);
     load();
   };
