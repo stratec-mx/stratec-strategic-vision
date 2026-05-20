@@ -18,10 +18,13 @@ const schema = z.object({
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
 });
 
-// Reemplace con la URL pública de su Google Workspace Appointment Schedule
-// (Calendar → Crear → Horario de citas → Compartir → Copiar enlace de reserva)
-// Notificaciones de citas y contacto → contacto@stratecsecurity.com
-const GOOGLE_BOOKING_URL = "REEMPLAZAR_CON_TU_LINK_DE_GOOGLE_CALENDAR";
+// URL pública del Google Workspace Appointment Schedule de STRATEC.
+// IMPORTANTE (backend/email service):
+// Todas las notificaciones de citas y contacto deben enviarse al correo institucional:
+//   → contacto@stratecsecurity.com
+// Configurar en Google Calendar (Appointment Schedule) y en el servicio de correo
+// transaccional (Resend / SMTP) como destinatario principal de avisos.
+const GOOGLE_BOOKING_URL = "https://calendar.app.google/LkW7ei95DBubFFRb8";
 
 const Schedule = () => {
   const { toast } = useToast();
@@ -39,7 +42,11 @@ const Schedule = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast({ title: "Solicitud recibida", description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Nuestro equipo se pondrá en contacto en menos de 24h hábiles." });
+      toast({
+        title: "Solicitud enviada correctamente",
+        description:
+          "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+      });
       (e.target as HTMLFormElement).reset();
     }, 800);
   };
