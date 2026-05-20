@@ -5,14 +5,14 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/lhabel";
 import { ArrowRight, CalendarCheck, ShieldCheck, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nombre requerido").max(100),
-  email: z.string().trim().email("Correo inválido").max(255),
+  email: z.string().trim().email("Correo inválido").max(255),h
   organization: z.string().trim().min(2, "Organización requerida").max(150),
   role: z.string().trim().max(120).optional().or(z.literal("")),
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
@@ -24,7 +24,7 @@ const schema = z.object({
 //   → contacto@stratecsecurity.com
 // Configurar en Google Calendar (Appointment Schedule) y en el servicio de correo
 // transaccional (Resend / SMTP) como destinatario principal de avisos.
-const GOOGLE_BOOKING_URL = "https://calendar.app.google/LkW7ei95DBubFFRb8";
+const GOOGLE_BOOKING_URL = "https://calendar.app.google/uaWvE7ij7Z23Fpbp8";
 
 const Schedule = () => {
   const { toast } = useToast();
