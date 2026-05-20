@@ -12,7 +12,7 @@ import { z } from "zod";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nombre requerido").max(100),
-  email: z.string().trim().email("Correo inválido").max(255),h
+  email: z.string().trim().email("Correo inválido").max(255),
   organization: z.string().trim().min(2, "Organización requerida").max(150),
   role: z.string().trim().max(120).optional().or(z.literal("")),
   message: z.string().trim().min(10, "Describa brevemente el contexto").max(1000),
