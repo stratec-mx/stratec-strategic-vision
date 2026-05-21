@@ -20,6 +20,7 @@ import Quotes from "./pages/app/Quotes.tsx";
 import Agenda from "./pages/app/Agenda.tsx";
 import Analytics from "./pages/app/Analytics.tsx";
 import { Messaging, Settings } from "./pages/app/Placeholders.tsx";
+import AdminLeads from "./pages/admin/Leads.tsx";
 
 const queryClient = new QueryClient();
 
