@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app/PageHeader";
 import { KpiCard } from "@/components/app/KpiCard";
 import { StatusBadge } from "@/components/app/StatusBadge";
-import { Target, TrendingUp, CalendarCheck, Briefcase } from "lucide-react";
+import { Target, TrendingUp, CalendarCheck, Briefcase, Clock, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -14,14 +14,16 @@ const Dashboard = () => {
   const [kpi, setKpi] = useState({ leads: 0, pipeline: 0, conv: "0%", appts: 0 });
   const [recent, setRecent] = useState<any[]>([]);
   const [trend, setTrend] = useState<{ d: string; v: number }[]>([]);
+  const [upcomingAppts, setUpcomingAppts] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [{ count: leads }, { data: deals }, { count: appts }, { data: leadsList }] = await Promise.all([
+      const [{ count: leads }, { data: deals }, { count: appts }, { data: leadsList }, { data: apptsList }] = await Promise.all([
         supabase.from("leads").select("*", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
         supabase.from("deals").select("value_amount, stage"),
         supabase.from("appointments").select("*", { count: "exact", head: true }).gte("starts_at", new Date().toISOString()),
-        supabase.from("leads").select("id, full_name, organization, status, created_at").order("created_at", { ascending: false }).limit(6),
+        supabase.from("leads").select("id, full_name, organization, status, created_at").order("created_at", { ascending: false }).limit(5),
+        supabase.from("appointments").select("id, title, starts_at, ends_at, attendee_name, organization, location").gte("starts_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(5),
       ]);
       const pipelineValue = (deals ?? []).filter(d => !["cierre", "perdido"].includes(d.stage)).reduce((s, d) => s + Number(d.value_amount), 0);
       const closed = (deals ?? []).filter(d => d.stage === "cierre").length;
@@ -33,7 +35,7 @@ const Dashboard = () => {
         appts: appts ?? 0,
       });
       setRecent(leadsList ?? []);
-      // mock trend (last 14 days)
+      setUpcomingAppts(apptsList ?? []);
       const t = Array.from({ length: 14 }, (_, i) => ({
         d: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString("es", { day: "2-digit", month: "short" }),
         v: Math.floor(Math.random() * 8) + 2,
@@ -79,20 +81,62 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="border border-border bg-card p-6">
-          <div className="eyebrow mb-1">— Reciente</div>
-          <div className="font-display text-xl text-navy mb-4">Últimos leads</div>
-          {recent.length === 0 && <div className="text-sm text-steel py-8 text-center">Sin registros aún.</div>}
-          <div className="divide-y divide-border">
-            {recent.map((l) => (
-              <div key={l.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm text-navy truncate">{l.full_name}</div>
-                  <div className="text-xs text-steel truncate">{l.organization ?? "—"}</div>
+        <div className="flex flex-col gap-6">
+          <div className="border border-border bg-card p-6">
+            <div className="eyebrow mb-1">— Reciente</div>
+            <div className="font-display text-xl text-navy mb-4">Últimos leads</div>
+            {recent.length === 0 && <div className="text-sm text-steel py-6 text-center">Sin registros aún.</div>}
+            <div className="divide-y divide-border">
+              {recent.map((l) => (
+                <div key={l.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm text-navy truncate">{l.full_name}</div>
+                    <div className="text-xs text-steel truncate">{l.organization ?? "—"}</div>
+                  </div>
+                  <StatusBadge status={l.status} />
                 </div>
-                <StatusBadge status={l.status} />
-              </div>
-            ))}
+              ))}
+            </div>
+            <Link to="/app/leads" className="mt-3 block text-xs text-olive uppercase tracking-wider hover:underline">Ver todos →</Link>
+          </div>
+
+          <div className="border border-border bg-card p-6">
+            <div className="eyebrow mb-1">— Agenda</div>
+            <div className="font-display text-xl text-navy mb-4">Próximas citas</div>
+            {upcomingAppts.length === 0 && <div className="text-sm text-steel py-6 text-center">Sin citas programadas.</div>}
+            <div className="divide-y divide-border">
+              {upcomingAppts.map((a) => {
+                const start = new Date(a.starts_at);
+                const end = new Date(a.ends_at);
+                return (
+                  <div key={a.id} className="py-3">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-olive mb-0.5">
+                      {start.toLocaleDateString("es", { weekday: "short", day: "2-digit", month: "short" })}
+                    </div>
+                    <div className="text-sm text-navy font-medium truncate">{a.title}</div>
+                    <div className="mt-1 space-y-0.5 text-xs text-steel">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        {start.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}–{end.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                      {a.attendee_name && (
+                        <div className="flex items-center gap-1.5">
+                          <User className="h-3 w-3 shrink-0" />
+                          {a.attendee_name}{a.organization ? ` · ${a.organization}` : ""}
+                        </div>
+                      )}
+                      {a.location && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {a.location}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <Link to="/app/agenda" className="mt-3 block text-xs text-olive uppercase tracking-wider hover:underline">Ver agenda completa →</Link>
           </div>
         </div>
       </div>
