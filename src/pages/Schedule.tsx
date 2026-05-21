@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, CalendarCheck, ShieldCheck, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const schema = z.object({
@@ -31,24 +32,45 @@ const Schedule = () => {
   const [loading, setLoading] = useState(false);
 
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
+    const form = e.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
       toast({ title: "Revise los campos", description: parsed.error.issues[0].message, variant: "destructive" });
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    // Inserta el lead en Supabase. RLS pública: source='web' y owner_id null.
+    // IMPORTANTE: las notificaciones por correo deben enviarse a contacto@stratecsecurity.com
+    // (configurar en el backend / servicio de email transaccional con un trigger o edge function).
+    const { error } = await supabase.from("leads").insert({
+      full_name: parsed.data.name,
+      email: parsed.data.email,
+      organization: parsed.data.organization,
+      role_title: parsed.data.role || null,
+      notes: parsed.data.message,
+      source: "web",
+      status: "new",
+      owner_id: null,
+    });
+    setLoading(false);
+    if (error) {
+      console.error("[Schedule.insert]", error?.code ?? "error");
       toast({
-        title: "Solicitud enviada correctamente",
-        description:
-          "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+        title: "No se pudo enviar la solicitud",
+        description: "Intente nuevamente en unos minutos o escriba a contacto@stratecsecurity.com.",
+        variant: "destructive",
       });
-      (e.target as HTMLFormElement).reset();
-    }, 800);
+      return;
+    }
+    toast({
+      title: "Solicitud enviada correctamente",
+      description:
+        "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+    });
+    form.reset();
   };
 
   return (
