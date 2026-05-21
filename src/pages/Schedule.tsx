@@ -65,7 +65,7 @@ const Schedule = () => {
               Agende un <span className="text-olive">diagnóstico estratégico</span> confidencial.
             </h1>
             <p className="mt-8 text-lg text-steel max-w-2xl font-light leading-relaxed">
-              Una sesión privada de 45 minutos con un consultor senior de STRATEC. Evaluamos
+              Una sesión privada de 30 minutos con un consultor senior de STRATEC. Evaluamos
               el contexto institucional de su organización y proponemos un marco de actuación
               alineado a sus objetivos estratégicos.
             </p>
