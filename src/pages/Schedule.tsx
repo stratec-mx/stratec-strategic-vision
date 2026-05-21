@@ -84,35 +84,42 @@ const Schedule = () => {
     }
 
     setLoading(true);
-    // Inserta el lead en Supabase. RLS pública: source='web' y owner_id null.
-    // IMPORTANTE: las notificaciones por correo deben enviarse a contacto@stratecsecurity.com
-    // (configurar en el backend / servicio de email transaccional con un trigger o edge function).
-    const { error } = await supabase.from("leads").insert({
-      full_name: parsed.data.name,
-      email: parsed.data.email,
-      organization: parsed.data.organization,
-      role_title: parsed.data.role || null,
-      notes: parsed.data.message,
-      source: "web",
-      status: "new",
-      owner_id: null,
+
+    // ── Call the Edge Function (server-side rate limiting + insert) ──────────
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("submit-lead", {
+      body: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        organization: parsed.data.organization,
+        role: parsed.data.role || null,
+        message: parsed.data.message,
+        honeypot: honeypot, // secondary server-side honeypot check
+      },
     });
+
     setLoading(false);
-    if (error) {
-      console.error("[Schedule.insert]", error?.code ?? "error");
-      toast({
-        title: "No se pudo enviar la solicitud",
-        description: "Intente nuevamente en unos minutos o escriba a contacto@stratecsecurity.com.",
-        variant: "destructive",
-      });
+
+    if (fnError || (fnData && fnData.error)) {
+      const msg = fnData?.error ?? fnError?.message ?? "Error desconocido";
+      // 429 = rate limited
+      if (fnData?.error?.includes("límite")) {
+        toast({
+          title: "Límite de solicitudes alcanzado",
+          description: fnData.error,
+          variant: "destructive",
+        });
+      } else {
+        console.error("[Schedule] Edge Function error:", msg);
+        toast({
+          title: "No se pudo enviar la solicitud",
+          description: "Intente nuevamente en unos minutos o escriba a contacto@stratecsecurity.com.",
+          variant: "destructive",
+        });
+      }
       return;
     }
-    toast({
-      title: "Solicitud enviada correctamente",
-      description:
-        "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
-    });
-    // Record successful submission for rate limiting
+
+    // Record successful submission for client-side rate limiting
     try {
       const stored = localStorage.getItem("stratec_rl");
       const ts: number[] = stored ? (JSON.parse(stored) as number[]) : [];
@@ -120,6 +127,12 @@ const Schedule = () => {
       localStorage.setItem("stratec_rl", JSON.stringify(ts));
     } catch { /* localStorage unavailable */ }
     formLoadTime.current = Date.now();
+
+    toast({
+      title: "Solicitud enviada correctamente",
+      description:
+        "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+    });
     form.reset();
   };
 
