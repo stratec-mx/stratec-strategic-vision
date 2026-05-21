@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/app/PageHeader";
@@ -11,6 +12,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const itemSchema = z.object({
+  description: z.string().trim().min(1, "Descripción requerida").max(300, "Descripción demasiado larga"),
+  qty: z.number().positive("Cantidad debe ser > 0").max(100000),
+  unit_price: z.number().min(0, "Precio inválido").max(10_000_000),
+});
+const quoteSchema = z.object({
+  number: z.string().trim().min(1, "Número requerido").max(50),
+  client_name: z.string().trim().min(1, "Cliente requerido").max(200),
+  currency: z.enum(["USD", "MXN", "EUR"]),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  valid_until: z.string().max(20).optional().or(z.literal("")),
+  taxRate: z.number().min(0, "Impuesto inválido").max(100, "Impuesto inválido"),
+  items: z.array(itemSchema).min(1, "Agregue al menos un concepto"),
+});
 
 type Item = { description: string; qty: number; unit_price: number };
 const STATUS = ["draft", "sent", "accepted", "rejected", "expired"] as const;
@@ -42,23 +58,30 @@ const Quotes = () => {
   const updateItem = (i: number, k: keyof Item, v: any) => setItems(items.map((it, idx) => idx === i ? { ...it, [k]: v } : it));
 
   const submit = async () => {
-    if (!form.number || !form.client_name) {
-      toast({ title: "Datos requeridos", description: "Número de cotización y cliente.", variant: "destructive" });
+    const parsed = quoteSchema.safeParse({ ...form, taxRate, items });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" });
       return;
     }
+    // Recompute server-trustworthy totals from validated inputs (do not trust client-side state)
+    const safeSubtotal = parsed.data.items.reduce((s, i) => s + i.qty * i.unit_price, 0);
+    const safeTax = safeSubtotal * (parsed.data.taxRate / 100);
+    const safeTotal = safeSubtotal + safeTax;
     setSaving(true);
     const { error } = await supabase.from("quotes").insert({
-      number: form.number,
-      currency: form.currency,
-      notes: form.notes || null,
-      valid_until: form.valid_until || null,
-      items: items as any,
-      subtotal, tax, total,
+      number: parsed.data.number,
+      currency: parsed.data.currency,
+      notes: parsed.data.notes || null,
+      valid_until: parsed.data.valid_until || null,
+      items: parsed.data.items as any,
+      subtotal: safeSubtotal,
+      tax: safeTax,
+      total: safeTotal,
       owner_id: user?.id,
     });
     setSaving(false);
-    if (error) { console.error("[Quotes.insert]", error); toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" }); return; }
-    toast({ title: "Cotización creada", description: `${form.number} · ${form.currency} ${total.toFixed(2)}` });
+    if (error) { console.error("[Quotes.insert]", error?.code ?? "error"); toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" }); return; }
+    toast({ title: "Cotización creada", description: `${parsed.data.number} · ${parsed.data.currency} ${safeTotal.toFixed(2)}` });
     setOpen(false);
     setForm({ number: "", client_name: "", currency: "USD", notes: "", valid_until: "" });
     setItems([{ description: "", qty: 1, unit_price: 0 }]);

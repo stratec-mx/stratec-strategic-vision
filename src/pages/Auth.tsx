@@ -61,7 +61,7 @@ const Auth = () => {
         navigate("/app", { replace: true });
       }
     } catch (err: any) {
-      console.error("[Auth]", err);
+      console.error("[Auth]", err?.code ?? err?.message ?? "error");
       const msg = err?.message?.includes("Invalid login")
         ? "Credenciales no válidas."
         : "No fue posible procesar la solicitud. Intente nuevamente.";
