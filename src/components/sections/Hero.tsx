@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import hero from "@/assets/hero-stratec.jpg";
+import { NetworkBackground } from "@/components/NetworkBackground";
 
 export const Hero = () => {
   return (
@@ -9,6 +10,7 @@ export const Hero = () => {
       <div className="absolute inset-0">
         <img src={hero} alt="Equipo ejecutivo analizando infraestructura crítica" className="w-full h-full object-cover opacity-40" width={1920} height={1080} />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/85 to-navy-deep/40" />
+        <NetworkBackground />
         <div className="absolute inset-0 grid-bg-light opacity-50" />
       </div>
 
