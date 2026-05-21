@@ -61,7 +61,11 @@ const Auth = () => {
         navigate("/app", { replace: true });
       }
     } catch (err: any) {
-      toast({ title: "No se pudo procesar", description: err.message ?? "Intente nuevamente", variant: "destructive" });
+      console.error("[Auth]", err);
+      const msg = err?.message?.includes("Invalid login")
+        ? "Credenciales no válidas."
+        : "No fue posible procesar la solicitud. Intente nuevamente.";
+      toast({ title: "Acceso no disponible", description: msg, variant: "destructive" });
     } finally {
       setBusy(false);
     }
