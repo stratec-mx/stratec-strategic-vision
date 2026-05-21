@@ -46,16 +46,6 @@ const Pipeline = () => {
   };
   useEffect(() => { load(); }, []);
 
-      const validation = dealSchema.safeParse({ title: fd.title, stage: fd.stage || "prospeccion" });
-      if (!validation.success) {
-            const validation = dealSchema.safeParse({ title: fd.title as string, stage: (fd.stage as string) || "prospeccion" });
-            if (!validation.success) {
-                    toast({ title: "Datos inválidos", description: validation.error.errors[0].message, variant: "destructive" });
-                    return;
-            }
-              toast({ title: "Datos inválidos", description: validation.error.errors[0].message, variant: "destructive" });
-              return;
-      }
   const onCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.currentTarget)) as any;
