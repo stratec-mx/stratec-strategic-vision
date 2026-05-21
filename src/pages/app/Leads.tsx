@@ -116,11 +116,13 @@ const Leads = () => {
         }
       />
 
-      <div className="border border-border bg-card">
+      <div className="border border-border bg-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-secondary/40 border-b border-border">
             <tr className="text-left text-[10px] uppercase tracking-[0.2em] text-steel">
               <th className="py-3 px-4 font-medium">Nombre</th>
+              <th className="py-3 px-4 font-medium">Correo</th>
+              <th className="py-3 px-4 font-medium">Cargo</th>
               <th className="py-3 px-4 font-medium">Organización</th>
               <th className="py-3 px-4 font-medium">Origen</th>
               <th className="py-3 px-4 font-medium">Estado</th>
@@ -129,13 +131,15 @@ const Leads = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-steel">Sin leads registrados.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-steel">Sin leads registrados.</td></tr>}
             {rows.map((l) => (
               <tr key={l.id} className="hover:bg-secondary/30 transition">
                 <td className="py-3 px-4">
                   <div className="text-navy">{l.full_name}</div>
-                  <div className="text-xs text-steel">{l.email ?? l.phone ?? "—"}</div>
+                  <div className="text-xs text-steel">{l.phone ?? "—"}</div>
                 </td>
+                <td className="py-3 px-4 text-steel">{l.email ?? "—"}</td>
+                <td className="py-3 px-4 text-steel">{l.role_title ?? "—"}</td>
                 <td className="py-3 px-4 text-steel">{l.organization ?? "—"}</td>
                 <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{l.source}</td>
                 <td className="py-3 px-4">
@@ -147,7 +151,9 @@ const Leads = () => {
                   </Select>
                 </td>
                 <td className="py-3 px-4 text-navy font-mono">{l.score}</td>
-                <td className="py-3 px-4 text-steel text-xs">{new Date(l.created_at).toLocaleDateString("es")}</td>
+                <td className="py-3 px-4 text-steel text-xs whitespace-nowrap">
+                  {new Date(l.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" })}
+                </td>
               </tr>
             ))}
           </tbody>
