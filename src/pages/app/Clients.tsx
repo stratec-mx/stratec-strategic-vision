@@ -37,7 +37,7 @@ const Clients = () => {
     if (!parsed.success) { toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" }); return; }
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("clients").insert({ ...parsed.data, owner_id: user?.id } as any);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) { console.error("[Clients.insert]", error); toast({ title: "Error", description: "No se pudo registrar el cliente.", variant: "destructive" }); return; }
     toast({ title: "Cliente registrado" });
     setOpen(false);
     load();
