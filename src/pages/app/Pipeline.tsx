@@ -48,22 +48,34 @@ const Pipeline = () => {
 
   const onCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = Object.fromEntries(new FormData(e.currentTarget)) as any;
+    const fd = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    const parsed = dealSchema.safeParse({
+      title: fd.title,
+      client_id: fd.client_id || "",
+      value: fd.value_amount ? Number(fd.value_amount) : 0,
+      stage: (fd.stage as any) || "prospeccion",
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" });
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("deals").insert({
-      title: fd.title,
-      client_id: fd.client_id || null,
+      title: parsed.data.title,
+      client_id: parsed.data.client_id || null,
       value_amount: Number(fd.value_amount || 0),
       currency: fd.currency || "USD",
-      stage: fd.stage,
+      stage: parsed.data.stage,
       owner_id: user?.id,
     });
-        if (error) { toast({ title: "Error", description: "No se pudo registrar el acuerdo. Intenta de nuevo.", variant: "destructive" }); return; }
+    if (error) { toast({ title: "Error", description: "No se pudo registrar el acuerdo. Intenta de nuevo.", variant: "destructive" }); return; }
     setOpen(false);
     load();
   };
 
   const moveToStage = async (id: string, stage: string) => {
+    const allowed = ["prospeccion","diagnostico","propuesta","negociacion","cierre"];
+    if (!allowed.includes(stage)) return;
     await supabase.from("deals").update({ stage: stage as any }).eq("id", id);
     load();
   };
