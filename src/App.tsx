@@ -49,6 +49,7 @@ const App = () => (
               <Route path="messaging" element={<Messaging />} />
               <Route path="settings" element={<Settings />} />
             </Route>
+            <Route path="/admin/leads" element={<AdminLeads />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
