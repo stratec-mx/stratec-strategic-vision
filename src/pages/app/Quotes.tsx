@@ -57,7 +57,7 @@ const Quotes = () => {
       owner_id: user?.id,
     });
     setSaving(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) { console.error("[Quotes.insert]", error); toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" }); return; }
     toast({ title: "Cotización creada", description: `${form.number} · ${form.currency} ${total.toFixed(2)}` });
     setOpen(false);
     setForm({ number: "", client_name: "", currency: "USD", notes: "", valid_until: "" });
