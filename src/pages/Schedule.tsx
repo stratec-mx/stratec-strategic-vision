@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -30,6 +30,8 @@ const GOOGLE_BOOKING_URL = "https://calendar.app.google/uaWvE7ij7Z23Fpbp8";
 const Schedule = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const formLoadTime = useRef(Date.now());
 
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,6 +43,46 @@ const Schedule = () => {
       toast({ title: "Revise los campos", description: parsed.error.issues[0].message, variant: "destructive" });
       return;
     }
+    // --- PROTECTION 1: Honeypot anti-bot ---
+    if (honeypot) {
+      toast({
+        title: "Solicitud enviada correctamente",
+        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+      });
+      form.reset();
+      return;
+    }
+
+    // --- PROTECTION 2: Minimum fill-time (< 4 s = bot) ---
+    if (Date.now() - formLoadTime.current < 4000) {
+      toast({
+        title: "Solicitud enviada correctamente",
+        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+      });
+      form.reset();
+      return;
+    }
+
+    // --- PROTECTION 3: Client-side rate limiting via localStorage ---
+    const RATE_LIMIT_KEY = "stratec_rl";
+    const now = Date.now();
+    let timestamps: number[] = [];
+    try {
+      const stored = localStorage.getItem(RATE_LIMIT_KEY);
+      timestamps = stored ? (JSON.parse(stored) as number[]) : [];
+    } catch {
+      timestamps = [];
+    }
+    timestamps = timestamps.filter((t) => now - t < 900000);
+    if (timestamps.length >= 3) {
+      toast({
+        title: "Límite de solicitudes alcanzado",
+        description: "Ha alcanzado el límite de solicitudes. Por favor espere 15 minutos antes de intentarlo de nuevo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     // Inserta el lead en Supabase. RLS pública: source='web' y owner_id null.
     // IMPORTANTE: las notificaciones por correo deben enviarse a contacto@stratecsecurity.com
@@ -70,6 +112,14 @@ const Schedule = () => {
       description:
         "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
     });
+    // Record successful submission for rate limiting
+    try {
+      const stored = localStorage.getItem("stratec_rl");
+      const ts: number[] = stored ? (JSON.parse(stored) as number[]) : [];
+      ts.push(Date.now());
+      localStorage.setItem("stratec_rl", JSON.stringify(ts));
+    } catch { /* localStorage unavailable */ }
+    formLoadTime.current = Date.now();
     form.reset();
   };
 
@@ -147,6 +197,18 @@ const Schedule = () => {
                 <div className="text-xs uppercase tracking-[0.3em] text-olive">02 — Contexto institucional</div>
                 <div className="mt-2 font-display text-2xl text-navy mb-8">Cuéntenos sobre su organización</div>
                 <form onSubmit={onSubmit} className="space-y-5">
+                {/* Honeypot field — hidden from humans, visible to bots */}
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  autoComplete="off"
+                  style={{ position: "absolute", left: "-9999px", opacity: 0, height: 0, width: 0 }}
+                />
+
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-xs uppercase tracking-wider text-steel">Nombre completo</Label>
                     <Input id="name" name="name" required maxLength={100} className="rounded-none border-border h-11" />
