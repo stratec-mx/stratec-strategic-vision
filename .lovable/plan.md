@@ -1,55 +1,79 @@
-## Fase 2 STRATEC — Plan por etapas
+# Portal institucional privado — eliminación de registro público
 
-Stack confirmado: **Vite + React + Tailwind + shadcn/ui + Framer Motion + Lovable Cloud (Supabase)**. Estilo Palantir / McKinsey — minimal ejecutivo, fondo claro, acentos navy/olive, grids densos, tipografía editorial.
+Convertir `/app` en un sistema cerrado: solo usuarios creados manualmente desde Lovable Cloud pueden entrar. Sin registro, sin auto-confirmación, con control de roles real.
 
----
-
-### Etapa A — Fundación CRM (este turno)
-
-**Backend (Lovable Cloud)**
-- Habilitar Cloud.
-- Tablas: `profiles`, `user_roles` (enum admin/executive/analyst) con función `has_role` SECURITY DEFINER.
-- Tablas CRM: `leads`, `clients`, `deals` (pipeline), `activities` (timeline), `quotes` (cotizaciones), `appointments`.
-- RLS estricto: solo usuarios autenticados con rol válido leen/escriben; admin = full access.
-
-**Auth**
-- `/auth` — login/registro email+password con `emailRedirectTo`.
-- Listener `onAuthStateChange` + guard de rutas privadas.
-
-**Layout admin `/app`**
-- Sidebar colapsable (shadcn) con secciones: Dashboard, Leads, Clientes, Pipeline, Cotizaciones, Agenda, Analítica, Mensajería, Ajustes.
-- Header con búsqueda global, perfil, logout.
-
-**Módulos UI (Etapa A)**
-1. `/app` Dashboard ejecutivo — 4 KPIs (leads nuevos, pipeline valor, conversión, citas próximas), gráfico de tendencia, lista de actividad reciente.
-2. `/app/leads` — tabla corporativa con filtros (estado, fuente, fecha, score), drawer de detalle, formulario de alta.
-3. `/app/clients` — tabla de clientes activos, ficha con timeline.
-4. `/app/pipeline` — vista Kanban (5 etapas: Prospección, Diagnóstico, Propuesta, Negociación, Cierre) con drag-and-drop, totales por columna.
-
-**Reemplazo Calendly → Google Appointment Schedule**
-- `/schedule` cambia el embed Calendly por iframe del booking page de Google Workspace. Variable `GOOGLE_BOOKING_URL` (placeholder hasta que pegues tu link).
+> **Nota importante sobre `/schedule`:** ese formulario público de captación de leads **se mantiene** (es para visitantes web, no crea usuarios). Lo que se elimina es el registro de cuentas del panel.
 
 ---
 
-### Etapa B — Comercial + Agenda + Analítica (siguiente turno)
-5. Cotizaciones — builder, PDF, estados.
-6. Agenda ejecutiva interna — sincronización con `appointments`, lista + calendario semanal.
-7. Analytics corporativo — funnel de conversión, performance por ejecutivo, cohortes.
+## 1. Backend — Lovable Cloud
 
-### Etapa C — Comunicaciones (turno final)
-8. WhatsApp Business Cloud API (Meta) — edge function `whatsapp-send`, webhook receptor, bandeja conversacional.
-9. Correo corporativo vía Resend — edge function `email-send`, plantillas premium HTML.
-10. Panel de seguimiento — secuencias automáticas (lead nuevo → email bienvenida → recordatorio WhatsApp 48h).
-11. Automatización: trigger DB que crea actividad al cambiar etapa de deal, scoring automático de leads.
+- **Deshabilitar signups** en la configuración de auth (`disable_signup: true`). Cualquier intento de `signUp` desde el cliente será rechazado por el servidor, aunque alguien manipule el frontend.
+- **Ampliar el enum de roles** `app_role`. Hoy es `admin | executive | analyst`. Pasará a:
+  - `admin` — control total (incluye gestión de usuarios y roles)
+  - `analyst` — lectura + edición operativa del CRM
+  - `operations` — edición operativa del CRM (reemplaza a `executive`)
+  - `viewer` — solo lectura
+- **Migrar usuarios existentes con rol `executive` → `operations`** y dejar de exponer `executive` en la UI (el valor del enum se mantiene en BD por compatibilidad, pero nadie nuevo lo recibe).
+- **Actualizar políticas RLS** de las tablas CRM (`leads`, `clients`, `deals`, `quotes`, `activities`, `appointments`):
+  - SELECT: cualquier usuario con al menos un rol (`has_any_role`).
+  - INSERT/UPDATE: `admin`, `analyst` u `operations`.
+  - DELETE: solo `admin`.
+  - `viewer` solo puede leer.
+- **Eliminar la asignación automática de rol** (ya no hay; el trigger `handle_new_user` solo crea el `profile`). Si un admin no asigna rol explícitamente, el usuario nuevo no puede entrar al panel — comportamiento deseado.
+
+## 2. Frontend — Auth
+
+- **Reescribir `src/pages/Auth.tsx`** como pantalla **login-only** (eliminar toggle signup, eliminar campo "nombre completo", eliminar texto "Solicitar acceso"). Diseño premium institucional consistente con el sistema actual (split screen, gradient navy, eyebrow olive, tipografía display).
+- Mensaje claro cuando las credenciales no son válidas: "Acceso restringido. Contacte al administrador."
+- Pie del formulario: enlace `mailto:contacto@stratecsecurity.com` para solicitar acceso (en lugar de auto-registro).
+
+## 3. Guardia de rutas
+
+- **`useAuth`** expone `roles` (ya lo hace). Añadir helper `hasAccess = roles.length > 0`.
+- **`AppShell`** (cubre `/app/*` incluyendo dashboard, leads, clients, pipeline, quotes, agenda, analytics, messaging, settings):
+  - Si `loading` → spinner.
+  - Si no hay sesión → `Navigate to="/auth"`.
+  - Si hay sesión pero `roles.length === 0` → mostrar pantalla "Acceso no autorizado. Contacte al administrador." con botón de cerrar sesión. No se accede a ningún módulo.
+- **Ocultar acciones según rol** en el sidebar/botones (ej. `viewer` no ve botones de crear/editar).
+- **Redirect legacy:** `/admin/leads` ya redirige a `/app/leads`; mantener.
+
+## 4. Settings (opcional, recomendado)
+
+- En `/app/settings`, sección visible solo para `admin`: lista de usuarios (`profiles`) con su rol actual y un `<Select>` para cambiarlo (`admin | analyst | operations | viewer`). Sin botón de "crear usuario" (los usuarios se crean manualmente desde la consola de Lovable Cloud, como pidió).
+
+## 5. Limpieza
+
+- Eliminar de `useAuth` el tipo `executive`, dejar `"admin" | "analyst" | "operations" | "viewer"`.
+- Quitar cualquier referencia a "Crear cuenta" / "Solicitar acceso" en el sitio público.
 
 ---
 
-### Notas técnicas
+## Detalles técnicos (para revisión)
 
-- Cada módulo nuevo es una ruta lazy-loaded bajo `/app/*` con su propio archivo en `src/pages/app/`.
-- Componentes reutilizables: `DataTable`, `KpiCard`, `EmptyState`, `PageHeader`, `StatusBadge`, `KanbanColumn`.
-- Sistema de diseño existente (navy / olive / smoke / steel) se reutiliza — no se rompen tokens.
-- Animaciones con Framer Motion: fade+slide en montaje de páginas, layout animations en Kanban.
-- Secrets que pediré en Etapa C: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`. Resend vía connector.
+- Migración SQL:
+  ```sql
+  ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'operations';
+  ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'viewer';
+  UPDATE public.user_roles SET role = 'operations' WHERE role = 'executive';
+  ```
+  Luego recrear las policies `crm insert/update` para incluir `operations` además de `admin`/`analyst`. (Postgres no permite eliminar un valor de enum, así que `executive` queda como valor huérfano sin filas — aceptable.)
+- `configure_auth({ disable_signup: true, auto_confirm_email: false, password_hibp_enabled: true, external_anonymous_users_enabled: false })`.
+- `AppShell` y todas las páginas `/app/*` ya están bajo el shell — un solo punto de control.
+- No se toca el formulario público `/schedule` ni el Edge Function `submit-lead`.
 
-Confirma para comenzar Etapa A.
+---
+
+## Archivos a modificar
+
+- `src/pages/Auth.tsx` — login-only, sin signup.
+- `src/hooks/useAuth.tsx` — nuevo tipo `Role`, helper `hasAccess`.
+- `src/components/app/AppShell.tsx` — bloqueo por roles vacíos + pantalla "no autorizado".
+- `src/App.tsx` — sin cambios estructurales (solo limpieza si aplica).
+- `src/pages/app/Placeholders.tsx` (Settings) — sección de gestión de roles para admin.
+- Migración SQL para enum + policies.
+- Configuración de auth (sin tocar archivos, vía tool).
+
+## Pendiente de confirmar
+
+¿OK con migrar los usuarios `executive` → `operations`, o prefieres mapearlos a `admin`?
