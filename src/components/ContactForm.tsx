@@ -20,7 +20,7 @@ type FormData = z.infer<typeof schema>;
 
 // EmailJS — reemplazar TEMPLATE_ID después de crear el template en emailjs.com
 const EMAILJS_SERVICE_ID  = "service_3wysprf";
-const EMAILJS_TEMPLATE_ID = "template_stratec01"; // ← actualizar con tu template real
+const EMAILJS_TEMPLATE_ID = "template_dqu8jlc";
 const EMAILJS_PUBLIC_KEY  = "QrsTojpa7iz8FVM-n";
 
 declare function gtag(...args: unknown[]): void;
@@ -52,13 +52,18 @@ export const ContactForm = () => {
           template_id: EMAILJS_TEMPLATE_ID,
           user_id:     EMAILJS_PUBLIC_KEY,
           template_params: {
-            from_name: data.nombre,
+            // Variables del header HTML del template
+            name:      data.nombre,
+            message:   `Servicio: ${data.servicio}. ${data.mensaje || ""}`.trim(),
+            time:      new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),
+            // Variables del cuerpo del template
+            from_name:  data.nombre,
             from_email: data.email,
-            empresa:   data.empresa,
-            cargo:     data.cargo    || "—",
-            telefono:  data.telefono || "—",
-            servicio:  data.servicio,
-            mensaje:   data.mensaje  || "—",
+            empresa:    data.empresa,
+            cargo:      data.cargo    || "—",
+            telefono:   data.telefono || "—",
+            servicio:   data.servicio,
+            mensaje:    data.mensaje  || "—",
           },
         }),
       });
