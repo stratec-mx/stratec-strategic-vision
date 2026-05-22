@@ -26,7 +26,7 @@ export const Technology = () => {
           <div className="lg:col-span-6">
             <div className="eyebrow mb-6">— Tecnología e Innovación</div>
             <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-              Inteligencia operacional sobre una plataforma institucional unificada.
+              Tecnología de seguridad: videovigilancia IA, biometría y automatización.
             </h2>
           </div>
           <div className="lg:col-span-5 lg:col-start-8 lg:pt-4">

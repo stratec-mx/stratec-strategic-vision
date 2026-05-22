@@ -6,7 +6,7 @@ import { NetworkBackground } from "@/components/NetworkBackground";
 
 export const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center bg-navy-deep overflow-hidden pt-20">
+    <section className="relative flex items-center bg-navy-deep overflow-hidden pt-20" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
       <div className="absolute inset-0">
         <img src={hero} alt="Equipo ejecutivo analizando infraestructura crítica" className="w-full h-full object-cover opacity-40" width={1920} height={1080} />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/85 to-navy-deep/40" />
@@ -34,8 +34,8 @@ export const Hero = () => {
             transition={{ duration: 0.9, delay: 0.1 }}
             className="font-display text-5xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
           >
-            Inteligencia estratégica para entornos
-            <span className="block font-normal text-smoke"> de alta exigencia.</span>
+            Consultoría en Seguridad Institucional
+            <span className="block font-normal text-smoke"> e Inteligencia Estratégica.</span>
           </motion.h1>
 
           <motion.p
@@ -73,9 +73,9 @@ export const Hero = () => {
             className="mt-20 grid grid-cols-3 gap-8 max-w-2xl border-t border-smoke/10 pt-8"
           >
             {[
-              { v: "20+", l: "Años de experiencia" },
-              { v: "150+", l: "Proyectos institucionales" },
-              { v: "8", l: "Sectores especializados" },
+              { v: "12+", l: "Años de experiencia en seguridad" },
+              { v: "50+", l: "Proyectos ejecutados" },
+              { v: "100%", l: "Confidencialidad garantizada" },
             ].map((m) => (
               <div key={m.l}>
                 <div className="text-3xl font-light text-smoke">{m.v}</div>

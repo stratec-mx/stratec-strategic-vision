@@ -19,7 +19,7 @@ export const Sectors = () => {
         <div className="text-center max-w-2xl mx-auto mb-20">
           <div className="eyebrow mb-6">— Sectores atendidos</div>
           <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-            Experiencia transversal en industrias estratégicas.
+            Sectores que protegemos: gobierno, industria, corporativos y educación.
           </h2>
         </div>
 

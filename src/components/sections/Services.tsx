@@ -23,7 +23,7 @@ export const Services = () => {
           <div className="lg:col-span-5">
             <div className="eyebrow mb-6">— Servicios estratégicos</div>
             <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-              Capacidades diseñadas para entornos de máxima exigencia.
+              Servicios de auditoría de seguridad, análisis de riesgos y protocolos institucionales.
             </h2>
           </div>
           <div className="lg:col-span-6 lg:col-start-7 lg:pt-4">

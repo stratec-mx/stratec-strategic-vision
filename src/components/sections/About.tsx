@@ -20,7 +20,7 @@ export const About = () => {
         >
           <div className="eyebrow mb-6">— Sobre STRATEC</div>
           <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-            Una firma construida sobre la disciplina del análisis y la precisión institucional.
+            Firma especializada en seguridad corporativa y consultoría estratégica.
           </h2>
         </motion.div>
 
@@ -37,6 +37,42 @@ export const About = () => {
             críticas. Operamos con confidencialidad absoluta, rigor analítico y una visión
             de largo plazo orientada a la continuidad operativa de nuestros clientes.
           </p>
+
+          {/* Video institucional placeholder */}
+          <div className="mt-12">
+            <div
+              style={{
+                aspectRatio: "16/9",
+                background: "linear-gradient(135deg, #0B1F3A, #111D33)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid rgba(123,127,66,0.2)",
+                borderRadius: "2px",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  background: "rgba(123,127,66,0.85)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#F7F7F5">
+                  <polygon points="8,5 19,12 8,19" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-center text-[11px] text-steel/50 mt-3 tracking-[0.15em] uppercase">
+              Video institucional — Próximamente
+            </p>
+          </div>
 
           <div className="mt-16 grid grid-cols-2 gap-y-10 gap-x-8 border-t border-border pt-12">
             {milestones.map((m, i) => (

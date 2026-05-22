@@ -9,7 +9,7 @@ const Privacy = () => (
     sections={[
       {
         title: "Identidad del responsable",
-        body: "STRATEC Consultoría en Seguridad S.A. de C.V., con domicilio en Ciudad de México, es responsable del uso, protección y tratamiento de los datos personales que recabe de sus clientes institucionales, contrapartes contractuales y visitantes de sus plataformas digitales.",
+        body: "STRATEC Consultoría en Seguridad S.A. de C.V., con domicilio en Morelos, México, es responsable del uso, protección y tratamiento de los datos personales que recabe de sus clientes institucionales, contrapartes contractuales y visitantes de sus plataformas digitales.",
       },
       {
         title: "Datos personales recabados",
@@ -38,7 +38,7 @@ const Privacy = () => (
       },
       {
         title: "Derechos ARCO",
-        body: "El titular podrá ejercer en cualquier momento sus derechos de Acceso, Rectificación, Cancelación y Oposición, así como revocar el consentimiento otorgado, mediante solicitud al correo privacidad@stratec.mx, acompañando la documentación que acredite su identidad o representación legal.",
+        body: "El titular podrá ejercer en cualquier momento sus derechos de Acceso, Rectificación, Cancelación y Oposición, así como revocar el consentimiento otorgado, mediante solicitud al correo contacto@stratecsecurity.com, acompañando la documentación que acredite su identidad o representación legal.",
       },
       {
         title: "Modificaciones al aviso",

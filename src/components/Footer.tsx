@@ -36,9 +36,10 @@ export const Footer = () => {
           <div className="lg:col-span-4">
             <div className="text-xs uppercase tracking-widest text-smoke mb-5">Contacto institucional</div>
             <ul className="space-y-4 text-sm">
-              <li className="flex items-start gap-3"><Mail className="h-4 w-4 text-olive mt-0.5" /><span>contacto@stratecsecurity.com</span></li>
-              <li className="flex items-start gap-3"><MapPin className="h-4 w-4 text-olive mt-0.5" /><span>Ciudad de México · Operaciones LATAM</span></li>
-              <li className="flex items-start gap-3"><Linkedin className="h-4 w-4 text-olive mt-0.5" /><a href="#" className="hover:text-smoke">LinkedIn</a></li>
+              <li className="flex items-start gap-3"><Mail className="h-4 w-4 text-olive mt-0.5" /><a href="mailto:contacto@stratecsecurity.com" className="hover:text-smoke transition-colors">contacto@stratecsecurity.com</a></li>
+              <li className="flex items-start gap-3"><MapPin className="h-4 w-4 text-olive mt-0.5" /><span>México — Operaciones en toda la región</span></li>
+              <li className="flex items-start gap-3"><Linkedin className="h-4 w-4 text-olive mt-0.5" /><a href="#" className="hover:text-smoke transition-colors">LinkedIn</a></li>
+              <li className="text-xs text-smoke/30">Lunes a viernes, 9:00 — 18:00 (CST)</li>
             </ul>
           </div>
         </div>
@@ -46,8 +47,8 @@ export const Footer = () => {
         <div className="pt-8 flex flex-col md:flex-row justify-between gap-4 text-xs text-smoke/40">
           <div>© {new Date().getFullYear()} STRATEC. Todos los derechos reservados.</div>
           <div className="flex gap-6">
-            <a href="/privacy" className="hover:text-smoke">Aviso de privacidad</a>
-            <a href="/terms" className="hover:text-smoke">Términos</a>
+            <a href="/privacidad" className="hover:text-smoke">Aviso de privacidad</a>
+            <a href="/terminos" className="hover:text-smoke">Términos</a>
             <a href="/confidentiality" className="hover:text-smoke">Confidencialidad</a>
           </div>
         </div>

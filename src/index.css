@@ -122,4 +122,46 @@
     transition: transform 0.5s var(--transition-smooth), box-shadow 0.5s var(--transition-smooth);
   }
   .hover-lift:hover { transform: translateY(-4px); box-shadow: var(--shadow-elevated); }
+
+  /* ── Bloque 7: Performance & Accessibility fixes ── */
+
+  /* 7.1 Cursor personalizado — desactivar en touch */
+  @media (pointer: coarse), (hover: none) {
+    .cursor, .cursor-ring { display: none !important; }
+    body { cursor: auto !important; }
+  }
+
+  /* 7.4 iOS Safari — dynamic viewport height */
+  #hero-section {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* 7.5 Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* 7.2 Font display swap — para fuentes cargadas via @font-face local */
+  @font-face {
+    font-family: 'Inter';
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'IBM Plex Sans';
+    font-display: swap;
+  }
+
+  /* Lazy load images below fold */
+  img[loading="lazy"] {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  img[loading="lazy"].loaded {
+    opacity: 1;
+  }
 }

@@ -4,11 +4,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { CookieBanner } from "@/components/CookieBanner";
+import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Schedule from "./pages/Schedule.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
+import Privacidad from "./pages/Privacidad.tsx";
+import Terminos from "./pages/Terminos.tsx";
 import Confidentiality from "./pages/Confidentiality.tsx";
 import Auth from "./pages/Auth.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
@@ -28,6 +32,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CookieBanner />
+      <WhatsAppFloat />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -35,6 +41,8 @@ const App = () => (
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/terminos" element={<Terminos />} />
             <Route path="/confidentiality" element={<Confidentiality />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/app" element={<AppShell />}>

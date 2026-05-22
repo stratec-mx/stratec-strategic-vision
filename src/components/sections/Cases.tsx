@@ -4,32 +4,32 @@ const cases = [
   {
     sector: "Educación",
     title: "Campus universitario multisede",
-    desc: "Diseño e implementación de un modelo integral de seguridad para una red de campus con más de 40,000 alumnos.",
-    metric: "−62% incidentes",
+    desc: "Diseño e implementación de un modelo integral de seguridad para una red de campus con alta densidad de usuarios y múltiples accesos perimetrales.",
+    metric: "Hasta 60% reducción proyectada de incidentes",
   },
   {
     sector: "Corporativo",
     title: "Corporativo multinacional",
-    desc: "Marco unificado de continuidad operativa y protección de ejecutivos en cinco regiones geográficas.",
-    metric: "5 regiones",
+    desc: "Marco unificado de continuidad operativa y protección de ejecutivos con coordinación en múltiples regiones geográficas.",
+    metric: "5+ regiones coordinadas",
   },
   {
     sector: "Inmobiliario",
-    title: "Desarrollo inmobiliario premium",
-    desc: "Arquitectura tecnológica y operativa de seguridad para un desarrollo de uso mixto de alto valor patrimonial.",
-    metric: "180,000 m²",
+    title: "Desarrollo inmobiliario de uso mixto",
+    desc: "Arquitectura tecnológica y operativa de seguridad para un desarrollo de alto valor patrimonial con acceso diferenciado por zonas.",
+    metric: "100+ puntos de control integrados",
   },
   {
     sector: "Industria",
     title: "Planta industrial estratégica",
-    desc: "Inteligencia preventiva y monitoreo continuo sobre operaciones críticas 24/7.",
-    metric: "99.98% uptime",
+    desc: "Inteligencia preventiva y monitoreo continuo sobre operaciones críticas con gestión de incidentes en tiempo real.",
+    metric: "Monitoreo 24/7 continuo",
   },
   {
     sector: "Infraestructura",
-    title: "Infraestructura crítica nacional",
-    desc: "Programa de protección integral con coordinación interinstitucional y gobierno de datos sensibles.",
-    metric: "8 instituciones",
+    title: "Infraestructura crítica institucional",
+    desc: "Programa de protección integral con coordinación interinstitucional y gobierno de datos sensibles bajo protocolos de confidencialidad.",
+    metric: "100+ personas capacitadas por proyecto",
   },
 ];
 
@@ -39,9 +39,9 @@ export const Cases = () => {
       <div className="container-wide">
         <div className="grid lg:grid-cols-12 gap-12 mb-20">
           <div className="lg:col-span-6">
-            <div className="eyebrow mb-6">— Casos de aplicación</div>
+            <div className="eyebrow mb-6">— Escenarios de aplicación</div>
             <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-              Resultados que sostienen instituciones complejas.
+              Resultados de consultoría en seguridad industrial y corporativa.
             </h2>
           </div>
         </div>
@@ -72,6 +72,10 @@ export const Cases = () => {
             </motion.article>
           ))}
         </div>
+
+        <p className="mt-10 text-[11px] text-steel/60 tracking-wide max-w-3xl">
+          Los escenarios presentados representan aplicaciones típicas de nuestra metodología. Resultados específicos varían según las condiciones de cada proyecto.
+        </p>
       </div>
     </section>
   );

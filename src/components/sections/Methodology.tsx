@@ -18,7 +18,7 @@ export const Methodology = () => {
           <div className="lg:col-span-6">
             <div className="text-xs uppercase tracking-[0.25em] text-olive font-medium mb-6">— Metodología STRATEC</div>
             <h2 className="font-display text-4xl md:text-5xl font-light leading-tight text-balance">
-              Un proceso disciplinado, medible y replicable.
+              Metodología STRATEC de diagnóstico y protección integral.
             </h2>
           </div>
           <div className="lg:col-span-5 lg:col-start-8 lg:pt-4">

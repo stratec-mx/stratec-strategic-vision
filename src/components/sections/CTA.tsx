@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
+import { ContactForm } from "@/components/ContactForm";
 
 export const CTA = () => {
   return (
@@ -28,15 +29,22 @@ export const CTA = () => {
 
           <div className="mt-12 flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="rounded-none bg-olive hover:bg-olive/90 text-smoke tracking-wider text-xs uppercase h-14 px-8 group">
-              <a href="mailto:contacto@stratec.mx">
-                Solicitar diagnóstico estratégico
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <a
+                href="mailto:contacto@stratecsecurity.com"
+                onClick={() => {
+                  if (typeof (window as any).gtag !== "undefined") (window as any).gtag("event", "click_email", { event_category: "contact", event_label: "email_cta" });
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                contacto@stratecsecurity.com
               </a>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-none border-smoke/20 bg-transparent text-smoke hover:bg-smoke/10 hover:text-smoke tracking-wider text-xs uppercase h-14 px-8">
-              <a href="/schedule">Agendar conversación</a>
+              <a href="#contact-form">Completar formulario</a>
             </Button>
           </div>
+
+          <ContactForm />
         </motion.div>
       </div>
     </section>

@@ -11,6 +11,7 @@ import { Technology } from "@/components/sections/Technology";
 import { Cases } from "@/components/sections/Cases";
 import { Advantages } from "@/components/sections/Advantages";
 import { CTA } from "@/components/sections/CTA";
+import { InstitutionalSupport } from "@/components/sections/InstitutionalSupport";
 
 const Index = () => {
   const location = useLocation();
@@ -26,7 +27,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main>
+      <main id="main-content">
         <Hero />
         <About />
         <Services />
@@ -35,6 +36,7 @@ const Index = () => {
         <Technology />
         <Cases />
         <Advantages />
+        <InstitutionalSupport />
         <CTA />
       </main>
       <Footer />
