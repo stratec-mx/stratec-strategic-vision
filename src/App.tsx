@@ -65,27 +65,30 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   
                   {/* Service Routes */}
-                  <Route path="/servicios/auditoria-seguridad" element={<NotFound />} />
-                  <Route path="/servicios/proteccion-civil" element={<NotFound />} />
-                  <Route path="/servicios/gestion-documental" element={<NotFound />} />
-                  <Route path="/servicios/nom-035" element={<NotFound />} />
-                  <Route path="/servicios/seguridad-eventos" element={<NotFound />} />
-                  <Route path="/servicios/control-acceso-biometrico" element={<NotFound />} />
-                  <Route path="/servicios/videovigilancia-ia" element={<NotFound />} />
+                  <Route path="/servicios" element={<ServiciosIndex />} />
+                  <Route path="/servicios/auditoria-seguridad" element={<AuditoriaSeguridad />} />
+                  <Route path="/servicios/proteccion-civil" element={<ProteccionCivil />} />
+                  <Route path="/servicios/gestion-documental" element={<GestionDocumental />} />
+                  <Route path="/servicios/nom-035" element={<NOM035 />} />
+                  <Route path="/servicios/seguridad-eventos" element={<SeguridadEventos />} />
+                  <Route path="/servicios/control-acceso-biometrico" element={<ControlAccesoBiometrico />} />
+                  <Route path="/servicios/videovigilancia-ia" element={<VideovigilanciaIA />} />
 
                   {/* Location Routes */}
-                  <Route path="/ubicaciones/morelos" element={<NotFound />} />
-                  <Route path="/ubicaciones/cuernavaca" element={<NotFound />} />
-                  <Route path="/ubicaciones/monterrey" element={<NotFound />} />
-                  <Route path="/ubicaciones/queretaro" element={<NotFound />} />
-                  <Route path="/ubicaciones/guadalajara" element={<NotFound />} />
+                  <Route path="/ubicaciones/morelos" element={<Morelos />} />
+                  <Route path="/ubicaciones/cuernavaca" element={<Cuernavaca />} />
+                  <Route path="/ubicaciones/jiutepec" element={<Jiutepec />} />
+                  <Route path="/ubicaciones/civac" element={<Civac />} />
+                  <Route path="/ubicaciones/monterrey" element={<Monterrey />} />
+                  <Route path="/ubicaciones/queretaro" element={<Queretaro />} />
+                  <Route path="/ubicaciones/guadalajara" element={<Guadalajara />} />
 
                   {/* Blog Routes */}
-                  <Route path="/blog" element={<NotFound />} />
-                  <Route path="/blog/nom-035" element={<NotFound />} />
-                  <Route path="/blog/nearshoring" element={<NotFound />} />
-                  <Route path="/blog/proteccion-civil" element={<NotFound />} />
-                  <Route path="/blog/seguridad-industrial" element={<NotFound />} />
+                  <Route path="/blog" element={<BlogIndex />} />
+                  <Route path="/blog/nom-035" element={<NOM035Post />} />
+                  <Route path="/blog/nearshoring" element={<NearshoringPost />} />
+                  <Route path="/blog/proteccion-civil" element={<ProteccionCivilPost />} />
+                  <Route path="/blog/seguridad-industrial" element={<SeguridadIndustrialPost />} />
 
                   {/* App Routes */}
                   <Route path="/app" element={<AppShell />}>
