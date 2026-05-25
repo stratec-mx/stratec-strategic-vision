@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /app
+Disallow: /admin
+Disallow: /auth
+
 Sitemap: https://stratecsecurity.com/sitemap.xml
