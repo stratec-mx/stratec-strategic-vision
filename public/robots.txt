@@ -1,3 +1,20 @@
+# STRATEC Security - Directrices para bots de búsqueda
 User-agent: *
 Allow: /
-Sitemap: https://stratecsecurity.com/sitemap.xml
+Disallow: /admin
+Disallow: /api
+Disallow: /*.pdf$
+Crawl-delay: 1
+
+# Bloquear bots maliciosos conocidos
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+# Sitemap
+Sitemap: https://www.stratecsecurity.com/sitemap.xml
