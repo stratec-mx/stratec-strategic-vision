@@ -27,6 +27,17 @@ import Quotes from "./pages/app/Quotes.tsx";
 import Agenda from "./pages/app/Agenda.tsx";
 import Analytics from "./pages/app/Analytics.tsx";
 import { Messaging, Settings } from "./pages/app/Placeholders.tsx";
+import ServiciosIndex from "./pages/Servicios/Index.tsx";
+import AuditoriaSeguridad from "./pages/Servicios/AuditoriaSeguridad.tsx";
+import ProteccionCivil from "./pages/Servicios/ProteccionCivil.tsx";
+import GestionDocumental from "./pages/Servicios/GestionDocumental.tsx";
+import NOM035 from "./pages/Servicios/NOM035.tsx";
+import SeguridadEventos from "./pages/Servicios/SeguridadEventos.tsx";
+import ControlAccesoBiometrico from "./pages/Servicios/ControlAccesoBiometrico.tsx";
+import VideovigilanciaIA from "./pages/Servicios/VideovigilanciaIA.tsx";
+import { Morelos, Cuernavaca, Jiutepec, Civac, Monterrey, Queretaro, Guadalajara } from "./pages/ubicaciones/index.tsx";
+import BlogIndex from "./pages/blog/Index.tsx";
+import { NOM035Post, NearshoringPost, ProteccionCivilPost, SeguridadIndustrialPost } from "./pages/blog/Posts.tsx";
 
 const queryClient = new QueryClient();
 
