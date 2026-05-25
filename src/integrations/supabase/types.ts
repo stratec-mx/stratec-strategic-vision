@@ -390,6 +390,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          ip: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

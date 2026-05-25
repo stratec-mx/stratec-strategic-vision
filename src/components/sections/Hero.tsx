@@ -6,7 +6,7 @@ import { NetworkBackground } from "@/components/NetworkBackground";
 
 export const Hero = () => {
   return (
-    <section className="relative flex items-center bg-navy-deep overflow-hidden pt-20" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
+    <section className="relative flex items-center bg-navy-deep overflow-hidden pt-20" style={{ minHeight: '100dvh' }}>
       <div className="absolute inset-0">
         <img src={hero} alt="Equipo ejecutivo analizando infraestructura crítica" className="w-full h-full object-cover opacity-40" width={1920} height={1080} />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/85 to-navy-deep/40" />

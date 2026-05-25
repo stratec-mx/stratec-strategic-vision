@@ -69,7 +69,7 @@ serve(async (req: Request) => {
                 .from("rate_limits")
                 .select("*", { count: "exact", head: true })
                 .eq("ip", clientIp)
-                .eq("action", "submit_lead")
+                .eq("endpoint", "submit_lead")
                 .gte("created_at", windowStart);
 
       if (countErr) {
@@ -90,7 +90,7 @@ serve(async (req: Request) => {
       // Record this attempt
       await supabase.from("rate_limits").insert({
               ip: clientIp,
-              action: "submit_lead",
+              endpoint: "submit_lead",
                   });
 
       // — 4. Insert the lead ————————————————————————
