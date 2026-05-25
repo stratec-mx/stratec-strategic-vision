@@ -31,12 +31,22 @@ export const Sectors = () => {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.05 }}
-              className="bg-smoke aspect-square flex flex-col items-center justify-center gap-4 group hover:bg-navy transition-colors duration-500 cursor-pointer"
+              className="bg-smoke aspect-square flex flex-col items-center justify-center gap-4 group hover:bg-navy hover:shadow-lg hover:shadow-navy/20 transition-all duration-500 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
             >
-              <s.icon className="h-8 w-8 text-steel group-hover:text-olive transition-colors duration-500" strokeWidth={1.2} />
-              <span className="text-sm tracking-widest uppercase text-navy group-hover:text-smoke transition-colors duration-500">
+              <motion.div
+                whileHover={{ rotate: 12, scale: 1.3 }}
+                transition={{ duration: 0.3 }}
+                className="h-8 w-8"
+              >
+                <s.icon className="h-full w-full text-steel group-hover:text-olive transition-colors duration-500" strokeWidth={1.2} />
+              </motion.div>
+              <motion.span
+                className="text-sm tracking-widest uppercase text-navy group-hover:text-smoke transition-colors duration-500"
+                whileHover={{ letterSpacing: "0.1em" }}
+              >
                 {s.name}
-              </span>
+              </motion.span>
             </motion.div>
           ))}
         </div>

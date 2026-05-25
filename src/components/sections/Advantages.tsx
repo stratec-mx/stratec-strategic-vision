@@ -29,14 +29,25 @@ export const Advantages = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
-              className="bg-smoke border border-border p-8 hover-lift"
+              className="bg-smoke border border-border p-8 hover:bg-navy hover:border-olive hover:shadow-lg hover:shadow-navy/20 transition-all duration-500 cursor-pointer"
+              whileHover={{ scale: 1.05, y: -8 }}
             >
               <div className="flex items-center justify-between mb-8">
-                <it.icon className="h-6 w-6 text-olive" strokeWidth={1.25} />
-                <span className="font-mono-ibm text-[10px] text-steel tracking-widest">0{i + 1}</span>
+                <motion.div
+                  whileHover={{ rotate: 12, scale: 1.2 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <it.icon className="h-6 w-6 text-olive group-hover:text-smoke transition-colors duration-500" strokeWidth={1.25} />
+                </motion.div>
+                <motion.span
+                  className="font-mono-ibm text-[10px] text-steel hover:text-olive transition-colors duration-500"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  0{i + 1}
+                </motion.span>
               </div>
-              <h3 className="text-lg font-medium text-navy">{it.title}</h3>
-              <p className="mt-3 text-sm text-steel leading-relaxed">{it.desc}</p>
+              <h3 className="text-lg font-medium text-navy hover:text-smoke transition-colors duration-500">{it.title}</h3>
+              <p className="mt-3 text-sm text-steel hover:text-smoke/80 leading-relaxed transition-colors duration-500">{it.desc}</p>
             </motion.div>
           ))}
         </div>

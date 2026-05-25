@@ -55,14 +55,16 @@ export const Hero = () => {
             transition={{ duration: 0.9, delay: 0.4 }}
             className="mt-12 flex flex-col sm:flex-row gap-4"
           >
-            <Button asChild size="lg" className="rounded-none bg-smoke text-navy hover:bg-smoke/90 tracking-wider text-xs uppercase h-14 px-8 group">
-              <a href="#contact">
+            <Button asChild size="lg" className="rounded-none bg-smoke text-navy hover:bg-smoke/90 tracking-wider text-xs uppercase h-14 px-8 group hover:shadow-lg hover:shadow-smoke/30 transition-all duration-300 transform hover:scale-105">
+              <a href="#contact" className="inline-flex items-center gap-2">
                 Solicitar diagnóstico estratégico
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <motion.div whileHover={{ x: 4, scale: 1.2 }} transition={{ duration: 0.2 }}>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </motion.div>
               </a>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-none border-smoke/30 bg-transparent text-smoke hover:bg-smoke/10 hover:text-smoke tracking-wider text-xs uppercase h-14 px-8">
-              <a href="#services">Conocer capacidades</a>
+            <Button asChild variant="outline" size="lg" className="rounded-none border-smoke/30 bg-transparent text-smoke hover:bg-smoke/10 hover:text-smoke hover:border-smoke/60 tracking-wider text-xs uppercase h-14 px-8 transition-all duration-300 hover:shadow-lg hover:shadow-smoke/10 group">
+              <motion.a href="#services" whileHover={{ scale: 1.05 }} className="inline-block">Conocer capacidades</motion.a>
             </Button>
           </motion.div>
 

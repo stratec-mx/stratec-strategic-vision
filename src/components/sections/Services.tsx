@@ -42,18 +42,27 @@ export const Services = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: (i % 4) * 0.08 }}
-              className="group bg-background p-10 hover:bg-navy transition-colors duration-500 cursor-pointer relative overflow-hidden"
+              className="group bg-background p-10 hover:bg-navy hover:shadow-xl hover:shadow-navy/20 hover:scale-105 transition-all duration-500 cursor-pointer relative overflow-hidden"
+              whileHover={{ scale: 1.02 }}
             >
-              <s.icon className="h-7 w-7 text-olive transition-transform duration-500 group-hover:scale-110" strokeWidth={1.25} />
+              <motion.div whileHover={{ rotate: 12, scale: 1.2 }} transition={{ duration: 0.3 }}>
+                <s.icon className="h-7 w-7 text-olive transition-transform duration-500 group-hover:text-smoke" strokeWidth={1.25} />
+              </motion.div>
               <h3 className="mt-8 text-lg font-medium text-navy group-hover:text-smoke transition-colors duration-500">
                 {s.title}
               </h3>
               <p className="mt-3 text-sm text-steel group-hover:text-smoke/70 leading-relaxed transition-colors duration-500">
                 {s.desc}
               </p>
-              <div className="mt-8 text-xs uppercase tracking-widest text-olive opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                Conocer más →
-              </div>
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                whileHover={{ opacity: 1, x: 0 }}
+                className="mt-8 text-xs uppercase tracking-widest text-olive opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              >
+                <motion.span className="inline-flex items-center gap-2" whileHover={{ x: 4 }}>
+                  Conocer más <motion.span whileHover={{ x: 2 }}>→</motion.span>
+                </motion.span>
+              </motion.div>
             </motion.div>
           ))}
         </div>

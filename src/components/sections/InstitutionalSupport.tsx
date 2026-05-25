@@ -37,15 +37,24 @@ export const InstitutionalSupport = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="flex flex-col items-center gap-4 py-8 px-6 border border-smoke/5 hover:border-olive/20 transition-colors duration-500"
+              className="flex flex-col items-center gap-4 py-8 px-6 border border-smoke/5 hover:border-olive/40 hover:bg-navy/50 transition-all duration-500 group cursor-pointer"
+              whileHover={{ scale: 1.05, y: -4 }}
             >
-              <item.icon
-                className="h-7 w-7 text-smoke/20 group-hover:text-olive transition-colors"
-                strokeWidth={1}
-              />
-              <p className="text-xs text-smoke/40 text-center tracking-wide leading-relaxed">
+              <motion.div
+                whileHover={{ rotate: 12, scale: 1.3 }}
+                transition={{ duration: 0.3 }}
+              >
+                <item.icon
+                  className="h-7 w-7 text-smoke/20 group-hover:text-olive transition-colors duration-500"
+                  strokeWidth={1}
+                />
+              </motion.div>
+              <motion.p
+                className="text-xs text-smoke/40 group-hover:text-smoke/70 text-center tracking-wide leading-relaxed transition-colors duration-500"
+                whileHover={{ letterSpacing: "0.02em" }}
+              >
                 {item.label}
-              </p>
+              </motion.p>
             </motion.div>
           ))}
         </div>

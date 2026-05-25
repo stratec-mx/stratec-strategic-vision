@@ -59,12 +59,27 @@ export const Technology = () => {
 
           {/* KPI row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-smoke/5">
-            {kpis.map((k) => (
-              <div key={k.label} className="bg-navy-deep p-6">
-                <div className="text-[10px] uppercase tracking-widest text-smoke/40">{k.label}</div>
-                <div className="mt-3 text-3xl font-light">{k.value}</div>
-                <div className="mt-1 text-xs text-olive">{k.delta}</div>
-              </div>
+            {kpis.map((k, i) => (
+              <motion.div
+                key={k.label}
+                className="bg-navy-deep p-6 hover:bg-navy hover:border-l-2 hover:border-olive cursor-pointer transition-all duration-300"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                whileHover={{ scale: 1.05 }}
+              >
+                <motion.div
+                  className="text-[10px] uppercase tracking-widest text-smoke/40"
+                  whileHover={{ letterSpacing: "0.05em" }}
+                >
+                  {k.label}
+                </motion.div>
+                <motion.div className="mt-3 text-3xl font-light text-smoke" whileHover={{ scale: 1.1, color: "#7B7F42" }}>
+                  {k.value}
+                </motion.div>
+                <motion.div className="mt-1 text-xs text-olive font-medium">{k.delta}</motion.div>
+              </motion.div>
             ))}
           </div>
 
@@ -95,13 +110,33 @@ export const Technology = () => {
             </div>
 
             <div className="bg-navy-deep p-6">
-              <div className="text-xs uppercase tracking-widest text-smoke/60 mb-6">Bitácora operativa</div>
+              <motion.div
+                className="text-xs uppercase tracking-widest text-smoke/60 mb-6"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                Bitácora operativa
+              </motion.div>
               <ul className="space-y-4">
                 {events.map((e, i) => (
-                  <li key={i} className="flex items-start gap-3 text-xs text-smoke/70 leading-relaxed">
-                    <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${lvlColor[e.lvl as keyof typeof lvlColor]}`} />
-                    <span>{e.text}</span>
-                  </li>
+                  <motion.li
+                    key={i}
+                    className="flex items-start gap-3 text-xs text-smoke/70 hover:text-smoke/100 leading-relaxed cursor-pointer group transition-colors duration-300"
+                    initial={{ opacity: 0, x: -10 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    whileHover={{ x: 4 }}
+                  >
+                    <motion.span
+                      className={`mt-1.5 h-1.5 w-1.5 rounded-full ${lvlColor[e.lvl as keyof typeof lvlColor]}`}
+                      whileHover={{ scale: 1.5 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                    <span className="group-hover:text-olive transition-colors duration-200">{e.text}</span>
+                  </motion.li>
                 ))}
               </ul>
             </div>

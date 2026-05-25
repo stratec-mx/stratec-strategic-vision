@@ -54,21 +54,48 @@ export const Cases = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.06 }}
-              className="grid md:grid-cols-12 gap-6 bg-background p-8 lg:p-10 group hover:bg-navy transition-colors duration-500 cursor-pointer"
+              className="grid md:grid-cols-12 gap-6 bg-background p-8 lg:p-10 group hover:bg-navy hover:shadow-lg hover:shadow-navy/20 transition-all duration-500 cursor-pointer"
+              whileHover={{ scale: 1.02, x: 4 }}
             >
-              <div className="md:col-span-2">
-                <div className="text-[10px] uppercase tracking-[0.3em] text-olive font-mono-ibm">{c.sector}</div>
-                <div className="mt-2 font-mono-ibm text-xs text-steel group-hover:text-smoke/50 transition-colors">
+              <motion.div className="md:col-span-2" whileHover={{ x: 4 }}>
+                <motion.div
+                  className="text-[10px] uppercase tracking-[0.3em] text-olive font-mono-ibm"
+                  whileHover={{ letterSpacing: "0.4em", color: "#7B7F42" }}
+                >
+                  {c.sector}
+                </motion.div>
+                <motion.div
+                  className="mt-2 font-mono-ibm text-xs text-steel group-hover:text-smoke/50 transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                >
                   Caso · {String(i + 1).padStart(2, "0")}
-                </div>
-              </div>
-              <div className="md:col-span-7">
-                <h3 className="text-2xl font-light text-navy group-hover:text-smoke transition-colors">{c.title}</h3>
-                <p className="mt-3 text-steel group-hover:text-smoke/70 transition-colors leading-relaxed font-light">{c.desc}</p>
-              </div>
-              <div className="md:col-span-3 md:text-right flex md:justify-end items-start">
-                <div className="text-3xl font-light text-navy group-hover:text-olive transition-colors">{c.metric}</div>
-              </div>
+                </motion.div>
+              </motion.div>
+              <motion.div className="md:col-span-7">
+                <motion.h3
+                  className="text-2xl font-light text-navy group-hover:text-smoke transition-colors"
+                  whileHover={{ letterSpacing: "0.01em" }}
+                >
+                  {c.title}
+                </motion.h3>
+                <motion.p
+                  className="mt-3 text-steel group-hover:text-smoke/70 transition-colors leading-relaxed font-light"
+                  whileHover={{ lineHeight: 1.8 }}
+                >
+                  {c.desc}
+                </motion.p>
+              </motion.div>
+              <motion.div
+                className="md:col-span-3 md:text-right flex md:justify-end items-start"
+                whileHover={{ scale: 1.1 }}
+              >
+                <motion.div
+                  className="text-3xl font-light text-navy group-hover:text-olive transition-colors"
+                  whileHover={{ y: -4 }}
+                >
+                  {c.metric}
+                </motion.div>
+              </motion.div>
             </motion.article>
           ))}
         </div>

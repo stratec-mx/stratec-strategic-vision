@@ -39,8 +39,15 @@ export const About = () => {
           </p>
 
           {/* Video institucional placeholder */}
-          <div className="mt-12">
-            <div
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <motion.div
+              className="group cursor-pointer"
               style={{
                 aspectRatio: "16/9",
                 background: "linear-gradient(135deg, #0B1F3A, #111D33)",
@@ -50,10 +57,11 @@ export const About = () => {
                 justifyContent: "center",
                 border: "1px solid rgba(123,127,66,0.2)",
                 borderRadius: "2px",
-                cursor: "pointer",
               }}
+              whileHover={{ borderColor: "rgba(123,127,66,0.5)", boxShadow: "0 8px 24px rgba(123,127,66,0.15)" }}
+              transition={{ duration: 0.3 }}
             >
-              <div
+              <motion.div
                 style={{
                   width: 64,
                   height: 64,
@@ -63,16 +71,25 @@ export const About = () => {
                   alignItems: "center",
                   justifyContent: "center",
                 }}
+                whileHover={{ scale: 1.2, background: "rgba(123,127,66,1)" }}
+                transition={{ duration: 0.3 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#F7F7F5">
+                <motion.svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="#F7F7F5"
+                  whileHover={{ x: 2 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <polygon points="8,5 19,12 8,19" />
-                </svg>
-              </div>
-            </div>
+                </motion.svg>
+              </motion.div>
+            </motion.div>
             <p className="text-center text-[11px] text-steel/50 mt-3 tracking-[0.15em] uppercase">
               Video institucional — Próximamente
             </p>
-          </div>
+          </motion.div>
 
           <div className="mt-16 grid grid-cols-2 gap-y-10 gap-x-8 border-t border-border pt-12">
             {milestones.map((m, i) => (

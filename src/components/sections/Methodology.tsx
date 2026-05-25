@@ -39,12 +39,34 @@ export const Methodology = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="relative p-6 lg:p-4"
+                className="relative p-6 lg:p-4 group hover:bg-navy/50 transition-colors duration-300 cursor-pointer"
+                whileHover={{ y: -4 }}
               >
-                <div className="hidden lg:block absolute top-12 left-0 -translate-x-1/2 w-2 h-2 rounded-full bg-olive ring-4 ring-navy-deep" />
-                <div className="font-mono-ibm text-xs text-olive tracking-widest">{s.n}</div>
-                <h3 className="mt-8 lg:mt-10 text-base font-medium text-smoke">{s.title}</h3>
-                <p className="mt-3 text-xs text-smoke/55 leading-relaxed">{s.desc}</p>
+                <motion.div
+                  className="hidden lg:block absolute top-12 left-0 -translate-x-1/2 w-2 h-2 rounded-full bg-olive ring-4 ring-navy-deep group-hover:ring-olive/30"
+                  whileHover={{ scale: 1.3 }}
+                  transition={{ duration: 0.2 }}
+                />
+                <motion.div
+                  className="font-mono-ibm text-xs text-olive tracking-widest"
+                  whileHover={{ scale: 1.1, letterSpacing: "0.1em" }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {s.n}
+                </motion.div>
+                <motion.h3
+                  className="mt-8 lg:mt-10 text-base font-medium text-smoke group-hover:text-olive transition-colors duration-300"
+                  whileHover={{ letterSpacing: "0.02em" }}
+                >
+                  {s.title}
+                </motion.h3>
+                <motion.p
+                  className="mt-3 text-xs text-smoke/55 group-hover:text-smoke/80 leading-relaxed transition-colors duration-300"
+                  initial={{ opacity: 0.55 }}
+                  whileHover={{ opacity: 0.9 }}
+                >
+                  {s.desc}
+                </motion.p>
               </motion.div>
             ))}
           </div>

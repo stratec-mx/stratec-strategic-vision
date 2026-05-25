@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
@@ -45,30 +46,41 @@ export const Navbar = () => {
   return (
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled || !isHome ? "bg-smoke/85 backdrop-blur-md border-b border-border" : "bg-transparent"
+        scrolled || !isHome ? "bg-smoke/85 backdrop-blur-md border-b border-border shadow-lg shadow-navy/5" : "bg-transparent"
       }`}
     >
       <div className="container-wide flex items-center justify-between h-24">
         <Logo size="md" variant={logoVariant} />
         <nav className="hidden lg:flex items-center gap-10">
           {nav.map((item) => (
-            <a
+            <motion.a
               key={item.href}
               href={isHome ? item.href : `/${item.href}`}
               onClick={(e) => handleNav(e, item.href)}
-              className={`text-sm transition-colors duration-300 tracking-wide ${linkColor}`}
+              className={`text-sm transition-colors duration-300 tracking-wide relative group ${linkColor}`}
+              whileHover={{ scale: 1.05 }}
             >
               {item.label}
-            </a>
+              <motion.div
+                className="absolute bottom-0 left-0 h-0.5 bg-olive origin-left"
+                initial={{ scaleX: 0 }}
+                whileHover={{ scaleX: 1 }}
+                transition={{ duration: 0.3 }}
+              />
+            </motion.a>
           ))}
         </nav>
         <div className="hidden lg:flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className={`rounded-none text-xs uppercase tracking-wider h-10 ${transparent ? "text-smoke hover:text-smoke hover:bg-smoke/10" : "text-navy hover:text-navy hover:bg-secondary"}`}>
-            <a href="/auth">Acceso</a>
-          </Button>
-          <Button asChild variant="default" size="sm" className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase px-6 h-10">
-            <a href={isHome ? "#contact" : "/#contact"} onClick={(e) => handleNav(e, "#contact")}>Diagnóstico</a>
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button asChild variant="ghost" size="sm" className={`rounded-none text-xs uppercase tracking-wider h-10 transition-all duration-300 ${transparent ? "text-smoke hover:text-smoke hover:bg-smoke/10" : "text-navy hover:text-navy hover:bg-secondary"}`}>
+              <a href="/auth">Acceso</a>
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button asChild variant="default" size="sm" className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase px-6 h-10 transition-all duration-300 hover:shadow-lg hover:shadow-navy/30">
+              <a href={isHome ? "#contact" : "/#contact"} onClick={(e) => handleNav(e, "#contact")}>Diagnóstico</a>
+            </Button>
+          </motion.div>
         </div>
         <button className={`lg:hidden ${menuColor}`} onClick={() => setOpen(!open)} aria-label="Menu">
           {open ? <X /> : <Menu />}
