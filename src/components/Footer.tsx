@@ -38,7 +38,7 @@ export const Footer = () => {
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3"><Mail className="h-4 w-4 text-olive mt-0.5" /><a href="mailto:contacto@stratecsecurity.com" className="hover:text-smoke transition-colors">contacto@stratecsecurity.com</a></li>
               <li className="flex items-start gap-3"><MapPin className="h-4 w-4 text-olive mt-0.5" /><span>México — Operaciones en toda la región</span></li>
-              <li className="flex items-start gap-3"><Linkedin className="h-4 w-4 text-olive mt-0.5" /><a href="#" className="hover:text-smoke transition-colors">LinkedIn</a></li>
+              <li className="flex items-start gap-3"><Linkedin className="h-4 w-4 text-olive mt-0.5" /><a href="https://www.linkedin.com/company/stratec-security" target="_blank" rel="noopener noreferrer" className="hover:text-smoke transition-colors">LinkedIn</a></li>
               <li className="text-xs text-smoke/30">Lunes a viernes, 9:00 — 18:00 (CST)</li>
             </ul>
           </div>

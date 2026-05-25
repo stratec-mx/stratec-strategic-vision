@@ -35,7 +35,13 @@ const Privacidad = () => (
       },
       {
         title: "Uso de cookies y tecnologías de rastreo",
-        body: "Este sitio utiliza cookies analíticas (Google Analytics) para comprender el comportamiento de los visitantes de forma agregada y anónima. No utilizamos cookies para identificar personas de forma individual. Puedes gestionar tus preferencias de cookies en cualquier momento desde el banner de cookies del sitio.",
+        body: [
+          "Este sitio utiliza cookies analíticas y de seguimiento únicamente CON TU CONSENTIMIENTO EXPLÍCITO. Ninguno de estos scripts se ejecuta sin que aceptes el banner de cookies.",
+          "Google Analytics 4 (ID: G-9SEKJR2MC6) — Análisis agregado y anónimo del comportamiento de visitantes para mejorar nuestros servicios.",
+          "Meta Pixel (ID: 978906281171528) — Seguimiento de conversiones y optimización de campañas publicitarias.",
+          "Ambos servicios se cargan ÚNICAMENTE después de que hagas clic en 'Aceptar' en el banner de cookies. Si rechazas o ignoras el banner, NO se cargarán.",
+          "Puedes revocar tu consentimiento en cualquier momento eliminando las cookies de tu navegador o contactando a contacto@stratecsecurity.com.",
+        ],
       },
       {
         title: "Medidas de seguridad",

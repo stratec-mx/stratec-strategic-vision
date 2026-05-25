@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 const schema = z.object({
   nombre: z.string().min(2, "Ingresa tu nombre completo"),
@@ -22,9 +23,6 @@ type FormData = z.infer<typeof schema>;
 const EMAILJS_SERVICE_ID  = "service_3wysprf";
 const EMAILJS_TEMPLATE_ID = "template_dqu8jlc";
 const EMAILJS_PUBLIC_KEY  = "QrsTojpa7iz8FVM-n";
-
-declare function gtag(...args: unknown[]): void;
-declare function fbq(...args: unknown[]): void;
 
 export const ContactForm = () => {
   const [submitted, setSubmitted] = useState(false);
@@ -69,12 +67,10 @@ export const ContactForm = () => {
       });
       if (!res.ok) throw new Error("Error al enviar");
       setSubmitted(true);
-      if (typeof gtag !== "undefined") {
-        gtag("event", "form_submit", { event_category: "lead", event_label: selectedService });
-      }
-      if (typeof fbq !== "undefined") {
-        fbq("track", "Lead", { content_name: selectedService });
-      }
+
+      // Registrar eventos de conversión
+      track.formSubmit(selectedService);
+      track.metaLead();
     } catch {
       setError("Hubo un problema al enviar tu solicitud. Intenta de nuevo o escríbenos a contacto@stratecsecurity.com");
     } finally {

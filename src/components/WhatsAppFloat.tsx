@@ -1,7 +1,7 @@
 // Botón flotante de WhatsApp
 // Número: +52 777 131 2049
 
-declare function gtag(...args: unknown[]): void;
+import { track } from "@/lib/analytics";
 
 const WA_NUMBER = "527771312049";
 const WA_MESSAGE = encodeURIComponent(
@@ -10,12 +10,8 @@ const WA_MESSAGE = encodeURIComponent(
 
 export const WhatsAppFloat = () => {
   const handleClick = () => {
-    if (typeof gtag !== "undefined") {
-      gtag("event", "click_whatsapp", {
-        event_category: "contact",
-        event_label: "whatsapp_float",
-      });
-    }
+    // Registrar evento de clic en WhatsApp
+    track.whatsappClick();
   };
 
   return (
