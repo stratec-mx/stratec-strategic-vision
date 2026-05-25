@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Public can submit web leads" ON public.leads;
