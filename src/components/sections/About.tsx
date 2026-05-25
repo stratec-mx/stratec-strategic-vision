@@ -20,7 +20,7 @@ export const About = () => {
         >
           <div className="eyebrow mb-6">— Sobre STRATEC</div>
           <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-            Firma especializada en seguridad corporativa y consultoría estratégica.
+            Acompañamos organizaciones complejas en decisiones críticas y situaciones de máximo riesgo.
           </h2>
         </motion.div>
 

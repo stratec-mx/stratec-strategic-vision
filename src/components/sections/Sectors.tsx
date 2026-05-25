@@ -17,9 +17,9 @@ export const Sectors = () => {
     <section id="sectors" className="py-32 bg-gradient-fade">
       <div className="container-wide">
         <div className="text-center max-w-2xl mx-auto mb-20">
-          <div className="eyebrow mb-6">— Sectores atendidos</div>
+          <div className="eyebrow mb-6">— Soluciones especializadas</div>
           <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-            Sectores que protegemos: gobierno, industria, corporativos y educación.
+            Cada sector requiere enfoques diferenciados. Protegemos gobiernos, industrias, corporativos e instituciones educativas.
           </h2>
         </div>
 

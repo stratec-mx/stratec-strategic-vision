@@ -24,7 +24,7 @@ export const Hero = () => {
           >
             <div className="h-px w-12 bg-olive" />
             <span className="text-xs uppercase tracking-[0.4em] text-olive font-medium">
-              Consultoría en Seguridad e Inteligencia Estratégica
+              Inteligencia Estratégica & Seguridad Especializada
             </span>
           </motion.div>
 

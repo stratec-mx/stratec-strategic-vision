@@ -17,7 +17,7 @@ export const Advantages = () => {
         <div className="max-w-2xl mb-20">
           <div className="eyebrow mb-6">— Ventajas competitivas</div>
           <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-            Por qué elegir una firma especializada en seguridad corporativa.
+            Lo que nos diferencia: profundidad analítica, confiabilidad operativa y visión estratégica.
           </h2>
         </div>
 
