@@ -17,4 +17,4 @@ User-agent: SemrushBot
 Disallow: /
 
 # Sitemap
-Sitemap: https://www.stratecsecurity.com/sitemap.xml
+Sitemap: https://stratecsecurity.com/sitemap.xml

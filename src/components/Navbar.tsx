@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,15 @@ export const Navbar = () => {
   const isHome = location.pathname === "/";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 100);
     onScroll();
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   const handleNav = (e: React.MouseEvent, hash: string) => {
     e.preventDefault();
@@ -34,80 +38,121 @@ export const Navbar = () => {
     if (isHome) {
       document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
     } else {
-      navigate(`/${hash}`);
+      navigate(`/?${hash}`);
+      setTimeout(() => {
+        document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     }
   };
 
   const transparent = isHome && !scrolled;
   const logoVariant = transparent ? "light" : "dark";
-  const linkColor = transparent ? "text-smoke/80 hover:text-smoke" : "text-steel hover:text-navy";
-  const menuColor = transparent ? "text-smoke" : "text-navy";
+  const linkColor = transparent ? "text-smoke/70 hover:text-smoke" : "text-smoke/60 hover:text-smoke";
+  const menuColor = transparent ? "text-smoke" : "text-smoke";
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled || !isHome ? "bg-smoke/85 backdrop-blur-md border-b border-border shadow-lg shadow-navy/5" : "bg-transparent"
+      className={`header-stratec fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+        scrolled || !isHome
+          ? "bg-[rgba(10,10,15,0.95)] backdrop-blur-md border-b border-[rgba(196,160,74,0.15)] shadow-lg shadow-black/20"
+          : "bg-transparent"
       }`}
     >
-      <div className="container-wide flex items-center justify-between h-24">
+      <div className="container-wide flex items-center justify-between h-20">
+        {/* Logo — única representación del nombre */}
         <Logo size="md" variant={logoVariant} />
-        <nav className="hidden lg:flex items-center gap-10">
+
+        {/* Desktop Navigation */}
+        <nav className="hidden lg:flex items-center gap-12">
           {nav.map((item) => (
             <motion.a
               key={item.href}
-              href={isHome ? item.href : `/${item.href}`}
+              href={isHome ? item.href : `/?${item.href}`}
               onClick={(e) => handleNav(e, item.href)}
-              className={`text-sm transition-colors duration-300 tracking-wide relative group ${linkColor}`}
+              className={`text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light relative group ${linkColor}`}
               whileHover={{ scale: 1.05 }}
             >
               {item.label}
               <motion.div
-                className="absolute bottom-0 left-0 h-0.5 bg-olive origin-left"
+                className="absolute bottom-0 left-0 h-0.5 bg-[#C4A04A] origin-left"
                 initial={{ scaleX: 0 }}
                 whileHover={{ scaleX: 1 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
               />
             </motion.a>
           ))}
         </nav>
-        <div className="hidden lg:flex items-center gap-3">
+
+        {/* Desktop CTA Buttons */}
+        <div className="hidden lg:flex items-center gap-4">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button asChild variant="ghost" size="sm" className={`rounded-none text-xs uppercase tracking-wider h-10 transition-all duration-300 ${transparent ? "text-smoke hover:text-smoke hover:bg-smoke/10" : "text-navy hover:text-navy hover:bg-secondary"}`}>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className={`rounded-none text-xs uppercase tracking-wider h-12 px-6 transition-all duration-300 border-[rgba(196,160,74,0.15)] ${
+                transparent
+                  ? "text-smoke hover:text-smoke hover:bg-smoke/5 hover:border-[rgba(196,160,74,0.3)]"
+                  : "text-smoke hover:text-smoke hover:bg-[rgba(196,160,74,0.08)] hover:border-[#C4A04A]"
+              }`}
+            >
               <a href="/auth">Acceso</a>
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button asChild variant="default" size="sm" className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase px-6 h-10 transition-all duration-300 hover:shadow-lg hover:shadow-navy/30">
-              <a href={isHome ? "#contact" : "/#contact"} onClick={(e) => handleNav(e, "#contact")}>Diagnóstico</a>
+            <Button
+              asChild
+              size="sm"
+              className="rounded-none bg-[#C4A04A] hover:bg-[#C4A04A]/90 text-[#0A0A0F] tracking-wider text-xs uppercase px-6 h-12 transition-all duration-300 hover:shadow-lg hover:shadow-[#C4A04A]/30 font-semibold"
+            >
+              <a href={isHome ? "#contact" : "/?#contact"} onClick={(e) => handleNav(e, "#contact")}>
+                Diagnóstico
+              </a>
             </Button>
           </motion.div>
         </div>
-        <button className={`lg:hidden ${menuColor}`} onClick={() => setOpen(!open)} aria-label="Menu">
-          {open ? <X /> : <Menu />}
+
+        {/* Mobile Menu Button */}
+        <button
+          className={`lg:hidden ${menuColor} hover:text-smoke transition-colors`}
+          onClick={() => setOpen(!open)}
+          aria-label="Menu"
+        >
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
+
+      {/* Mobile Navigation */}
       {open && (
-        <div className="lg:hidden bg-smoke border-t border-border">
-          <nav className="container-wide py-6 flex flex-col gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="lg:hidden bg-[#0A0A0F] border-t border-[rgba(196,160,74,0.15)]"
+        >
+          <nav className="container-wide py-8 flex flex-col gap-6">
             {nav.map((item) => (
               <a
                 key={item.href}
-                href={isHome ? item.href : `/${item.href}`}
+                href={isHome ? item.href : `/?${item.href}`}
                 onClick={(e) => handleNav(e, item.href)}
-                className="text-sm text-steel hover:text-navy py-2"
+                className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
               >
                 {item.label}
               </a>
             ))}
-            <a
-              href={isHome ? "#contact" : "/#contact"}
-              onClick={(e) => handleNav(e, "#contact")}
-              className="text-sm text-navy font-semibold py-2 border-t border-border pt-4"
-            >
-              Solicitar diagnóstico →
-            </a>
+            <div className="border-t border-[rgba(196,160,74,0.15)] pt-6 mt-2">
+              <a
+                href={isHome ? "#contact" : "/?#contact"}
+                onClick={(e) => handleNav(e, "#contact")}
+                className="text-sm text-[#C4A04A] font-semibold py-2 uppercase tracking-wider"
+              >
+                Solicitar diagnóstico →
+              </a>
+            </div>
           </nav>
-        </div>
+        </motion.div>
       )}
     </header>
   );

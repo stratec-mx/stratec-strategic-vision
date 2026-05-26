@@ -16,6 +16,8 @@ import Privacidad from "./pages/Privacidad.tsx";
 import Terminos from "./pages/Terminos.tsx";
 import Confidentiality from "./pages/Confidentiality.tsx";
 import Auth from "./pages/Auth.tsx";
+import CoverageIndex from "./pages/coverage/CoverageIndex.tsx";
+import CoverageLocality from "./pages/coverage/CoverageLocality.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
 import Leads from "./pages/app/Leads.tsx";
@@ -43,6 +45,13 @@ const AppRoutes = () => {
         <Route path="/terminos" element={<Terminos />} />
         <Route path="/confidentiality" element={<Confidentiality />} />
         <Route path="/auth" element={<Auth />} />
+
+        {/* Coverage routes */}
+        <Route path="/cobertura" element={<CoverageIndex />} />
+        <Route path="/cobertura/:state" element={<CoverageLocality />} />
+        <Route path="/cobertura/:state/:city" element={<CoverageLocality />} />
+
+        {/* App routes */}
         <Route path="/app" element={<AppShell />}>
           <Route index element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
