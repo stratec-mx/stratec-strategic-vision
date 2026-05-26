@@ -12,66 +12,102 @@ interface PageSEO {
   canonicalUrl?: string;
 }
 
-const baseUrl = "https://www.stratecsecurity.com";
+const baseUrl = "https://stratecsecurity.com";
 const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/3948a78b-768d-4148-942e-e912d324102d";
 
 export const seoConfig: Record<string, PageSEO> = {
   "/": {
-    title: "STRATEC Security — Consultoría en Seguridad Institucional, Auditorías e Inteligencia Estratégica | México",
-    description: "Consultoría especializada en auditorías de seguridad institucional, análisis de riesgos, protocolos de seguridad, inteligencia preventiva y tecnología de videovigilancia para gobiernos, corporativos e industria en México.",
+    title: "STRATEC Security | Consultoría de Seguridad Institucional",
+    description: "Consultoría de seguridad institucional, auditorías estratégicas y gestión normativa para gobierno, corporativos, universidades e industria en México.",
     keywords: [
-      "auditoría de seguridad",
-      "consultoría seguridad institucional",
+      "consultoría de seguridad",
+      "auditoría de seguridad institucional",
       "análisis de riesgos",
-      "protocolos seguridad",
-      "inteligencia preventiva",
-      "videovigilancia IA",
-      "México",
-      "seguridad corporativa",
-      "análisis de riesgo"
+      "gestión normativa",
+      "seguridad corporativa México",
+      "consultoría de inteligencia",
+      "seguridad institucional"
     ],
     ogImage: defaultImage,
+    ogType: "website",
     canonicalUrl: `${baseUrl}/`
   },
+  "/cobertura": {
+    title: "Cobertura Geográfica | STRATEC Security",
+    description: "Cobertura de consultoría de seguridad institucional en México. Morelos, CDMX, Estado de México, Puebla, Guerrero y Jalisco.",
+    keywords: ["cobertura", "seguridad institucional México", "consultoría por estado"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura`
+  },
+  "/cobertura/morelos": {
+    title: "Consultoría de Seguridad Institucional en Morelos | STRATEC",
+    description: "STRATEC ofrece auditorías de seguridad, gestión institucional y consultoría estratégica en Morelos. Servicio dirigido a gobierno, corporativos, universidades e industria.",
+    keywords: ["consultoría seguridad Morelos", "auditoría seguridad Morelos", "seguridad institucional Morelos"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/morelos`
+  },
+  "/cobertura/morelos/cuernavaca": {
+    title: "Consultoría de Seguridad Institucional en Cuernavaca | STRATEC",
+    description: "STRATEC ofrece auditorías de seguridad, gestión institucional y consultoría estratégica en Cuernavaca, Morelos. Servicio para gobierno, corporativos, universidades e industria.",
+    keywords: ["consultoría seguridad Cuernavaca", "auditoría seguridad Cuernavaca", "seguridad institucional Cuernavaca"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/morelos/cuernavaca`
+  },
+  "/cobertura/cdmx": {
+    title: "Consultoría de Seguridad Institucional en CDMX | STRATEC",
+    description: "Consultoría de seguridad institucional en Ciudad de México. Auditorías, análisis de riesgos y gestión normativa para gobierno federal, corporativos y organismos de la capital.",
+    keywords: ["consultoría seguridad CDMX", "auditoría seguridad Ciudad de México", "seguridad corporativa CDMX"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/cdmx`
+  },
+  "/cobertura/estado-de-mexico": {
+    title: "Consultoría de Seguridad Institucional en Estado de México | STRATEC",
+    description: "Consultoría de seguridad en Estado de México. Cobertura estratégica en zona metropolitana y región industrial.",
+    keywords: ["consultoría seguridad Estado de México", "seguridad Toluca", "consultoría seguridad metropolitana"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/estado-de-mexico`
+  },
+  "/cobertura/puebla": {
+    title: "Consultoría de Seguridad Institucional en Puebla | STRATEC",
+    description: "Consultoría especializada en seguridad para sector manufacturero y educativo en Puebla.",
+    keywords: ["consultoría seguridad Puebla", "seguridad industrial Puebla"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/puebla`
+  },
+  "/cobertura/guerrero": {
+    title: "Consultoría de Seguridad Institucional en Guerrero | STRATEC",
+    description: "Gestión integral de seguridad institucional en Guerrero. Análisis y consultoría en contextos de riesgos complejos.",
+    keywords: ["consultoría seguridad Guerrero"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/guerrero`
+  },
+  "/cobertura/jalisco-guadalajara": {
+    title: "Consultoría de Seguridad Institucional en Guadalajara | STRATEC",
+    description: "Cobertura con desplazamiento. Consultoría de seguridad para corporativos multinacionales en Guadalajara.",
+    keywords: ["consultoría seguridad Guadalajara"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/cobertura/jalisco-guadalajara`
+  },
   "/privacidad": {
-    title: "Política de Privacidad | STRATEC Security",
-    description: "Política de privacidad y protección de datos de STRATEC Security. Conoce cómo protegemos tu información.",
-    keywords: ["privacidad", "protección de datos", "política de privacidad"],
+    title: "Aviso de Privacidad | STRATEC Security",
+    description: "Aviso de privacidad y protección de datos personales de STRATEC Security conforme a LFPDPPP.",
+    keywords: ["privacidad", "protección de datos", "aviso de privacidad"],
+    ogType: "website",
     canonicalUrl: `${baseUrl}/privacidad`
   },
   "/terminos": {
     title: "Términos y Condiciones | STRATEC Security",
-    description: "Términos y condiciones de uso de los servicios y plataforma de STRATEC Security.",
+    description: "Términos y condiciones de uso de servicios y plataforma de STRATEC Security.",
     keywords: ["términos", "condiciones", "términos de servicio"],
+    ogType: "website",
     canonicalUrl: `${baseUrl}/terminos`
   },
-  "/servicios": {
-    title: "Servicios de Consultoría en Seguridad | STRATEC Security",
-    description: "Conoce nuestros servicios de auditoría de seguridad, análisis de riesgos, capacitación y asesoría estratégica.",
-    keywords: [
-      "servicios consultoría",
-      "auditoría seguridad",
-      "análisis de riesgos",
-      "capacitación seguridad"
-    ],
-    canonicalUrl: `${baseUrl}/servicios`
-  },
-  "/sobre-nosotros": {
-    title: "Sobre STRATEC Security — Expertise en Seguridad Institucional",
-    description: "Conoce la historia, experiencia y trayectoria de STRATEC Security en consultoría de seguridad institucional.",
-    keywords: [
-      "sobre nosotros",
-      "equipo STRATEC",
-      "experiencia seguridad",
-      "historia STRATEC"
-    ],
-    canonicalUrl: `${baseUrl}/sobre-nosotros`
-  },
-  "/contacto": {
-    title: "Contacto | STRATEC Security — Solicita tu Diagnóstico",
-    description: "Contacta a STRATEC Security para solicitar un diagnóstico estratégico y conocer cómo podemos ayudarte.",
-    keywords: ["contacto", "solicitar diagnóstico", "asesoría"],
-    canonicalUrl: `${baseUrl}/contacto`
+  "/confidentiality": {
+    title: "Confidencialidad | STRATEC Security",
+    description: "Política de confidencialidad y protección de información institucional.",
+    keywords: ["confidencialidad", "protección información"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/confidentiality`
   }
 };
 

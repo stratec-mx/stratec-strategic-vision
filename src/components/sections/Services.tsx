@@ -1,71 +1,162 @@
 import { motion } from "framer-motion";
-import {
-  Eye, ShieldCheck, Building2, Cpu, Compass, Activity, Lock, LineChart,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
-const services = [
-  { icon: Eye, title: "Inteligencia preventiva", desc: "Anticipación de riesgos mediante análisis predictivo y monitoreo institucional continuo." },
-  { icon: ShieldCheck, title: "Gestión integral de riesgos", desc: "Marcos de evaluación, control y mitigación adaptados a entornos críticos." },
-  { icon: Building2, title: "Consultoría en seguridad institucional", desc: "Diseño de arquitecturas de seguridad para organismos públicos y corporativos." },
-  { icon: Cpu, title: "Integración tecnológica", desc: "Implementación de plataformas de monitoreo, control de acceso y analítica avanzada." },
-  { icon: Compass, title: "Estrategia corporativa", desc: "Asesoría ejecutiva en decisiones de alta complejidad y posicionamiento institucional." },
-  { icon: Activity, title: "Continuidad operativa", desc: "Planes de resiliencia y recuperación ante incidentes y disrupciones críticas." },
-  { icon: Lock, title: "Protección de infraestructura crítica", desc: "Salvaguarda de activos físicos, digitales y humanos de alto valor estratégico." },
-  { icon: LineChart, title: "Análisis y diagnóstico", desc: "Auditorías integrales con reportes ejecutivos accionables y de nivel C-suite." },
+const formats = [
+  {
+    title: "Diagnóstico Estratégico",
+    subtitle: "Evaluación integral de alcance cerrado",
+    description:
+      "Auditoría inicial con alcance acotado. Evaluación integral del estado de seguridad institucional, normativo y operativo. Identificación de brechas críticas, matriz de riesgos clasificada y hoja de ruta priorizada.",
+    recommended:
+      "Recomendado para instituciones que requieren una lectura objetiva del estado actual antes de tomar decisiones de inversión o reorganización.",
+    deliverables: [
+      "Reporte ejecutivo institucional",
+      "Matriz de riesgos clasificada por impacto y probabilidad",
+      "Plan de mitigación priorizado",
+    ]
+  },
+  {
+    title: "Programa de Implementación",
+    subtitle: "Instrumentación multi-fase del diagnóstico",
+    description:
+      "Ejecución estructurada de las intervenciones identificadas en el diagnóstico. Acompañamiento técnico y operativo en la instrumentación de protocolos, normatividad aplicable y arquitectura tecnológica. Alcance escalonado con entregables auditables por fase.",
+    recommended:
+      "Recomendado para instituciones que han completado un diagnóstico y requieren capacidad operativa para llevarlo a ejecución.",
+    deliverables: [
+      "Protocolos operativos documentados",
+      "Implementación de normatividad aplicable",
+      "Arquitectura tecnológica integrada",
+      "Plan de transferencia y autonomía operativa",
+    ]
+  },
+  {
+    title: "Gestión Institucional Continua",
+    subtitle: "Relación estratégica sostenida",
+    description:
+      "Coordinación normativa, gestión documental, soporte ante contingencias y evolución continua del modelo de seguridad. Función equivalente a una dirección de seguridad institucional externalizada, ajustada a la escala del cliente.",
+    recommended:
+      "Recomendado para instituciones que requieren capacidad institucional permanente sin la estructura interna de un área dedicada.",
+    deliverables: [
+      "Coordinación normativa permanente",
+      "Gestión documental e institucional",
+      "Soporte operativo ante contingencias",
+      "Reportes ejecutivos periódicos",
+      "Evolución continua del modelo de seguridad",
+    ]
+  },
 ];
 
 export const Services = () => {
   return (
-    <section id="services" className="py-32 bg-background relative">
-      <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
+    <section id="services" className="py-32 bg-navy-deep relative">
+      <div className="absolute inset-0 grid-bg-light opacity-30 pointer-events-none" />
       <div className="container-wide relative">
+        {/* Header */}
         <div className="grid lg:grid-cols-12 gap-12 mb-20">
-          <div className="lg:col-span-5">
-            <div className="eyebrow mb-6">— Servicios estratégicos</div>
-            <h2 className="font-display text-4xl md:text-5xl font-light text-navy leading-tight text-balance">
-              Diagnósticos profundos, implementación de soluciones y acompañamiento integral en seguridad.
-            </h2>
-          </div>
-          <div className="lg:col-span-6 lg:col-start-7 lg:pt-4">
-            <p className="text-steel text-lg font-light leading-relaxed">
-              Cada práctica combina inteligencia, tecnología y disciplina operativa para
-              entregar resultados medibles y sostenibles en el tiempo.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
-          {services.map((s, i) => (
+          <div className="lg:col-span-7">
             <motion.div
-              key={s.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: (i % 4) * 0.08 }}
-              className="group bg-background p-10 hover:bg-navy hover:shadow-xl hover:shadow-navy/20 hover:scale-105 transition-all duration-500 cursor-pointer relative overflow-hidden"
-              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.6 }}
             >
-              <motion.div whileHover={{ rotate: 12, scale: 1.2 }} transition={{ duration: 0.3 }}>
-                <s.icon className="h-7 w-7 text-olive transition-transform duration-500 group-hover:text-smoke" strokeWidth={1.25} />
-              </motion.div>
-              <h3 className="mt-8 text-lg font-medium text-navy group-hover:text-smoke transition-colors duration-500">
-                {s.title}
-              </h3>
-              <p className="mt-3 text-sm text-steel group-hover:text-smoke/70 leading-relaxed transition-colors duration-500">
-                {s.desc}
-              </p>
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                whileHover={{ opacity: 1, x: 0 }}
-                className="mt-8 text-xs uppercase tracking-widest text-olive opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              >
-                <motion.span className="inline-flex items-center gap-2" whileHover={{ x: 4 }}>
-                  Conocer más <motion.span whileHover={{ x: 2 }}>→</motion.span>
-                </motion.span>
-              </motion.div>
+              <div className="eyebrow mb-6">— Formatos de intervención</div>
+              <h2 className="font-display text-5xl md:text-6xl font-light text-smoke leading-tight text-balance">
+                Tres enfoques adaptados a tu etapa institucional
+              </h2>
+            </motion.div>
+          </div>
+          <div className="lg:col-span-5 lg:pt-4">
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-smoke/70 text-lg font-light leading-relaxed mb-6"
+            >
+              No publicamos tarifas. Cada propuesta se construye sobre el alcance específico, el perfil de riesgo institucional y la profundidad de la intervención requerida.
+            </motion.p>
+          </div>
+        </div>
+
+        {/* Formats Grid */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {formats.map((format, idx) => (
+            <motion.div
+              key={format.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: idx * 0.1 }}
+              className="group border border-olive/30 bg-navy/60 hover:bg-navy/80 transition-all duration-300"
+            >
+              <div className="p-8 flex flex-col h-full">
+                {/* Title and Subtitle */}
+                <div className="mb-6">
+                  <h3 className="text-2xl font-light text-smoke mb-2">
+                    {format.title}
+                  </h3>
+                  <p className="text-sm uppercase tracking-widest text-olive">
+                    {format.subtitle}
+                  </p>
+                </div>
+
+                {/* Description */}
+                <p className="text-sm text-smoke/70 font-light leading-relaxed mb-6">
+                  {format.description}
+                </p>
+
+                {/* Recommended */}
+                <div className="bg-olive/10 border border-olive/20 p-4 mb-6 rounded">
+                  <p className="text-xs text-olive/90 font-light">
+                    <span className="font-semibold">Recomendado:</span> {format.recommended}
+                  </p>
+                </div>
+
+                {/* Deliverables */}
+                <div className="mb-8 flex-grow">
+                  <div className="text-xs uppercase tracking-widest text-smoke/50 mb-4">
+                    Entregables clave
+                  </div>
+                  <ul className="space-y-2">
+                    {format.deliverables.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm text-smoke/70">
+                        <CheckCircle2 size={16} className="text-olive mt-0.5 shrink-0" />
+                        <span className="font-light">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* CTA */}
+                <motion.a
+                  href="#contact"
+                  className="inline-flex items-center gap-2 text-sm uppercase tracking-widest text-olive hover:text-smoke transition-colors group-hover:translate-x-1 transition-transform"
+                  whileHover={{ x: 4 }}
+                >
+                  Solicitar propuesta dirigida
+                  <ArrowRight size={16} />
+                </motion.a>
+              </div>
             </motion.div>
           ))}
         </div>
+
+        {/* Additional context */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-16 border border-olive/20 bg-navy/40 p-8 md:p-10"
+        >
+          <h3 className="text-xl font-light text-smoke mb-4">
+            Metodología transversal en todos los formatos
+          </h3>
+          <p className="text-smoke/70 font-light leading-relaxed">
+            Independientemente del formato elegido, cada intervención se sustenta en análisis de inteligencia, diagnóstico profundo de vulnerabilidades, cumplimiento normativo mexicano e internacional, y diseño de arquitecturas de seguridad ajustadas al contexto específico de cada institución. Entregables auditables, reportes ejecutivos de nivel C-suite, y transferencia de capacidades son estándares en todas nuestras intervenciones.
+          </p>
+        </motion.div>
       </div>
     </section>
   );
