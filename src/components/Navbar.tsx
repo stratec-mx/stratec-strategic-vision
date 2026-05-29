@@ -90,11 +90,7 @@ export const Navbar = () => {
               asChild
               variant="outline"
               size="sm"
-              className={`rounded-none text-xs uppercase tracking-wider h-12 px-6 transition-all duration-300 border-[rgba(196,160,74,0.15)] ${
-                transparent
-                  ? "text-smoke hover:text-smoke hover:bg-smoke/5 hover:border-[rgba(196,160,74,0.3)]"
-                  : "text-smoke hover:text-smoke hover:bg-[rgba(196,160,74,0.08)] hover:border-[#C4A04A]"
-              }`}
+              className="rounded-none text-xs uppercase tracking-wider h-12 px-6 transition-all duration-300 bg-transparent border border-[rgba(196,160,74,0.4)] text-[#C4A04A] hover:bg-[rgba(196,160,74,0.08)] hover:text-[#C4A04A] hover:border-[#C4A04A]"
             >
               <a href="/auth">Acceso</a>
             </Button>
@@ -142,7 +138,13 @@ export const Navbar = () => {
                 {item.label}
               </a>
             ))}
-            <div className="border-t border-[rgba(196,160,74,0.15)] pt-6 mt-2">
+            <div className="border-t border-[rgba(196,160,74,0.15)] pt-6 mt-2 flex flex-col gap-4">
+              <a
+                href="/auth"
+                className="text-sm text-[#C4A04A] py-2 uppercase tracking-wider font-light border border-[rgba(196,160,74,0.4)] text-center hover:bg-[rgba(196,160,74,0.08)] transition-colors"
+              >
+                Acceso
+              </a>
               <a
                 href={isHome ? "#contact" : "/?#contact"}
                 onClick={(e) => handleNav(e, "#contact")}

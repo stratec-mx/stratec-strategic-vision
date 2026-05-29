@@ -19,7 +19,7 @@ export const ORGANIZATION_SCHEMA = {
   ],
   "contactPoint": {
     "@type": "ContactPoint",
-    "telephone": "+52-1-555-000-0000",
+    "email": "contacto@stratecsecurity.com",
     "contactType": "Customer Service",
     "areaServed": "MX",
     "availableLanguage": ["es", "en"]

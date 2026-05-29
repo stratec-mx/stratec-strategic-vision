@@ -249,7 +249,7 @@ const Schedule = () => {
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                   <p className="text-[11px] text-steel/70 leading-relaxed">
-                    Al enviar acepta nuestro <a href="/privacy" className="text-navy underline underline-offset-2">Aviso de Privacidad</a> y los
+                    Al enviar acepta nuestro <a href="/privacidad" className="text-navy underline underline-offset-2">Aviso de Privacidad</a> y los
                     términos de <a href="/confidentiality" className="text-navy underline underline-offset-2">Confidencialidad Institucional</a>.
                   </p>
                 </form>

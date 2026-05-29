@@ -17,16 +17,20 @@ const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/a
 
 export const seoConfig: Record<string, PageSEO> = {
   "/": {
-    title: "STRATEC Security | Consultoría de Seguridad Institucional",
-    description: "Consultoría de seguridad institucional, auditorías estratégicas y gestión normativa para gobierno, corporativos, universidades e industria en México.",
+    title: "STRATEC Security | Consultoría Estratégica de Seguridad Institucional",
+    description: "STRATEC Security — consultoría estratégica de seguridad institucional, auditorías, análisis de riesgos y cumplimiento normativo para gobierno, corporativos e instituciones en México.",
     keywords: [
+      "STRATEC",
+      "STRATEC Security",
+      "consultoría estratégica de seguridad",
+      "estrategia de seguridad institucional",
       "consultoría de seguridad",
       "auditoría de seguridad institucional",
       "análisis de riesgos",
-      "gestión normativa",
+      "cumplimiento normativo",
+      "seguridad institucional México",
       "seguridad corporativa México",
-      "consultoría de inteligencia",
-      "seguridad institucional"
+      "consultoría de inteligencia"
     ],
     ogImage: defaultImage,
     ogType: "website",
