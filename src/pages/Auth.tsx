@@ -104,7 +104,7 @@ const Auth = () => {
               </label>
             </div>
             <Button type="submit" disabled={busy} className="w-full rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase h-12 group">
-              {busy ? "Verificando…" : "Entrar"}
+              {busy ? "Verificando…" : "ACCEDER AL DASHBOARD"}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </form>
