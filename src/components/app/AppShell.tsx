@@ -22,44 +22,13 @@ const nav = [
 ];
 
 export const AppShell = ({ children }: { children?: ReactNode }) => {
-  const { session, loading, hasAccess, user, signOut } = useAuth();
+  const { session, loading, user, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-steel text-sm">Verificando acceso…</div>;
   }
   if (!session) return <Navigate to="/auth" state={{ from: location }} replace />;
-
-  // TEMPORAL: Permitir acceso para debugging
-  // TODO: Reactivar check de permisos cuando RLS esté configurado correctamente
-  // if (!hasAccess) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-smoke p-6">
-  //       <div className="max-w-md w-full border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-  //         <div className="h-14 w-14 rounded-full bg-olive/10 flex items-center justify-center mx-auto mb-6">
-  //           <ShieldAlert className="h-7 w-7 text-olive" />
-  //         </div>
-  //         <div className="eyebrow mb-3">— Acceso pendiente</div>
-  //         <h1 className="font-display text-2xl text-navy font-light">Su cuenta no tiene permisos asignados</h1>
-  //         <p className="mt-4 text-sm text-steel leading-relaxed">
-  //           Su sesión es válida pero aún no tiene un rol institucional autorizado.
-  //           Contacte al administrador para habilitar su acceso al panel operativo.
-  //         </p>
-  //         <p className="mt-4 text-xs text-steel/80">
-  //           <a href="mailto:contacto@stratecsecurity.com" className="text-navy underline underline-offset-2">
-  //             contacto@stratecsecurity.com
-  //           </a>
-  //         </p>
-  //         <Button
-  //           onClick={signOut}
-  //           className="mt-8 w-full rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase h-11"
-  //         >
-  //           <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión
-  //         </Button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="min-h-screen flex bg-smoke">
