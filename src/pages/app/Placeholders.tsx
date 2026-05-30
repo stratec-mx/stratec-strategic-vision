@@ -85,23 +85,34 @@ export const Settings = () => {
   }, []);
 
   const updateRole = async (userId: string, role: Role) => {
-    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (delErr) {
-      toast({ title: "Error", description: "No se pudo actualizar el rol: " + delErr.message, variant: "destructive" });
-      return;
+    // UPSERT atómico: inserta o actualiza en una sola operación
+    // Evita el race condition de DELETE→INSERT que borraba el rol admin antes de re-insertarlo
+    const { error } = await supabase
+      .from("user_roles")
+      .upsert({ user_id: userId, role }, { onConflict: "user_id" });
+
+    if (error) {
+      // Fallback: si no hay constraint único aún, intentar insert directo
+      const { error: insErr } = await supabase.from("user_roles").insert({ user_id: userId, role });
+      if (insErr) {
+        toast({ title: "Error al actualizar rol", description: insErr.message, variant: "destructive" });
+        return;
+      }
     }
-    const { error: insErr } = await supabase.from("user_roles").insert({ user_id: userId, role });
-    if (insErr) {
-      toast({ title: "Error", description: "No se pudo asignar el rol: " + insErr.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "✅ Rol actualizado", description: `Permisos de ${role} aplicados correctamente.` });
+    toast({ title: "✅ Rol actualizado", description: `Permisos de "${role}" aplicados correctamente.` });
     load();
   };
 
   const removeUser = async (userId: string) => {
     if (userId === user?.id) {
-      toast({ title: "Acción no permitida", description: "No puedes eliminar tu propio acceso.", variant: "destructive" });
+      toast({ title: "Acción no permitida", description: "No puedes revocar tu propio acceso de administrador.", variant: "destructive" });
+      return;
+    }
+    // Verificar que quede al menos 1 admin
+    const adminCount = rows.filter(r => r.role === "admin").length;
+    const isRemovingAdmin = rows.find(r => r.id === userId)?.role === "admin";
+    if (isRemovingAdmin && adminCount <= 1) {
+      toast({ title: "Acción no permitida", description: "Debe existir al menos un administrador en el sistema.", variant: "destructive" });
       return;
     }
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
