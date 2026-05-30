@@ -24,16 +24,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
+  const loadRoles = async (uid: string) => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid);
+
+    if (error) {
+      console.warn("[useAuth] Error cargando roles:", error.message);
+      setRoles([]);
+    } else {
+      setRoles((data ?? []).map((r) => r.role as Role));
+    }
+    setRolesLoaded(true);
+  };
+
   useEffect(() => {
-    // TEMPORAL: Bypass role loading - automatically grant admin access to all authenticated users
-    // TODO: Re-enable role loading once RLS is properly configured
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        // Automatically grant admin access to bypass RLS issues
-        setRoles(["admin"]);
-        setRolesLoaded(true);
+        setRolesLoaded(false);
+        loadRoles(s.user.id);
       } else {
         setRoles([]);
         setRolesLoaded(true);
@@ -44,11 +56,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        // Automatically grant admin access to bypass RLS issues
-        setRoles(["admin"]);
+        loadRoles(s.user.id).finally(() => setLoading(false));
+      } else {
         setRolesLoaded(true);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => sub.subscription.unsubscribe();
@@ -58,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasAccess = roles.length > 0;
   const isAdmin = roles.includes("admin");
-  const canEdit = roles.some((r) => r === "admin" || r === "analyst" || r === "operations" || r === "executive");
+  const canEdit = roles.some((r) => ["admin", "analyst", "operations", "executive"].includes(r));
 
   return (
     <Ctx.Provider
@@ -78,8 +90,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = () => {
-  const ctx = useContext(Ctx);
-  // v2.0.2 - Auto-assign admin role on auth, bypass RLS completely
-  return ctx;
-};
+export const useAuth = () => useContext(Ctx);

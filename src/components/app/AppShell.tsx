@@ -22,13 +22,36 @@ const nav = [
 ];
 
 export const AppShell = ({ children }: { children?: ReactNode }) => {
-  const { session, loading, user, signOut } = useAuth();
+  const { session, loading, user, signOut, hasAccess } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-steel text-sm">Verificando acceso…</div>;
   }
   if (!session) return <Navigate to="/auth" state={{ from: location }} replace />;
+
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-smoke">
+        <div className="max-w-md text-center p-8 border border-border bg-card">
+          <ShieldAlert className="h-10 w-10 text-olive mx-auto mb-4" />
+          <div className="font-display text-xl text-navy mb-2">Sin rol asignado</div>
+          <p className="text-sm text-steel mb-4">
+            Su sesión es válida pero no tiene un rol institucional autorizado.
+            Contacte al administrador para habilitar su acceso.
+          </p>
+          <a href="mailto:contacto@stratecsecurity.com" className="text-xs text-navy underline underline-offset-2">
+            contacto@stratecsecurity.com
+          </a>
+          <div className="mt-6">
+            <button onClick={signOut} className="text-xs text-steel hover:text-navy underline underline-offset-2">
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-smoke">
