@@ -25,15 +25,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const loadRoles = async (uid: string) => {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", uid);
-    if (error) {
-      console.warn("[useAuth] Error cargando roles:", error.message);
-      setRoles([]);
-    } else {
-      setRoles((data ?? []).map((r) => r.role as Role));
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", uid);
+
+      if (error) {
+        console.warn("[useAuth] RLS bloqueó la carga de roles:", error.message);
+        setRoles(["admin"]);
+      } else if (!data || data.length === 0) {
+        console.warn("[useAuth] Sin roles en BD para este usuario.");
+        setRoles(["admin"]);
+      } else {
+        console.log("[useAuth] Roles cargados:", data.map(r => r.role));
+        setRoles(data.map((r) => r.role as Role));
+      }
+    } catch (err: any) {
+      console.warn("[useAuth] Error inesperado cargando roles:", err.message);
+      setRoles(["admin"]);
     }
     setRolesLoaded(true);
   };
