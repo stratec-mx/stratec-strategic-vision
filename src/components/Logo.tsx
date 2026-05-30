@@ -6,7 +6,7 @@ export const Logo = ({ variant = "dark", size = "md" }: { variant?: "dark" | "li
   const titleSize = { sm: "text-base", md: "text-lg", lg: "text-2xl" }[size];
   const taglineSize = { sm: "text-[8px]", md: "text-[9px]", lg: "text-[10px]" }[size];
 
-  const titleColor = variant === "light" ? "text-smoke" : "text-smoke";
+  const titleColor = variant === "light" ? "text-smoke" : "text-navy";
   const taglineColor = variant === "light" ? "text-smoke/50" : "text-[#C4A04A]";
 
   return (
