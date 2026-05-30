@@ -21,6 +21,7 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (session) navigate("/app", { replace: true });
@@ -96,7 +97,11 @@ const Auth = () => {
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-steel">Contraseña</Label>
-              <Input name="password" type="password" required maxLength={72} autoComplete="current-password" className="rounded-none h-11" />
+              <Input name="password" type={showPassword ? "text" : "password"} required maxLength={72} autoComplete="current-password" className="rounded-none h-11" />
+              <label className="flex items-center gap-2 text-xs text-steel cursor-pointer">
+                <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} className="rounded border-border" />
+                Mostrar contraseña
+              </label>
             </div>
             <Button type="submit" disabled={busy} className="w-full rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase h-12 group">
               {busy ? "Verificando…" : "Entrar"}
