@@ -129,9 +129,17 @@ export const Settings = () => {
       toast({ title: "Datos incompletos", description: "Ingresa correo y contraseña temporal.", variant: "destructive" });
       return;
     }
+    if (invitePassword.length < 6) {
+      toast({ title: "Contraseña muy corta", description: "Mínimo 6 caracteres.", variant: "destructive" });
+      return;
+    }
     setInviting(true);
     try {
-      // Create the user account
+      // Guardar sesión del admin antes de crear el nuevo usuario
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+      if (!adminSession) throw new Error("Sesión de admin no encontrada.");
+
+      // Crear el nuevo usuario
       const { data, error } = await supabase.auth.signUp({
         email: inviteEmail.trim().toLowerCase(),
         password: invitePassword,
@@ -139,27 +147,43 @@ export const Settings = () => {
       });
 
       if (error) throw error;
-      if (!data.user) throw new Error("No se creó el usuario.");
+      if (!data.user) throw new Error("No se pudo crear el usuario.");
 
-      // Assign role immediately
-      const { error: roleErr } = await supabase.from("user_roles").insert({
-        user_id: data.user.id,
-        role: inviteRole,
-      });
+      const newUserId = data.user.id;
 
-      if (roleErr) throw roleErr;
+      // Restaurar sesión del admin si fue reemplazada por el signUp
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+      }
 
-      toast({
-        title: "✅ Colaborador creado",
-        description: `${inviteEmail} registrado con rol ${inviteRole}. Se envió confirmación por correo.`,
-      });
+      // Asignar rol al nuevo usuario (como admin)
+      const { error: roleErr } = await supabase
+        .from("user_roles")
+        .insert({ user_id: newUserId, role: inviteRole });
+
+      if (roleErr) {
+        toast({
+          title: "⚠️ Usuario creado, rol pendiente",
+          description: `${inviteEmail} fue creado pero no se pudo asignar el rol: ${roleErr.message}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "✅ Colaborador registrado",
+          description: `${inviteEmail} tiene acceso con rol "${inviteRole}".`,
+        });
+      }
+
       setInviteEmail("");
       setInvitePassword("");
       setInviteRole("viewer");
       setShowInvite(false);
       load();
     } catch (err: any) {
-      toast({ title: "Error al crear usuario", description: err.message, variant: "destructive" });
+      toast({ title: "Error al crear colaborador", description: err.message, variant: "destructive" });
     } finally {
       setInviting(false);
     }
