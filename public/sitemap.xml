@@ -3,107 +3,107 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://stratecsecurity.com/</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Coverage Index -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- Primary Coverage: Morelos -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/morelos</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/morelos</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://stratecsecurity.com/cobertura/morelos/cuernavaca</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/morelos/cuernavaca</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://stratecsecurity.com/cobertura/morelos/jiutepec</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/morelos/jiutepec</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
   <url>
-    <loc>https://stratecsecurity.com/cobertura/morelos/cuautla</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/morelos/cuautla</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
   <!-- Primary Coverage: CDMX -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/cdmx</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/cdmx</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Primary Coverage: Estado de México -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/estado-de-mexico</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/estado-de-mexico</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Primary Coverage: Puebla -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/puebla</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/puebla</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Primary Coverage: Guerrero -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/guerrero</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/guerrero</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Secondary Coverage: Jalisco -->
   <url>
-    <loc>https://stratecsecurity.com/cobertura/jalisco-guadalajara</loc>
-    <lastmod>2026-05-25</lastmod>
+    <loc>https://www.stratecsecurity.com/cobertura/jalisco-guadalajara</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- Legal pages -->
   <url>
-    <loc>https://stratecsecurity.com/privacidad</loc>
-    <lastmod>2026-05-01</lastmod>
+    <loc>https://www.stratecsecurity.com/privacidad</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://stratecsecurity.com/terminos</loc>
-    <lastmod>2026-05-01</lastmod>
+    <loc>https://www.stratecsecurity.com/terminos</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://stratecsecurity.com/confidentiality</loc>
-    <lastmod>2026-05-01</lastmod>
+    <loc>https://www.stratecsecurity.com/confidentiality</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

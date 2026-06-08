@@ -1,8 +1,8 @@
 // SEO Configuration and utilities
 
 export const SITE_NAME = "STRATEC";
-export const SITE_URL = "https://stratec.mx";
-export const SITE_DOMAIN = "stratec.mx";
+export const SITE_URL = "https://www.stratecsecurity.com";
+export const SITE_DOMAIN = "www.stratecsecurity.com";
 
 export const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",

@@ -12,7 +12,7 @@ interface PageSEO {
   canonicalUrl?: string;
 }
 
-const baseUrl = "https://stratecsecurity.com";
+const baseUrl = "https://www.stratecsecurity.com";
 const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/3948a78b-768d-4148-942e-e912d324102d";
 
 export const seoConfig: Record<string, PageSEO> = {
