@@ -15,7 +15,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
   const { heroImage, breadcrumb, h1, lead, intro, blocks, modalidades, nota, cta } = data;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F]">
+    <div className="min-h-screen bg-navy-deep">
       <Navbar />
 
       <main id="main-content">
@@ -34,9 +34,9 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
               decoding="async"
             />
             {/* Gradiente de izquierda a derecha (igual que Hero principal) */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0F] via-[#0A0A0F]/88 to-[#0A0A0F]/50" />
+            <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/88 to-[#0A0A0F]/50" />
             {/* Gradiente vertical inferior para mezclar con el contenido */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F]/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-deep via-navy-deep/20 to-transparent" />
             {/* Animación de red — idéntica a la página de inicio */}
             <NetworkBackground density={0.85} />
             {/* Grid sutil */}
@@ -124,7 +124,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
         </section>
 
         {/* ── Bloques de sub-servicios ───────────────────────── */}
-        <section className="py-20 md:py-28 bg-[#0A0A0F]">
+        <section className="py-20 md:py-28 bg-navy-deep">
           <div className="container-wide max-w-4xl">
 
             {/* Cabecera de sección */}
@@ -147,7 +147,6 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
                   key={block.h2}
                   block={block}
                   index={i}
-                  heroImage={heroImage}
                   titulo={h1}
                   cta={cta}
                   total={blocks.length}
@@ -191,7 +190,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
         </section>
 
         {/* ── CTA de cierre ──────────────────────────────────── */}
-        <section className="py-20 md:py-28 border-t border-[rgba(196,160,74,0.1)] bg-[#0A0A0F]">
+        <section className="py-20 md:py-28 border-t border-[rgba(196,160,74,0.1)] bg-navy-deep">
           <div className="container-wide text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -225,13 +224,11 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
 function BlockItem({
   block,
   index,
-  heroImage,
   titulo,
   cta,
 }: {
   block: ServiceBlock;
   index: number;
-  heroImage: string;
   titulo: string;
   cta: string;
   total: number;
@@ -331,17 +328,17 @@ function BlockItem({
                 </a>
               </div>
 
-              {/* Imagen de referencia */}
+              {/* Imagen específica del sub-servicio */}
               <div className="md:col-span-4">
                 <div className="relative h-36 md:h-full min-h-[9rem] overflow-hidden">
                   <img
-                    src={heroImage}
-                    alt={titulo}
+                    src={block.blockImage}
+                    alt={block.h2}
                     className="w-full h-full object-cover"
                     style={{ opacity: 0.6 }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F]/80 via-[#0A0A0F]/20 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0F]/30 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy-deep/80 via-navy-deep/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-navy-deep/30 to-transparent" />
                   {/* Etiqueta decorativa */}
                   <div className="absolute bottom-3 left-3">
                     <span className="font-condensed text-[0.62rem] uppercase tracking-[0.22em] text-[#C4A04A]/70">

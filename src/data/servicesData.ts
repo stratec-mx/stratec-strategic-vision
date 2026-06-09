@@ -7,6 +7,7 @@
 export interface ServiceBlock {
   h2: string;
   p: string;
+  blockImage: string; // imagen específica del sub-servicio
 }
 
 export interface ServiceData {
@@ -90,22 +91,27 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       {
         h2: "Diagnóstico Integral de Seguridad",
         p: "Evaluación estructurada de las condiciones de seguridad física, operativa y organizacional de una instalación, negocio o institución. El resultado es una visión clara de los riesgos existentes, las vulnerabilidades identificadas y las acciones prioritarias para reducir la exposición.",
+        blockImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Auditoría de Seguridad",
         p: "Revisión técnica de procedimientos, infraestructura, controles internos y medidas de protección implementadas. Permite verificar el cumplimiento de protocolos, identificar desviaciones operativas y fortalecer los mecanismos de control.",
+        blockImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Análisis de Riesgos y Vulnerabilidades",
         p: "Identificación de amenazas internas y externas que puedan afectar personas, activos, operaciones o información. Se desarrolla una matriz de riesgos que facilita la toma de decisiones y la priorización de recursos.",
+        blockImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Prevención de Pérdidas",
         p: "Diseño de medidas orientadas a reducir robos, fraudes, mermas, accesos no autorizados y otras situaciones que impactan la continuidad operativa.",
+        blockImage: "https://images.unsplash.com/photo-1557862921-37829c790f19?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Protocolos Institucionales",
         p: "Desarrollo de procedimientos de actuación ante incidentes, emergencias y situaciones críticas, adaptados al entorno y necesidades específicas de cada organización.",
+        blockImage: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=900&q=80",
       },
     ],
     gancho:
@@ -127,22 +133,27 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       {
         h2: "Programas Internos de Protección Civil",
         p: "Diseño e integración de programas conforme a la normatividad aplicable, incorporando análisis de riesgos, organización interna y procedimientos de actuación.",
+        blockImage: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Análisis de Riesgos",
         p: "Identificación de amenazas naturales, tecnológicas y humanas que puedan afectar la operación de una instalación o actividad.",
+        blockImage: "https://images.unsplash.com/photo-1495139800991-8a851eddb8c1?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Brigadas de Emergencia",
         p: "Integración, capacitación y fortalecimiento de brigadas responsables de la atención inicial ante situaciones de emergencia.",
+        blockImage: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Simulacros",
         p: "Planeación, ejecución y evaluación de ejercicios prácticos orientados a medir la capacidad de respuesta institucional.",
+        blockImage: "https://images.unsplash.com/photo-1590012314607-cda9d9b699ae?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Planes de Emergencia y Continuidad Operativa",
         p: "Desarrollo de estrategias que permitan mantener la operación o recuperar funciones críticas ante eventos disruptivos.",
+        blockImage: "https://images.unsplash.com/photo-1503551723145-6c040742065b?auto=format&fit=crop&w=900&q=80",
       },
     ],
     gancho:
@@ -164,22 +175,27 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       {
         h2: "Seguridad Institucional y Protocolos",
         p: "Diseño e implementación de Procedimientos Operativos Estandarizados (SOP), protocolos internos y mecanismos de actuación ante incidentes.",
+        blockImage: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Gestión Integral de Riesgos",
         p: "Metodologías para identificar, evaluar y gestionar riesgos en entornos institucionales y empresariales.",
+        blockImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Protección Civil y Emergencias",
         p: "Capacitación para brigadas, responsables de seguridad y personal operativo.",
+        blockImage: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Prevención de Fraudes e Ingeniería Social",
         p: "Programas orientados a reducir riesgos asociados a phishing, vishing, fraude corporativo y manipulación de información.",
+        blockImage: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Atención a Personas en Situación de Vulnerabilidad",
         p: "Capacitación en protocolos de primer contacto, atención inicial y actuación institucional.",
+        blockImage: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?auto=format&fit=crop&w=900&q=80",
       },
     ],
     modalidades: "Presencial · Virtual · In Company",
@@ -203,26 +219,32 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       {
         h2: "Sistemas de Videovigilancia",
         p: "Diseño e implementación de soluciones de monitoreo mediante cámaras de seguridad para hogares, comercios, empresas e instituciones. Incluye evaluación de cobertura, configuración y optimización de recursos tecnológicos.",
+        blockImage: "https://images.unsplash.com/photo-1557862921-37829c790f19?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Monitoreo Vehicular Inteligente",
         p: "Implementación de sistemas de localización satelital que permiten supervisar rutas, activos móviles y unidades operativas en tiempo real. Las soluciones incorporan herramientas de geolocalización, alertamiento, análisis de recorridos y control de flotas.",
+        blockImage: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Videotelemática y Cámaras Vehiculares",
         p: "Integración de cámaras embarcadas para registrar eventos durante la operación de vehículos corporativos, comerciales o institucionales. Permite generar evidencia, fortalecer la supervisión operativa y mejorar la gestión de incidentes.",
+        blockImage: "https://images.unsplash.com/photo-1544198365-f5d60b6d8190?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Control de Accesos",
         p: "Implementación de sistemas destinados a regular y registrar el ingreso de personas, vehículos y proveedores.",
+        blockImage: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Sistemas de Alarma y Detección",
         p: "Soluciones orientadas a la detección temprana de eventos de riesgo y fortalecimiento de la capacidad de respuesta.",
+        blockImage: "https://images.unsplash.com/photo-1535016120720-40c646be5580?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Proyectos Integrales de Seguridad",
         p: "Diseño de arquitecturas tecnológicas que integran videovigilancia, monitoreo vehicular, control de accesos y sistemas de protección en una solución coordinada.",
+        blockImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
       },
     ],
     gancho:
@@ -244,22 +266,27 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       {
         h2: "Diagnósticos Institucionales",
         p: "Evaluación de capacidades operativas, procedimientos y estructuras organizacionales relacionadas con la seguridad.",
+        blockImage: "https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Planeación Estratégica",
         p: "Diseño de programas, proyectos e instrumentos orientados al fortalecimiento institucional.",
+        blockImage: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Seguridad Urbana y Entornos Seguros",
         p: "Análisis de espacios, infraestructura y dinámicas de riesgo para la generación de entornos más seguros y funcionales.",
+        blockImage: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Prevención y Gestión de Riesgos",
         p: "Desarrollo de estrategias preventivas orientadas a reducir vulnerabilidades y fortalecer capacidades de respuesta.",
+        blockImage: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Estudios Especializados",
         p: "Elaboración de análisis técnicos, reportes ejecutivos, diagnósticos sectoriales y documentos estratégicos para la toma de decisiones.",
+        blockImage: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=900&q=80",
       },
     ],
     nota: "STRATEC opera con el sector público bajo acuerdos de confidencialidad institucional. Los detalles de cada intervención se presentan exclusivamente en propuesta dirigida.",

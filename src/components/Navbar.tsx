@@ -25,6 +25,12 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
 
+  // Páginas que tienen un hero oscuro — el logo arranca blanco y transiciona al bajar
+  const hasDarkHero =
+    location.pathname === "/" ||
+    location.pathname === "/servicios" ||
+    location.pathname.startsWith("/servicios/");
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
     onScroll();
@@ -49,7 +55,7 @@ export const Navbar = () => {
     }
   };
 
-  const transparent = isHome && !scrolled;
+  const transparent = hasDarkHero && !scrolled;
   const logoVariant = transparent ? "light" : "dark";
   const linkColor = transparent ? "text-smoke/70 hover:text-smoke" : "text-smoke/60 hover:text-smoke";
   const menuColor = transparent ? "text-smoke" : "text-smoke";
@@ -57,7 +63,7 @@ export const Navbar = () => {
   return (
     <header
       className={`header-stratec fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled || !isHome
+        !hasDarkHero || scrolled
           ? "bg-[rgba(10,10,15,0.95)] backdrop-blur-md border-b border-[rgba(196,160,74,0.15)] shadow-lg shadow-black/20"
           : "bg-transparent"
       }`}
