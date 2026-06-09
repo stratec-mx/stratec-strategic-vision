@@ -1,0 +1,62 @@
+name: 📱 Publicación diaria en redes sociales
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HORARIO: lunes a viernes a las 9:00 AM (hora Ciudad de México, UTC-6)
+#          = 15:00 UTC en horario de invierno
+# Para publicar también en fin de semana: cambiar '1-5' por '*'
+# Para cambiar la hora: modificar el número '15' (hora UTC)
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: "0 15 * * 1-5"   # Lun–Vie, 9 AM México City
+
+  # Permite ejecutar manualmente desde GitHub → Actions → Run workflow
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Solo mostrar captions sin publicar (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  publicar:
+    name: Generar y publicar
+    runs-on: ubuntu-latest
+
+    # Permiso para hacer commit de las imágenes archivadas
+    permissions:
+      contents: write
+
+    steps:
+      # ── 1. Descargar el repositorio ──────────────────────────────────────
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Configurar Node.js ────────────────────────────────────────────
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # ── 3. Ejecutar el script de publicación ─────────────────────────────
+      - name: Ejecutar publicador social
+        env:
+          ANTHROPIC_API_KEY:           ${{ secrets.ANTHROPIC_API_KEY }}
+          LINKEDIN_ACCESS_TOKEN:       ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_ORG_ID:             ${{ secrets.LINKEDIN_ORG_ID }}
+          FACEBOOK_PAGE_ACCESS_TOKEN:  ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+          FACEBOOK_PAGE_ID:            ${{ secrets.FACEBOOK_PAGE_ID }}
+          DRY_RUN:                     ${{ github.event.inputs.dry_run || 'false' }}
+        run: node scripts/social-post.mjs
+
+      # ── 4. Archivar imagen publicada (commit automático) ─────────────────
+      - name: Archivar imagen en el repositorio
+        run: |
+          git config user.name  "STRATEC Bot"
+          git config user.email "bot@stratecsecurity.com"
+          git add public/social-posts/
+          # Solo hace commit si hubo cambios (imagen movida a posted/)
+          git diff --staged --quiet || git commit -m "chore: imagen publicada el $(date '+%Y-%m-%d') [bot]"
+          git push
