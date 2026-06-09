@@ -46,7 +46,7 @@ export const ORGANIZATION_SCHEMA = {
   "logo": `${SITE_URL}/logo.png`,
   "description": "Consultoría estratégica en seguridad institucional, nearshoring y protección civil en México",
   "sameAs": [
-    "https://www.linkedin.com/company/stratec",
+    "https://www.linkedin.com/in/stratec-security-35a484415/",
     "https://www.facebook.com/stratec",
     "https://www.instagram.com/stratec"
   ],
