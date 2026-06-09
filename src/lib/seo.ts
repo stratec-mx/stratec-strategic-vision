@@ -7,10 +7,9 @@ export const SITE_DOMAIN = "www.stratecsecurity.com";
 // ── Datos del consultor/autor — actualizar con nombre real y LinkedIn ────────
 // E-E-A-T: señal de autoría para Google y agentes de IA (YMYL)
 export const SITE_CONSULTANT = {
-  name: "Director de Consultoría · STRATEC",
-  title: "Especialista en Seguridad Institucional, Protección Civil y Gestión de Riesgos",
-  bio: "Más de 15 años de trayectoria en diagnósticos de seguridad, implementación de Programas Internos de Protección Civil y auditorías institucionales para organizaciones públicas y privadas en México.",
-  // ⚠️ Actualiza con el perfil de LinkedIn del consultor responsable:
+  name: "Juan Carlos González",
+  title: "Coordinador General · STRATEC",
+  bio: "12 años de trayectoria en seguridad institucional, implementación de Programas Internos de Protección Civil, auditorías de seguridad y gestión de riesgos para organizaciones públicas y privadas en México.",
   linkedin: "https://www.linkedin.com/company/stratec",
   methodologies: [
     { label: "ISO 31000:2018", desc: "Gestión del Riesgo" },
