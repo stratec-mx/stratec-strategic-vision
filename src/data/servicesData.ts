@@ -11,6 +11,7 @@ export interface ServiceData {
   titulo: string;
   descripcionCorta: string;
   href: string;
+  heroImage: string;
   breadcrumb: string;
   h1: string;
   lead: string;
@@ -61,6 +62,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
+    heroImage: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Consultoría en Seguridad",
     h1: "Consultoría en Seguridad",
     lead: "Toda organización enfrenta riesgos. La diferencia radica en conocerlos antes de que se conviertan en pérdidas, interrupciones operativas o afectaciones patrimoniales. STRATEC desarrolla diagnósticos, auditorías y estrategias de protección que permiten a empresas, instituciones y organizaciones fortalecer sus capacidades de seguridad mediante soluciones objetivas, medibles y alineadas a su operación.",
@@ -95,6 +97,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",
     href: "/servicios/proteccion-civil",
+    heroImage: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Protección Civil y Gestión Integral de Riesgos",
     h1: "Protección Civil y Gestión Integral de Riesgos",
     lead: "La preparación es la herramienta más efectiva para reducir el impacto de una emergencia. STRATEC acompaña a organizaciones públicas y privadas en la identificación de riesgos, cumplimiento normativo y fortalecimiento de capacidades de respuesta.",
@@ -129,6 +132,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Capacitación Especializada",
     descripcionCorta: "Formación operativa en seguridad, riesgos y protección civil.",
     href: "/servicios/capacitacion",
+    heroImage: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Capacitación Especializada",
     h1: "Capacitación Especializada",
     lead: "La seguridad depende de las personas que la ejecutan. STRATEC desarrolla programas de formación orientados a fortalecer competencias, mejorar la capacidad de respuesta y generar una cultura preventiva dentro de organizaciones públicas y privadas.",
@@ -164,6 +168,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Integración Tecnológica para la Seguridad",
     descripcionCorta: "Videovigilancia, monitoreo vehicular, control de accesos y proyectos integrales.",
     href: "/servicios/integracion-tecnologica",
+    heroImage: "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Integración Tecnológica para la Seguridad",
     h1: "Integración Tecnológica para la Seguridad",
     lead: "La tecnología genera valor cuando se integra a una estrategia de seguridad. STRATEC diseña soluciones tecnológicas orientadas a mejorar la supervisión, fortalecer el control operativo y proporcionar información útil para la toma de decisiones.",
@@ -203,6 +208,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Consultoría para Gobierno e Instituciones",
     descripcionCorta: "Diagnósticos institucionales, planeación estratégica y seguridad urbana.",
     href: "/servicios/consultoria-gobierno",
+    heroImage: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Consultoría para Gobierno e Instituciones",
     h1: "Consultoría para Gobierno e Instituciones",
     lead: "La seguridad institucional requiere análisis técnico, planeación estratégica y mecanismos de gestión que permitan fortalecer capacidades y optimizar recursos. STRATEC desarrolla soluciones dirigidas a dependencias públicas, organismos autónomos, instituciones educativas y organizaciones que requieren instrumentos especializados para la toma de decisiones.",

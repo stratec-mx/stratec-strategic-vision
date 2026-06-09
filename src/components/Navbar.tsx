@@ -5,17 +5,19 @@ import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
-const nav = [
-  { label: "Firma", href: "#about" },
-  { label: "Servicios", href: "#services" },
-  { label: "Sectores", href: "#sectors" },
-  { label: "Metodología", href: "#methodology" },
-  { label: "Tecnología", href: "#technology" },
-  { label: "Casos", href: "#cases" },
-];
+type NavItem =
+  | { label: string; href: string; to?: never }
+  | { label: string; to: string; href?: never };
 
-// Enlace directo (no anchor)
-const SERVICIOS_PATH = "/servicios";
+const nav: NavItem[] = [
+  { label: "Firma",       href: "#about" },
+  { label: "Servicios",   href: "#services" },
+  { label: "Sectores",    href: "#sectors" },
+  { label: "Metodología", href: "#methodology" },
+  { label: "Tecnología",  href: "#technology" },
+  { label: "Casos",       href: "#cases" },
+  { label: "Oferta",      to: "/servicios" },
+];
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -66,33 +68,43 @@ export const Navbar = () => {
         <Logo size="md" variant={logoVariant} />
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-12">
-          {nav.map((item) => (
-            <motion.a
-              key={item.href}
-              href={isHome ? item.href : `/?${item.href}`}
-              onClick={(e) => handleNav(e, item.href)}
-              className={`text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light relative group ${linkColor}`}
-              whileHover={{ scale: 1.05 }}
-            >
-              {item.label}
-              <motion.div
-                className="absolute bottom-0 left-0 h-0.5 bg-[#C4A04A] origin-left"
-                initial={{ scaleX: 0 }}
-                whileHover={{ scaleX: 1 }}
-                transition={{ duration: 0.2 }}
-              />
-            </motion.a>
-          ))}
+        <nav className="hidden lg:flex items-center gap-10">
+          {nav.map((item) =>
+            item.to ? (
+              // Enlace directo de React Router (sin anchor)
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light relative group ${linkColor}`}
+              >
+                {item.label}
+                <motion.div
+                  className="absolute bottom-0 left-0 h-0.5 bg-[#C4A04A] origin-left"
+                  initial={{ scaleX: 0 }}
+                  whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </Link>
+            ) : (
+              // Enlace de anchor (scroll o navigate)
+              <motion.a
+                key={item.href}
+                href={isHome ? item.href : `/?${item.href}`}
+                onClick={(e) => handleNav(e, item.href!)}
+                className={`text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light relative group ${linkColor}`}
+                whileHover={{ scale: 1.05 }}
+              >
+                {item.label}
+                <motion.div
+                  className="absolute bottom-0 left-0 h-0.5 bg-[#C4A04A] origin-left"
+                  initial={{ scaleX: 0 }}
+                  whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </motion.a>
+            )
+          )}
         </nav>
-
-        {/* Servicios — enlace directo */}
-        <Link
-          to={SERVICIOS_PATH}
-          className={`hidden lg:block text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light ${linkColor}`}
-        >
-          Oferta
-        </Link>
 
         {/* Desktop CTA Buttons */}
         <div className="hidden lg:flex items-center gap-4">
@@ -139,22 +151,26 @@ export const Navbar = () => {
           className="lg:hidden bg-[#0A0A0F] border-t border-[rgba(196,160,74,0.15)]"
         >
           <nav className="container-wide py-8 flex flex-col gap-6">
-            {nav.map((item) => (
-              <a
-                key={item.href}
-                href={isHome ? item.href : `/?${item.href}`}
-                onClick={(e) => handleNav(e, item.href)}
-                className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link
-              to={SERVICIOS_PATH}
-              className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
-            >
-              Oferta de servicios
-            </Link>
+            {nav.map((item) =>
+              item.to ? (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <a
+                  key={item.href}
+                  href={isHome ? item.href : `/?${item.href}`}
+                  onClick={(e) => handleNav(e, item.href!)}
+                  className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
+                >
+                  {item.label}
+                </a>
+              )
+            )}
             <div className="border-t border-[rgba(196,160,74,0.15)] pt-6 mt-2 flex flex-col gap-4">
               <a
                 href="/auth"
