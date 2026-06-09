@@ -7,7 +7,35 @@ Disallow: /admin
 Disallow: /api
 Disallow: /*.pdf
 
-# Bloquear bots maliciosos conocidos
+# ── Agentes de IA — acceso explícito para GEO / RAG ──────────────────────────
+# Gemini (Google AI Overview)
+User-agent: Google-Extended
+Allow: /
+
+# ChatGPT / OpenAI
+User-agent: GPTBot
+Allow: /
+
+# Anthropic Claude
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Common Crawl (base de entrenamiento de muchos modelos)
+User-agent: CCBot
+Allow: /
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+
+# ── Bots maliciosos — bloqueados ──────────────────────────────────────────────
 User-agent: MJ12bot
 Disallow: /
 

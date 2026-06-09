@@ -5,17 +5,21 @@ import { ArrowRight, ChevronRight, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { NetworkBackground } from "@/components/NetworkBackground";
-import { ServiceBlock, ServiceData } from "@/data/servicesData";
+import { ServiceBlock, ServiceData, RagDeliverable } from "@/data/servicesData";
 import { SeoHelmet } from "@/components/SEO/SeoHelmet";
 import { SchemaMarkup } from "@/components/SEO/SchemaMarkup";
-import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL } from "@/lib/seo";
+import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL, SITE_CONSULTANT, PERSON_SCHEMA } from "@/lib/seo";
 
 interface ServiceLandingProps {
   data: ServiceData;
 }
 
 export default function ServiceLanding({ data }: ServiceLandingProps) {
-  const { heroImage, breadcrumb, parentBreadcrumb, parentHref, h1, lead, intro, blocks, modalidades, nota, cta, seo, href } = data;
+  const {
+    heroImage, breadcrumb, parentBreadcrumb, parentHref,
+    h1, lead, intro, blocks, modalidades, nota, cta, seo, href,
+    ragSnippet, deliverables, deliverablesListTitle, deliverablesList,
+  } = data;
 
   const pageUrl = `${SITE_URL}${href}`;
   const seoTitle = seo?.title ?? `${h1} | STRATEC`;
@@ -58,6 +62,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
       />
       <SchemaMarkup schema={serviceSchema} />
       <SchemaMarkup schema={breadcrumbSchema} />
+      <SchemaMarkup schema={PERSON_SCHEMA(SITE_CONSULTANT)} />
       <Navbar />
 
       <main id="main-content">
@@ -173,6 +178,164 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
           </motion.div>
         </section>
 
+        {/* ══ RAG SNIPPET — Resumen Ejecutivo ════════════════════
+             Texto plano visible siempre (nunca oculto), estructurado
+             para extracción como Featured Snippet por Google y LLMs.
+             H2 + P inmediato = patrón RAG óptimo.             ══════ */}
+        {ragSnippet && (
+          <section
+            aria-label="Resumen ejecutivo del servicio"
+            className="py-14 md:py-18 bg-[#0D0D18] border-b border-[rgba(196,160,74,0.12)]"
+          >
+            <div className="container-wide max-w-4xl">
+              <motion.article
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="border-l-4 border-[#C4A04A]/55 pl-6 pr-4 py-6 bg-[rgba(196,160,74,0.03)]"
+              >
+                {/* Etiqueta visible — señal semántica para crawlers */}
+                <span className="font-condensed text-[0.62rem] uppercase tracking-[0.38em] text-[#C4A04A]/45 block mb-4">
+                  ── Resumen ejecutivo
+                </span>
+
+                {/* H2 conversacional — trigger de Featured Snippet */}
+                <h2 className="font-serif font-light text-xl md:text-[1.55rem] text-white leading-snug mb-4 max-w-3xl">
+                  {ragSnippet.h2}
+                </h2>
+
+                {/* Párrafo de respuesta directa ≤ 55 palabras — formato RAG */}
+                <p
+                  className="font-condensed font-light text-[0.97rem] leading-[1.9] max-w-3xl"
+                  style={{ color: "rgba(230,228,224,0.72)" }}
+                >
+                  {ragSnippet.p}
+                </p>
+              </motion.article>
+            </div>
+          </section>
+        )}
+
+        {/* ══ TABLA DE ENTREGABLES ════════════════════════════════
+             <table> nativo — los LLMs extraen tablas HTML con alta
+             fidelidad. Encabezados <th> descriptivos. Sin imágenes. ══ */}
+        {(deliverables || deliverablesList) && (
+          <section
+            aria-label="Entregables y aplicabilidad del servicio"
+            className="py-14 md:py-20 bg-navy-deep border-b border-[rgba(196,160,74,0.08)]"
+          >
+            <div className="container-wide max-w-4xl">
+
+              {/* Tabla de fases y entregables */}
+              {deliverables && deliverables.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="h-px w-8 bg-[#C4A04A]/40" />
+                    <span className="font-condensed text-[0.68rem] uppercase tracking-[0.3em] text-[#C4A04A]/55">
+                      Entregables del servicio
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto -mx-4 px-4">
+                    <table className="w-full border-collapse min-w-[560px]">
+                      <thead>
+                        <tr className="border-b border-[rgba(196,160,74,0.22)]">
+                          <th
+                            scope="col"
+                            className="text-left font-condensed text-[0.67rem] uppercase tracking-[0.22em] text-[#C4A04A]/55 pb-4 pr-6 whitespace-nowrap"
+                          >
+                            Fase
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-left font-condensed text-[0.67rem] uppercase tracking-[0.22em] text-[#C4A04A]/55 pb-4 pr-6"
+                          >
+                            Entregable
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-left font-condensed text-[0.67rem] uppercase tracking-[0.22em] text-[#C4A04A]/55 pb-4"
+                          >
+                            Qué resuelve
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {deliverables.map((row: RagDeliverable, i: number) => (
+                          <tr
+                            key={i}
+                            className="border-b border-[rgba(255,255,255,0.04)] hover:bg-[rgba(196,160,74,0.03)] transition-colors duration-200"
+                          >
+                            <td className="py-4 pr-6 font-condensed text-[0.75rem] text-[#C4A04A]/65 whitespace-nowrap align-top leading-relaxed">
+                              {row.fase}
+                            </td>
+                            <td className="py-4 pr-6 font-condensed text-[0.87rem] text-white/78 align-top leading-relaxed">
+                              {row.entregable}
+                            </td>
+                            <td
+                              className="py-4 font-condensed text-[0.84rem] align-top leading-relaxed"
+                              style={{ color: "rgba(230,228,224,0.52)" }}
+                            >
+                              {row.queResuelve}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Lista de aplicabilidad — <ul> nativo con negritas en primeras palabras */}
+              {deliverablesList && deliverablesList.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: deliverables ? 0.12 : 0 }}
+                  className={deliverables ? "mt-12 pt-10 border-t border-[rgba(196,160,74,0.1)]" : ""}
+                >
+                  {deliverablesListTitle && (
+                    <div className="flex items-center gap-3 mb-7">
+                      <div className="h-px w-8 bg-[#C4A04A]/40" />
+                      <span className="font-condensed text-[0.68rem] uppercase tracking-[0.3em] text-[#C4A04A]/55">
+                        {deliverablesListTitle}
+                      </span>
+                    </div>
+                  )}
+                  <ul className="space-y-3.5" role="list">
+                    {deliverablesList.map((item: string, i: number) => {
+                      const words = item.split(" ");
+                      const boldPart = words.slice(0, 3).join(" ");
+                      const rest = words.slice(3).join(" ");
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-3 font-condensed text-[0.9rem]"
+                          style={{ color: "rgba(230,228,224,0.62)" }}
+                        >
+                          <span className="text-[#C4A04A]/45 mt-0.5 shrink-0 select-none">·</span>
+                          <span>
+                            <strong className="text-white/85 font-medium">{boldPart}</strong>
+                            {rest ? ` ${rest}` : ""}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </motion.div>
+              )}
+
+            </div>
+          </section>
+        )}
+
         {/* ── Bloques de sub-servicios ───────────────────────── */}
         <section className="py-20 md:py-28 bg-navy-deep">
           <div className="container-wide max-w-4xl">
@@ -235,6 +398,97 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
                 </p>
               </motion.div>
             )}
+          </div>
+        </section>
+
+        {/* ══ BLOQUE E-E-A-T — Metodología y Autoría ═══════════════
+             Señal de confianza YMYL: normas citadas en texto plano
+             + autor identificable con enlace externo verificable.
+             Google y los LLMs usan este bloque para evaluar E-E-A-T. ══ */}
+        <section
+          aria-label="Metodología y equipo consultor"
+          className="py-14 md:py-20 bg-[#0D0D18] border-t border-[rgba(196,160,74,0.1)]"
+        >
+          <div className="container-wide max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              {/* Título de sección */}
+              <div className="flex items-center gap-3 mb-10">
+                <div className="h-px w-8 bg-[#C4A04A]/40" />
+                <span className="font-condensed text-[0.68rem] uppercase tracking-[0.3em] text-[#C4A04A]/55">
+                  Metodología y estándares
+                </span>
+              </div>
+
+              {/* Chips de normas — texto plano con alt semántico */}
+              <div className="flex flex-wrap gap-3 mb-10" role="list" aria-label="Marcos normativos aplicados">
+                {SITE_CONSULTANT.methodologies.map((m) => (
+                  <div
+                    key={m.label}
+                    role="listitem"
+                    className="border border-[rgba(196,160,74,0.25)] bg-[rgba(196,160,74,0.04)] px-4 py-2.5"
+                    title={`${m.label} — ${m.desc}`}
+                  >
+                    <span className="font-condensed text-[0.72rem] font-medium text-[#C4A04A]/80 tracking-[0.12em]">
+                      {m.label}
+                    </span>
+                    <span className="font-condensed text-[0.68rem] text-white/35 ml-2 tracking-[0.06em]">
+                      {m.desc}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bloque de autoría — señal de autoría para Google */}
+              <div className="border border-[rgba(196,160,74,0.15)] bg-[rgba(196,160,74,0.02)] p-6 md:p-8">
+                <p className="font-condensed text-[0.65rem] uppercase tracking-[0.35em] text-[#C4A04A]/40 mb-5">
+                  Metodología avalada por
+                </p>
+                <div className="flex items-start gap-5">
+                  {/* Avatar placeholder */}
+                  <div
+                    className="shrink-0 w-11 h-11 rounded-full border border-[rgba(196,160,74,0.3)] flex items-center justify-center bg-[rgba(196,160,74,0.06)]"
+                    aria-hidden="true"
+                  >
+                    <span className="font-serif text-[#C4A04A]/60 text-lg">S</span>
+                  </div>
+
+                  <div className="min-w-0">
+                    {/* Nombre del consultor — actualizar en src/lib/seo.ts → SITE_CONSULTANT.name */}
+                    <p className="font-condensed font-medium text-[0.92rem] text-white/85 mb-1">
+                      {SITE_CONSULTANT.name}
+                    </p>
+                    <p
+                      className="font-condensed text-[0.82rem] leading-relaxed mb-3"
+                      style={{ color: "rgba(230,228,224,0.50)" }}
+                    >
+                      {SITE_CONSULTANT.title}
+                    </p>
+                    <p
+                      className="font-condensed font-light text-[0.82rem] leading-[1.75] mb-4 max-w-2xl"
+                      style={{ color: "rgba(230,228,224,0.45)" }}
+                    >
+                      {SITE_CONSULTANT.bio}
+                    </p>
+                    {/* Enlace externo con rel="noopener" — señal E-E-A-T de verificabilidad */}
+                    <a
+                      href={SITE_CONSULTANT.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 font-condensed text-[0.72rem] uppercase tracking-[0.18em] text-[#C4A04A]/65 hover:text-[#C4A04A] transition-colors duration-300"
+                      aria-label={`Ver perfil profesional de ${SITE_CONSULTANT.name} en LinkedIn`}
+                    >
+                      Ver perfil profesional
+                      <ArrowRight className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </section>
 

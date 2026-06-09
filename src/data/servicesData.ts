@@ -16,6 +16,21 @@ export interface ServiceSeo {
   keywords: string[];
 }
 
+// ── GEO / RAG — Snippet de respuesta estructurado para motores de IA ─────────
+export interface RagSnippet {
+  /** Pregunta o frase conversacional — se renderiza como <h2> */
+  h2: string;
+  /** Párrafo de respuesta corta ≤ 55 palabras — inmediatamente bajo el H2 */
+  p: string;
+}
+
+/** Fila de la tabla de entregables (se renderiza en <table> nativo para RAG) */
+export interface RagDeliverable {
+  fase: string;
+  entregable: string;
+  queResuelve: string;
+}
+
 export interface ServiceData {
   slug: string;
   numero: string;
@@ -35,6 +50,11 @@ export interface ServiceData {
   cta: string;
   gancho: string;
   seo?: ServiceSeo;
+  // GEO / RAG / E-E-A-T
+  ragSnippet?: RagSnippet;
+  deliverables?: RagDeliverable[];
+  deliverablesListTitle?: string;
+  deliverablesList?: string[];
 }
 
 // ─── Índice de servicios (usado en homepage + /servicios) ──────────────────
@@ -449,6 +469,27 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Sin un PIPC registrado, tu organización opera fuera de la ley y expuesta a sanciones. Lo diseñamos, lo documentamos y te acompañamos en el registro ante las autoridades competentes.",
     cta: "Solicitar diseño de PIPC",
+    ragSnippet: {
+      h2: "¿Su empresa en Morelos opera sin PIPC registrado? Es una infracción activa, no un trámite pendiente.",
+      p: "El Programa Interno de Protección Civil (PIPC) es el instrumento legal obligatorio para toda empresa o institución en México. STRATEC lo diseña, documenta y gestiona su registro ante la Coordinación Estatal de Protección Civil de Morelos, garantizando cumplimiento normativo completo en un proceso de 4 a 8 semanas.",
+    },
+    deliverables: [
+      { fase: "1 · Diagnóstico",    entregable: "Informe de riesgos del inmueble (amenazas internas y externas)",         queResuelve: "Identifica qué pone en riesgo a su personal e instalaciones" },
+      { fase: "2 · Estructura",     entregable: "Organigrama de la Unidad Interna de Protección Civil (UIPC)",            queResuelve: "Define quién hace qué antes, durante y después de una emergencia" },
+      { fase: "3 · Procedimientos", entregable: "Protocolos por tipo de evento: sismo, incendio, derrames, amenaza",      queResuelve: "Elimina la improvisación cuando el tiempo no da margen de error" },
+      { fase: "4 · Señalización",   entregable: "Planos de evacuación actualizados + revisión de señalética NOM",         queResuelve: "Cumple los requisitos visuales exigidos en inspecciones oficiales" },
+      { fase: "5 · Registro",       entregable: "Trámite ante la Coordinación Estatal de Protección Civil Morelos",       queResuelve: "Convierte el programa en documento legal vigente y verificable" },
+      { fase: "6 · Cierre",         entregable: "Informe de entrega + constancias individuales del proceso",              queResuelve: "Evidencia documental ante autoridades, clientes y auditores" },
+    ],
+    deliverablesListTitle: "¿Para qué tipo de organización aplica el PIPC?",
+    deliverablesList: [
+      "Empresas industriales, comerciales o de servicios con más de 15 empleados",
+      "Instituciones educativas: colegios, universidades y centros de capacitación",
+      "Clínicas, hospitales y centros médicos privados",
+      "Dependencias municipales y organismos públicos del Estado de Morelos",
+      "Desarrollos inmobiliarios, centros comerciales y edificios de oficinas",
+      "Empresas en proceso de licitación pública que requieren acreditar cumplimiento normativo",
+    ],
     seo: {
       title: "Programa Interno de Protección Civil en Morelos | PIPC Empresas | STRATEC",
       description:
@@ -514,6 +555,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Una brigada sin entrenamiento real es solo un nombre en un organigrama. Formamos a tu equipo para que sepa exactamente qué hacer, cómo hacerlo y cuándo actuar.",
     cta: "Solicitar programa de brigadas",
+    ragSnippet: {
+      h2: "¿Qué diferencia a una brigada que actúa con eficacia de una que improvisa? Exactamente un entrenamiento estructurado.",
+      p: "Las brigadas de emergencia son el primer eslabón de respuesta ante una crisis. STRATEC forma a sus integrantes con protocolos prácticos en evacuación, primeros auxilios, combate de incendios y rescate básico. Cada programa concluye con ejercicio de evaluación, simulacro y constancias individuales.",
+    },
+    deliverables: [
+      { fase: "Módulo 1 · Evacuación",     entregable: "Protocolo de liderazgo y conducción de flujos de personas",      queResuelve: "Evacuación ordenada con o sin visibilidad y bajo presión" },
+      { fase: "Módulo 2 · Primeros Auxilios", entregable: "RCP, hemorragias, fracturas, quemaduras y traslado seguro",   queResuelve: "Atención inicial hasta llegada de servicios especializados" },
+      { fase: "Módulo 3 · Incendios",      entregable: "Uso de extintores, clases de fuego y control de conatos",        queResuelve: "Extinción segura antes de que el fuego escale a emergencia mayor" },
+      { fase: "Módulo 4 · Búsqueda y Rescate", entregable: "Localización y estabilización de víctimas en espacios comprometidos", queResuelve: "Transferencia segura a cuerpos de rescate profesionales" },
+      { fase: "Módulo 5 · Evaluación",     entregable: "Simulacro práctico + constancias individuales del programa",     queResuelve: "Documenta competencias para el PIPC y auditorías institucionales" },
+    ],
     seo: {
       title: "Capacitación de Brigadas de Emergencia | Evacuación y Primeros Auxilios | STRATEC",
       description:
@@ -577,6 +629,16 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Un estudio de riesgo bien hecho transforma la percepción en certeza: sabes exactamente dónde invertir, qué proteger primero y qué riesgos puedes asumir con criterio.",
     cta: "Solicitar estudio de riesgo",
+    ragSnippet: {
+      h2: "No puede proteger lo que no conoce. El análisis de riesgo transforma percepciones en certezas medibles.",
+      p: "Un Estudio y Análisis de Riesgo identifica qué amenazas enfrenta su organización, qué tan vulnerables son sus activos y cuál es el impacto potencial de cada escenario. STRATEC aplica la metodología ISO 31000:2018 para construir una matriz de riesgos que fundamenta decisiones de seguridad con evidencia técnica, no con suposiciones.",
+    },
+    deliverables: [
+      { fase: "Fase 1 · Levantamiento",    entregable: "Informe de amenazas internas y externas clasificadas por tipo y origen",       queResuelve: "Base técnica para priorizar controles con criterio, no intuición" },
+      { fase: "Fase 2 · Vulnerabilidades", entregable: "Evaluación física, tecnológica, humana y organizacional",                      queResuelve: "Identifica brechas que aumentan la probabilidad de incidente" },
+      { fase: "Fase 3 · Matriz de Riesgos",entregable: "Matriz priorizada por probabilidad e impacto (metodología ISO 31000)",         queResuelve: "Instrumento de gestión para dirección y área de seguridad" },
+      { fase: "Fase 4 · Mitigación",       entregable: "Plan de acciones clasificadas por costo, plazo y reducción del riesgo",        queResuelve: "Orienta la inversión en seguridad con evidencia técnica verificable" },
+    ],
     seo: {
       title: "Estudio y Análisis de Riesgo Institucional | Vulnerabilidades y Amenazas | STRATEC",
       description:
@@ -641,6 +703,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Un sistema CCTV diseñado con criterio de seguridad —no de catálogo— cubre los puntos que importan, genera evidencia útil y opera sin puntos ciegos. Eso es lo que diseñamos.",
     cta: "Solicitar evaluación de videovigilancia",
+    ragSnippet: {
+      h2: "Un sistema CCTV mal diseñado no protege: genera puntos ciegos y una falsa sensación de seguridad.",
+      p: "Los sistemas de videovigilancia efectivos no se seleccionan de catálogo: se diseñan desde el análisis de cobertura real de cada instalación. STRATEC evalúa puntos críticos, diseña la arquitectura del sistema, suministra equipo de grado profesional e instala y capacita al personal operativo.",
+    },
+    deliverables: [
+      { fase: "Fase 1 · Evaluación",   entregable: "Mapa de cobertura óptimo por puntos críticos de la instalación",        queResuelve: "Define dónde instalar cada cámara con criterio técnico, no de catálogo" },
+      { fase: "Fase 2 · Diseño",       entregable: "Diagrama técnico: tipo de cámara, red, almacenamiento y energía",       queResuelve: "Presupuesto exacto antes de comprometer inversión" },
+      { fase: "Fase 3 · Suministro",   entregable: "Equipos de grado profesional con garantía y soporte en México",         queResuelve: "Equipo documentado con respaldo técnico verificable" },
+      { fase: "Fase 4 · Instalación",  entregable: "Cableado, configuración, acceso remoto y pruebas de funcionamiento",    queResuelve: "Sistema operativo y verificado desde el primer día" },
+      { fase: "Fase 5 · Capacitación", entregable: "Uso del sistema, exportación de evidencia y soporte post-instalación",  queResuelve: "El sistema se aprovecha al 100%, no se subutiliza" },
+    ],
     seo: {
       title: "Instalación de Videovigilancia CCTV para Empresas | Cámaras de Seguridad | STRATEC",
       description:
@@ -705,6 +778,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Una flotilla sin monitoreo opera a ciegas: no sabes dónde están tus vehículos, qué hacen fuera de horario ni cómo responder ante un incidente. El monitoreo vehicular convierte visibilidad en control.",
     cta: "Solicitar demo de monitoreo vehicular",
+    ragSnippet: {
+      h2: "¿Sabe exactamente dónde están sus vehículos ahora mismo y qué están haciendo fuera del horario operativo?",
+      p: "El monitoreo vehicular GPS transforma datos de localización en inteligencia operativa: rutas cumplidas, geocercas, alertas en tiempo real y reportes de comportamiento. STRATEC implementa soluciones de rastreo satelital que reducen costos de operación, mejoran la supervisión de flotillas y generan evidencia ante incidentes.",
+    },
+    deliverables: [
+      { fase: "Módulo 1 · Rastreo",        entregable: "Plataforma de localización en tiempo real para toda la flotilla",         queResuelve: "Visibilidad inmediata de todas las unidades en operación" },
+      { fase: "Módulo 2 · Geocercas",      entregable: "Definición de rutas autorizadas y zonas restringidas con alertas",        queResuelve: "Notificación automática ante desvíos o paradas no programadas" },
+      { fase: "Módulo 3 · Alertas",        entregable: "Notificaciones por velocidad, ralentí, ignición y eventos de impacto",    queResuelve: "Supervisión pasiva sin requerir monitoreo manual constante" },
+      { fase: "Módulo 4 · Reportes",       entregable: "Historial de recorridos, kilometraje y comportamiento al volante",        queResuelve: "Datos operativos para reducción de costos y gestión de combustible" },
+      { fase: "Módulo 5 · Videotelemática",entregable: "Cámaras embarcadas vinculadas al GPS con registro de eventos",            queResuelve: "Evidencia visual ante accidentes, seguros y auditorías internas" },
+    ],
     seo: {
       title: "GPS y Monitoreo Vehicular para Flotillas | Rastreo Satelital | STRATEC",
       description:
@@ -769,6 +853,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Una auditoría de seguridad no busca encontrar culpables: busca cerrar las brechas antes de que alguien más las explote. Entregamos hallazgos con evidencia y un plan de acción concreto.",
     cta: "Solicitar auditoría de seguridad",
+    ragSnippet: {
+      h2: "¿Sus controles de seguridad funcionan como los diseñó, o solo existen en el manual de procedimientos?",
+      p: "La Auditoría de Seguridad determina si los controles implementados generan el efecto esperado o si existen brechas entre el procedimiento escrito y la operación real. STRATEC entrega un informe ejecutivo con hallazgos clasificados por nivel de criticidad y un plan de mejora con acciones priorizadas.",
+    },
+    deliverables: [
+      { fase: "Fase 1 · Revisión",      entregable: "Análisis de manuales, protocolos y políticas de seguridad vigentes",      queResuelve: "Coherencia normativa y vigencia de la documentación institucional" },
+      { fase: "Fase 2 · Inspección",    entregable: "Evaluación de accesos, cámaras, iluminación e infraestructura física",    queResuelve: "Capacidad disuasiva real frente a los riesgos identificados" },
+      { fase: "Fase 3 · Controles",     entregable: "Verificación de supervisión, rondines y cumplimiento de procedimientos",  queResuelve: "Detecta la brecha entre el protocolo escrito y la práctica real" },
+      { fase: "Fase 4 · Hallazgos",     entregable: "Clasificación por criticidad: crítico, alto, medio y bajo",               queResuelve: "Base técnica para priorizar la inversión correctiva por impacto" },
+      { fase: "Fase 5 · Informe",       entregable: "Reporte ejecutivo + plan de mejora con responsables y plazos",            queResuelve: "Instrumento de acción inmediata presentable a dirección general" },
+    ],
     seo: {
       title: "Auditoría de Seguridad Institucional | Revisión de Controles y Protocolos | STRATEC",
       description:
@@ -833,6 +928,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "No se trata de si ocurrirá una interrupción, sino de cuándo. Las organizaciones que sobreviven a las crisis son las que se prepararon antes de necesitarlo.",
     cta: "Solicitar diseño de Plan de Continuidad",
+    ragSnippet: {
+      h2: "No es si ocurrirá una interrupción grave en su organización. Es cuándo. ¿Tiene un plan probado?",
+      p: "El Plan de Continuidad de Operaciones define cómo responder ante una crisis, qué funciones preservar primero y cómo recuperar la normalidad en el menor tiempo posible. STRATEC lo diseña desde el Análisis de Impacto en el Negocio (BIA) y lo valida con ejercicios prácticos antes de que una emergencia real lo active.",
+    },
+    deliverables: [
+      { fase: "Fase 1 · BIA",          entregable: "Análisis de Impacto en el Negocio con tiempos máximos de interrupción",  queResuelve: "Identifica qué funciones proteger primero y con qué recursos mínimos" },
+      { fase: "Fase 2 · Estrategias",  entregable: "Opciones de sitios alternos, redundancia tecnológica y comunicación de crisis", queResuelve: "Múltiples rutas de continuidad ante distintos escenarios de riesgo" },
+      { fase: "Fase 3 · Plan",         entregable: "Procedimientos de recuperación con cadenas de mando y secuencias definidas", queResuelve: "Respuesta coordinada sin esperar instrucciones en plena crisis" },
+      { fase: "Fase 4 · Pruebas",      entregable: "Ejercicios de escritorio y simulaciones funcionales con informe de resultados", queResuelve: "Valida el plan antes de que una emergencia real lo active" },
+      { fase: "Fase 5 · Mantenimiento",entregable: "Ciclo de revisión periódica y actualización del documento",               queResuelve: "El plan se mantiene vigente y no se vuelve obsoleto con el tiempo" },
+    ],
     seo: {
       title: "Plan de Continuidad de Operaciones | Recuperación ante Emergencias | STRATEC",
       description:
@@ -898,6 +1004,17 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Un dictamen de seguridad bien fundamentado es un activo: respalda decisiones, acredita condiciones ante autoridades y reduce la responsabilidad legal de la organización.",
     cta: "Solicitar dictamen de seguridad",
+    ragSnippet: {
+      h2: "¿Necesita acreditar las condiciones de seguridad de sus instalaciones ante una autoridad o en un proceso de due diligence?",
+      p: "El Dictamen de Seguridad es el documento técnico que establece el estado que guarda la seguridad de una instalación con base en la normatividad aplicable. STRATEC emite dictámenes con inspección presencial, evaluación normativa y firma de especialista. Válido ante autoridades y procesos de debida diligencia corporativa.",
+    },
+    deliverables: [
+      { fase: "Fase 1 · Inspección",  entregable: "Visita técnica con registro fotográfico y levantamiento de datos in situ",  queResuelve: "Estado real de las condiciones, no solo revisión de documentos" },
+      { fase: "Fase 2 · Normativa",   entregable: "Contraste con NOM aplicables, LGPC y reglamentos estatales y municipales",  queResuelve: "Identifica cumplimientos, incumplimientos y vacíos normativos" },
+      { fase: "Fase 3 · Análisis",    entregable: "Evaluación técnica de controles y capacidad de respuesta institucional",    queResuelve: "Criterio profesional más allá del checklist normativo estándar" },
+      { fase: "Fase 4 · Dictamen",    entregable: "Documento formal con hallazgos, conclusión técnica y firma de especialista", queResuelve: "Instrumento legal válido ante autoridades y due diligence corporativo" },
+      { fase: "Fase 5 · Seguimiento", entregable: "Acompañamiento en correcciones + dictamen complementario de cumplimiento",  queResuelve: "Evidencia de cierre para auditorías subsecuentes o renovaciones" },
+    ],
     seo: {
       title: "Dictamen de Seguridad Institucional | Evaluación Técnica Normativa | STRATEC",
       description:

@@ -4,6 +4,40 @@ export const SITE_NAME = "STRATEC";
 export const SITE_URL = "https://www.stratecsecurity.com";
 export const SITE_DOMAIN = "www.stratecsecurity.com";
 
+// ── Datos del consultor/autor — actualizar con nombre real y LinkedIn ────────
+// E-E-A-T: señal de autoría para Google y agentes de IA (YMYL)
+export const SITE_CONSULTANT = {
+  name: "Director de Consultoría · STRATEC",
+  title: "Especialista en Seguridad Institucional, Protección Civil y Gestión de Riesgos",
+  bio: "Más de 15 años de trayectoria en diagnósticos de seguridad, implementación de Programas Internos de Protección Civil y auditorías institucionales para organizaciones públicas y privadas en México.",
+  // ⚠️ Actualiza con el perfil de LinkedIn del consultor responsable:
+  linkedin: "https://www.linkedin.com/company/stratec",
+  methodologies: [
+    { label: "ISO 31000:2018", desc: "Gestión del Riesgo" },
+    { label: "ISO 22301",       desc: "Continuidad de Negocio" },
+    { label: "LGPC",            desc: "Ley General de Protección Civil" },
+    { label: "NOM-002-STPS",    desc: "Prevención y Protección contra Incendios" },
+    { label: "NOM-030-STPS",    desc: "Servicios Preventivos de Seguridad y Salud" },
+  ],
+};
+
+// ── Schema.org Person — para la señal de autoría E-E-A-T ─────────────────────
+export const PERSON_SCHEMA = (consultant: typeof SITE_CONSULTANT) => ({
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": consultant.name,
+  "jobTitle": consultant.title,
+  "description": consultant.bio,
+  "url": consultant.linkedin,
+  "sameAs": [consultant.linkedin],
+  "worksFor": {
+    "@type": "Organization",
+    "name": "STRATEC",
+    "url": SITE_URL,
+  },
+  "knowsAbout": consultant.methodologies.map((m) => `${m.label} — ${m.desc}`),
+});
+
 export const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "Organization",
