@@ -11,12 +11,11 @@ type NavItem =
 
 const nav: NavItem[] = [
   { label: "Firma",       href: "#about" },
-  { label: "Servicios",   href: "#services" },
+  { label: "Servicios",   to: "/servicios" },
   { label: "Sectores",    href: "#sectors" },
   { label: "Metodología", href: "#methodology" },
   { label: "Tecnología",  href: "#technology" },
   { label: "Casos",       href: "#cases" },
-  { label: "Oferta",      to: "/servicios" },
 ];
 
 export const Navbar = () => {
