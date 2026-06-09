@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { NetworkBackground } from "@/components/NetworkBackground";
@@ -333,7 +334,7 @@ export default function ServicesIndex() {
   );
 }
 
-/* ── Tarjeta de servicio ─────────────────────────────────────────────────── */
+/* ── Tarjeta de servicio (expandible) ───────────────────────────────────── */
 function ServiceCard({
   item,
   index,
@@ -341,42 +342,109 @@ function ServiceCard({
   item: (typeof SERVICIOS_INDEX)[number];
   index: number;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.55, delay: index * 0.07 }}
-      className="bg-[#1A1A24] group"
+      className="bg-[#1A1A24]"
     >
-      <Link
-        to={item.href}
-        className="block h-full p-8 md:p-10 border border-[rgba(196,160,74,0.12)]
-                   hover:border-[rgba(196,160,74,0.4)] hover:bg-[#232330]
-                   transition-all duration-300 relative overflow-hidden"
+      <div
+        className={`border transition-all duration-300 relative overflow-hidden
+          ${open
+            ? "border-[rgba(196,160,74,0.45)] bg-[#232330]"
+            : "border-[rgba(196,160,74,0.12)] hover:border-[rgba(196,160,74,0.3)] hover:bg-[#1e1e2d]"
+          }`}
       >
-        <div
-          className="font-serif font-light text-[4rem] leading-none text-[#C4A04A] mb-6 select-none"
-          style={{ opacity: 0.18 }}
+        {/* ── Cabecera clicable ── */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full text-left p-8 md:p-10 group"
         >
-          {item.numero}
-        </div>
+          <div
+            className="font-serif font-light text-[4rem] leading-none text-[#C4A04A] mb-6 select-none"
+            style={{ opacity: 0.18 }}
+          >
+            {item.numero}
+          </div>
 
-        <h2 className="font-serif font-light text-[1.45rem] text-smoke leading-snug mb-3 group-hover:text-[#C4A04A]/90 transition-colors duration-300">
-          {item.titulo}
-        </h2>
+          <h2
+            className={`font-serif font-light text-[1.45rem] leading-snug mb-3 transition-colors duration-300
+              ${open ? "text-[#C4A04A]/90" : "text-smoke group-hover:text-[#C4A04A]/80"}`}
+          >
+            {item.titulo}
+          </h2>
 
-        <p className="font-condensed font-light text-[0.95rem] text-smoke/50 leading-relaxed mb-8">
-          {item.descripcionCorta}
-        </p>
+          <p className="font-condensed font-light text-[0.95rem] text-smoke/50 leading-relaxed mb-6">
+            {item.descripcionCorta}
+          </p>
 
-        <div className="flex items-center gap-2 font-condensed text-[0.75rem] uppercase tracking-[0.2em] text-[#C4A04A]/40 group-hover:text-[#C4A04A] transition-all duration-300 group-hover:translate-x-1">
-          Ver servicio
-          <ArrowRight className="h-3.5 w-3.5" />
-        </div>
+          <div
+            className={`flex items-center gap-2 font-condensed text-[0.75rem] uppercase tracking-[0.2em] transition-all duration-300
+              ${open ? "text-[#C4A04A]" : "text-smoke/30 group-hover:text-[#C4A04A]/60"}`}
+          >
+            {open ? "Cerrar" : "Conocer más"}
+            <motion.span
+              animate={{ rotate: open ? 180 : 0 }}
+              transition={{ duration: 0.25 }}
+              className="inline-flex"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </motion.span>
+          </div>
+        </button>
 
-        <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#C4A04A]/40 group-hover:w-full transition-all duration-500" />
-      </Link>
+        {/* ── Panel expandible ── */}
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="expand"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.38, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              {/* Imagen de referencia */}
+              <div className="relative h-48 overflow-hidden mx-8 md:mx-10">
+                <img
+                  src={item.heroImage}
+                  alt={item.titulo}
+                  className="w-full h-full object-cover"
+                  style={{ opacity: 0.7 }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#232330] via-[#232330]/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#232330]/40 to-transparent" />
+              </div>
+
+              {/* Texto de gancho + CTA */}
+              <div className="px-8 md:px-10 pt-6 pb-10">
+                <p className="font-condensed font-light text-[0.95rem] text-smoke/70 leading-[1.85] mb-7 italic border-l-2 border-[rgba(196,160,74,0.3)] pl-4">
+                  {item.gancho}
+                </p>
+                <Link
+                  to={item.href}
+                  className="inline-flex items-center gap-2.5 font-condensed text-[0.75rem] uppercase tracking-[0.2em]
+                             text-[#C4A04A] border border-[rgba(196,160,74,0.4)] px-7 py-3
+                             hover:bg-[rgba(196,160,74,0.1)] hover:border-[#C4A04A] transition-all duration-300"
+                >
+                  Ver servicio completo
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Acento inferior */}
+        <div
+          className={`absolute bottom-0 left-0 h-0.5 bg-[#C4A04A]/40 transition-all duration-500
+            ${open ? "w-full" : "w-0"}`}
+        />
+      </div>
     </motion.div>
   );
 }

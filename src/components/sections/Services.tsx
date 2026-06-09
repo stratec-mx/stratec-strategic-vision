@@ -1,7 +1,118 @@
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SERVICIOS_INDEX } from "@/data/servicesData";
+
+/* ── Tarjeta expandible para homepage ───────────────────────────────────── */
+function HomeServiceCard({
+  s,
+  index,
+}: {
+  s: (typeof SERVICIOS_INDEX)[number];
+  index: number;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className="bg-[#1A1A24]"
+    >
+      <div
+        className={`border transition-all duration-300 relative overflow-hidden
+          ${open
+            ? "border-[rgba(196,160,74,0.45)] bg-[#232330]"
+            : "border-[rgba(196,160,74,0.1)] hover:border-[rgba(196,160,74,0.3)] hover:bg-[#1e1e2d]"
+          }`}
+      >
+        {/* Cabecera clicable */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full text-left flex items-start gap-5 p-6 group"
+        >
+          <span
+            className="font-serif font-light text-3xl leading-none text-[#C4A04A] shrink-0 mt-0.5 select-none"
+            style={{ opacity: 0.25 }}
+          >
+            {s.numero}
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p
+              className={`font-serif font-light text-[1.1rem] leading-snug mb-1.5 transition-colors duration-300
+                ${open ? "text-[#C4A04A]/85" : "text-smoke group-hover:text-[#C4A04A]/75"}`}
+            >
+              {s.titulo}
+            </p>
+            <p className="font-condensed font-light text-[0.85rem] text-smoke/45 leading-relaxed">
+              {s.descripcionCorta}
+            </p>
+          </div>
+
+          <motion.span
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.25 }}
+            className={`inline-flex mt-1 shrink-0 transition-colors duration-300
+              ${open ? "text-[#C4A04A]" : "text-smoke/25 group-hover:text-[#C4A04A]/50"}`}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </motion.span>
+        </button>
+
+        {/* Panel expandible */}
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="exp"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              {/* Imagen */}
+              <div className="relative h-40 overflow-hidden mx-6">
+                <img
+                  src={s.heroImage}
+                  alt={s.titulo}
+                  className="w-full h-full object-cover"
+                  style={{ opacity: 0.65 }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#232330] via-[#232330]/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#232330]/40 to-transparent" />
+              </div>
+
+              {/* Gancho + CTA */}
+              <div className="px-6 pt-5 pb-7">
+                <p className="font-condensed font-light text-[0.88rem] text-smoke/65 leading-[1.85] mb-5 italic border-l-2 border-[rgba(196,160,74,0.3)] pl-3.5">
+                  {s.gancho}
+                </p>
+                <Link
+                  to={s.href}
+                  className="inline-flex items-center gap-2 font-condensed text-[0.72rem] uppercase tracking-[0.2em]
+                             text-[#C4A04A] border border-[rgba(196,160,74,0.4)] px-6 py-2.5
+                             hover:bg-[rgba(196,160,74,0.1)] hover:border-[#C4A04A] transition-all duration-300"
+                >
+                  Ver servicio completo
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div
+          className={`absolute bottom-0 left-0 h-0.5 bg-[#C4A04A]/35 transition-all duration-500
+            ${open ? "w-full" : "w-0"}`}
+        />
+      </div>
+    </motion.div>
+  );
+}
 
 export const Services = () => {
   return (
@@ -46,44 +157,10 @@ export const Services = () => {
           </div>
         </div>
 
-        {/* ── Lista compacta de servicios ── */}
+        {/* ── Lista de servicios expandibles ── */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-[rgba(196,160,74,0.08)] mb-16">
           {SERVICIOS_INDEX.map((s, i) => (
-            <motion.div
-              key={s.href}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="bg-[#1A1A24] group"
-            >
-              <Link
-                to={s.href}
-                className="flex items-start gap-5 p-6 border border-[rgba(196,160,74,0.1)]
-                           hover:border-[rgba(196,160,74,0.35)] hover:bg-[#232330]
-                           transition-all duration-300 relative overflow-hidden h-full"
-              >
-                {/* Número */}
-                <span
-                  className="font-serif font-light text-3xl leading-none text-[#C4A04A] shrink-0 mt-0.5 select-none"
-                  style={{ opacity: 0.25 }}
-                >
-                  {s.numero}
-                </span>
-                {/* Texto */}
-                <div className="min-w-0">
-                  <p className="font-serif font-light text-[1.1rem] text-smoke leading-snug mb-1.5
-                                group-hover:text-[#C4A04A]/85 transition-colors duration-300">
-                    {s.titulo}
-                  </p>
-                  <p className="font-condensed font-light text-[0.85rem] text-smoke/45 leading-relaxed">
-                    {s.descripcionCorta}
-                  </p>
-                </div>
-                {/* Acento hover */}
-                <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#C4A04A]/35 group-hover:w-full transition-all duration-500" />
-              </Link>
-            </motion.div>
+            <HomeServiceCard key={s.href} s={s} index={i} />
           ))}
         </div>
 

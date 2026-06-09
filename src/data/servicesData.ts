@@ -20,38 +20,54 @@ export interface ServiceData {
   modalidades?: string;
   nota?: string;
   cta: string;
+  gancho: string;
 }
 
-export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripcionCorta" | "href">[] = [
+export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripcionCorta" | "href" | "heroImage" | "gancho">[] = [
   {
     numero: "01",
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
+    heroImage: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
+    gancho:
+      "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
   },
   {
     numero: "02",
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",
     href: "/servicios/proteccion-civil",
+    heroImage: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80",
+    gancho:
+      "Una emergencia no avisa. La diferencia entre una crisis y una contingencia manejada es la preparación previa. Diseñamos tu programa, formamos tus brigadas y garantizamos la continuidad operativa.",
   },
   {
     numero: "03",
     titulo: "Capacitación Especializada",
     descripcionCorta: "Formación operativa en seguridad, riesgos y protección civil.",
     href: "/servicios/capacitacion",
+    heroImage: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1920&q=80",
+    gancho:
+      "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
   },
   {
     numero: "04",
     titulo: "Integración Tecnológica para la Seguridad",
     descripcionCorta: "Videovigilancia, monitoreo vehicular, control de accesos y proyectos integrales.",
     href: "/servicios/integracion-tecnologica",
+    heroImage: "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=1920&q=80",
+    gancho:
+      "No compras cámaras ni GPS: compras visibilidad, control operativo y capacidad de respuesta. Diseñamos arquitecturas tecnológicas integradas que trabajan al servicio de tu estrategia de seguridad.",
   },
   {
     numero: "05",
     titulo: "Consultoría para Gobierno e Instituciones",
     descripcionCorta: "Diagnósticos institucionales, planeación estratégica y seguridad urbana.",
     href: "/servicios/consultoria-gobierno",
+    heroImage: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=1920&q=80",
+    gancho:
+      "La seguridad institucional requiere análisis técnico, planeación rigurosa y capacidad operativa sostenida. Acompañamos a dependencias y organismos en el fortalecimiento de sus modelos de seguridad con soluciones objetivas y auditables.",
   },
 ];
 
@@ -88,6 +104,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         p: "Desarrollo de procedimientos de actuación ante incidentes, emergencias y situaciones críticas, adaptados al entorno y necesidades específicas de cada organización.",
       },
     ],
+    gancho:
+      "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
     cta: "Solicitar diagnóstico especializado",
   },
 
@@ -123,6 +141,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         p: "Desarrollo de estrategias que permitan mantener la operación o recuperar funciones críticas ante eventos disruptivos.",
       },
     ],
+    gancho:
+      "Una emergencia no avisa. La diferencia entre una crisis y una contingencia manejada es la preparación previa. Diseñamos tu programa, formamos tus brigadas y garantizamos la continuidad operativa.",
     cta: "Solicitar propuesta especializada",
   },
 
@@ -159,6 +179,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       },
     ],
     modalidades: "Presencial · Virtual · In Company",
+    gancho:
+      "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
     cta: "Solicitar programa de capacitación",
   },
 
@@ -199,6 +221,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         p: "Diseño de arquitecturas tecnológicas que integran videovigilancia, monitoreo vehicular, control de accesos y sistemas de protección en una solución coordinada.",
       },
     ],
+    gancho:
+      "No compras cámaras ni GPS: compras visibilidad, control operativo y capacidad de respuesta. Diseñamos arquitecturas tecnológicas integradas que trabajan al servicio de tu estrategia de seguridad.",
     cta: "Solicitar evaluación tecnológica",
   },
 
@@ -235,6 +259,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       },
     ],
     nota: "STRATEC opera con el sector público bajo acuerdos de confidencialidad institucional. Los detalles de cada intervención se presentan exclusivamente en propuesta dirigida.",
+    gancho:
+      "La seguridad institucional requiere análisis técnico, planeación rigurosa y capacidad operativa sostenida. Acompañamos a dependencias y organismos en el fortalecimiento de sus modelos de seguridad con soluciones objetivas y auditables.",
     cta: "Solicitar propuesta dirigida",
   },
 };
