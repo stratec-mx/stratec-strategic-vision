@@ -15,6 +15,8 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
         display: ["Inter", "sans-serif"],
         ibm: ["IBM Plex Sans", "sans-serif"],
+        serif: ["Cormorant Garamond", "Georgia", "serif"],
+        condensed: ["Barlow Condensed", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

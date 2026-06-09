@@ -19,9 +19,11 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <div className="text-xs uppercase tracking-widest text-smoke mb-5">Servicios</div>
             <ul className="space-y-3 text-sm">
-              <li><a href="/#services" className="hover:text-smoke transition-colors font-light">Diagnóstico Estratégico</a></li>
-              <li><a href="/#services" className="hover:text-smoke transition-colors font-light">Programa de Implementación</a></li>
-              <li><a href="/#services" className="hover:text-smoke transition-colors font-light">Gestión Institucional Continua</a></li>
+              <li><Link to="/servicios/consultoria-seguridad" className="hover:text-smoke transition-colors font-light">Consultoría en Seguridad</Link></li>
+              <li><Link to="/servicios/proteccion-civil" className="hover:text-smoke transition-colors font-light">Protección Civil</Link></li>
+              <li><Link to="/servicios/capacitacion" className="hover:text-smoke transition-colors font-light">Capacitación</Link></li>
+              <li><Link to="/servicios/integracion-tecnologica" className="hover:text-smoke transition-colors font-light">Integración Tecnológica</Link></li>
+              <li><Link to="/servicios/consultoria-gobierno" className="hover:text-smoke transition-colors font-light">Gobierno e Instituciones</Link></li>
             </ul>
           </div>
 

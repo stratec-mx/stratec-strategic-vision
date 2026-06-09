@@ -16,6 +16,12 @@ import Confidentiality from "./pages/Confidentiality.tsx";
 import Auth from "./pages/Auth.tsx";
 import CoverageIndex from "./pages/coverage/CoverageIndex.tsx";
 import CoverageLocality from "./pages/coverage/CoverageLocality.tsx";
+import ServicesIndex from "./pages/services/ServicesIndex.tsx";
+import ConsultoriaSeguridad from "./pages/services/ConsultoriaSeguridad.tsx";
+import ProteccionCivil from "./pages/services/ProteccionCivil.tsx";
+import Capacitacion from "./pages/services/Capacitacion.tsx";
+import IntegracionTecnologica from "./pages/services/IntegracionTecnologica.tsx";
+import ConsultoriaGobierno from "./pages/services/ConsultoriaGobierno.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
 import Leads from "./pages/app/Leads.tsx";
@@ -46,6 +52,14 @@ const AppRoutes = () => {
         <Route path="/cobertura" element={<CoverageIndex />} />
         <Route path="/cobertura/:state" element={<CoverageLocality />} />
         <Route path="/cobertura/:state/:city" element={<CoverageLocality />} />
+
+        {/* Services routes */}
+        <Route path="/servicios" element={<ServicesIndex />} />
+        <Route path="/servicios/consultoria-seguridad" element={<ConsultoriaSeguridad />} />
+        <Route path="/servicios/proteccion-civil" element={<ProteccionCivil />} />
+        <Route path="/servicios/capacitacion" element={<Capacitacion />} />
+        <Route path="/servicios/integracion-tecnologica" element={<IntegracionTecnologica />} />
+        <Route path="/servicios/consultoria-gobierno" element={<ConsultoriaGobierno />} />
 
         {/* App routes */}
         <Route path="/app" element={<AppShell />}>

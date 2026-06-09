@@ -14,6 +14,9 @@ const nav = [
   { label: "Casos", href: "#cases" },
 ];
 
+// Enlace directo (no anchor)
+const SERVICIOS_PATH = "/servicios";
+
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -83,6 +86,14 @@ export const Navbar = () => {
           ))}
         </nav>
 
+        {/* Servicios — enlace directo */}
+        <Link
+          to={SERVICIOS_PATH}
+          className={`hidden lg:block text-[0.85rem] transition-colors duration-200 tracking-[0.15em] uppercase font-light ${linkColor}`}
+        >
+          Oferta
+        </Link>
+
         {/* Desktop CTA Buttons */}
         <div className="hidden lg:flex items-center gap-4">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -138,6 +149,12 @@ export const Navbar = () => {
                 {item.label}
               </a>
             ))}
+            <Link
+              to={SERVICIOS_PATH}
+              className="text-sm text-smoke/70 hover:text-smoke transition-colors py-2 uppercase tracking-wider font-light"
+            >
+              Oferta de servicios
+            </Link>
             <div className="border-t border-[rgba(196,160,74,0.15)] pt-6 mt-2 flex flex-col gap-4">
               <a
                 href="/auth"
