@@ -15,7 +15,7 @@ interface ServiceLandingProps {
 }
 
 export default function ServiceLanding({ data }: ServiceLandingProps) {
-  const { heroImage, breadcrumb, h1, lead, intro, blocks, modalidades, nota, cta, seo, href } = data;
+  const { heroImage, breadcrumb, parentBreadcrumb, parentHref, h1, lead, intro, blocks, modalidades, nota, cta, seo, href } = data;
 
   const pageUrl = `${SITE_URL}${href}`;
   const seoTitle = seo?.title ?? `${h1} | STRATEC`;
@@ -29,11 +29,21 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
     url: pageUrl,
   });
 
-  const breadcrumbSchema = BREADCRUMB_SCHEMA([
-    { name: "Inicio", url: SITE_URL },
-    { name: "Servicios", url: `${SITE_URL}/servicios` },
-    { name: breadcrumb, url: pageUrl },
-  ]);
+  // Breadcrumb schema: añade nivel de categoría padre cuando existe
+  const breadcrumbItems = parentBreadcrumb && parentHref
+    ? [
+        { name: "Inicio", url: SITE_URL },
+        { name: "Servicios", url: `${SITE_URL}/servicios` },
+        { name: parentBreadcrumb, url: `${SITE_URL}${parentHref}` },
+        { name: breadcrumb, url: pageUrl },
+      ]
+    : [
+        { name: "Inicio", url: SITE_URL },
+        { name: "Servicios", url: `${SITE_URL}/servicios` },
+        { name: breadcrumb, url: pageUrl },
+      ];
+
+  const breadcrumbSchema = BREADCRUMB_SCHEMA(breadcrumbItems);
 
   return (
     <div className="min-h-screen bg-navy-deep">
@@ -84,7 +94,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="flex items-center gap-2 font-condensed text-[0.7rem] uppercase tracking-[0.18em] text-white/35 mb-8"
+              className="flex items-center gap-2 font-condensed text-[0.7rem] uppercase tracking-[0.18em] text-white/35 mb-8 flex-wrap"
             >
               <Link to="/" className="hover:text-[#C4A04A] transition-colors">
                 Inicio
@@ -93,6 +103,14 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
               <Link to="/servicios" className="hover:text-[#C4A04A] transition-colors">
                 Servicios
               </Link>
+              {parentBreadcrumb && parentHref && (
+                <>
+                  <ChevronRight className="h-3 w-3 opacity-40" />
+                  <Link to={parentHref} className="hover:text-[#C4A04A] transition-colors">
+                    {parentBreadcrumb}
+                  </Link>
+                </>
+              )}
               <ChevronRight className="h-3 w-3 opacity-40" />
               <span className="text-white/50">{breadcrumb}</span>
             </motion.nav>

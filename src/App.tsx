@@ -22,6 +22,14 @@ import ProteccionCivil from "./pages/services/ProteccionCivil.tsx";
 import Capacitacion from "./pages/services/Capacitacion.tsx";
 import IntegracionTecnologica from "./pages/services/IntegracionTecnologica.tsx";
 import ConsultoriaGobierno from "./pages/services/ConsultoriaGobierno.tsx";
+import ProgramaInternoProteccionCivil from "./pages/services/ProgramaInternoProteccionCivil.tsx";
+import CapacitacionBrigadasEmergencia from "./pages/services/CapacitacionBrigadasEmergencia.tsx";
+import EstudioAnalisisRiesgo from "./pages/services/EstudioAnalisisRiesgo.tsx";
+import VideovigilanciaCctv from "./pages/services/VideovigilanciaCctv.tsx";
+import GpsMonitoreoVehicular from "./pages/services/GpsMonitoreoVehicular.tsx";
+import AuditoriaSeguridadPage from "./pages/services/AuditoriaSeguridadPage.tsx";
+import PlanContinuidadOperaciones from "./pages/services/PlanContinuidadOperaciones.tsx";
+import DictamenSeguridad from "./pages/services/DictamenSeguridad.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
 import Leads from "./pages/app/Leads.tsx";
@@ -60,6 +68,16 @@ const AppRoutes = () => {
         <Route path="/servicios/capacitacion" element={<Capacitacion />} />
         <Route path="/servicios/integracion-tecnologica" element={<IntegracionTecnologica />} />
         <Route path="/servicios/consultoria-gobierno" element={<ConsultoriaGobierno />} />
+
+        {/* Páginas específicas de servicios (SEO individual) */}
+        <Route path="/servicios/programa-interno-proteccion-civil" element={<ProgramaInternoProteccionCivil />} />
+        <Route path="/servicios/capacitacion-brigadas-emergencia" element={<CapacitacionBrigadasEmergencia />} />
+        <Route path="/servicios/estudio-analisis-riesgo" element={<EstudioAnalisisRiesgo />} />
+        <Route path="/servicios/videovigilancia-cctv" element={<VideovigilanciaCctv />} />
+        <Route path="/servicios/gps-monitoreo-vehicular" element={<GpsMonitoreoVehicular />} />
+        <Route path="/servicios/auditoria-seguridad" element={<AuditoriaSeguridadPage />} />
+        <Route path="/servicios/plan-continuidad-operaciones" element={<PlanContinuidadOperaciones />} />
+        <Route path="/servicios/dictamen-seguridad" element={<DictamenSeguridad />} />
 
         {/* App routes */}
         <Route path="/app" element={<AppShell />}>

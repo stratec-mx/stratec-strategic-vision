@@ -56,6 +56,72 @@
     <priority>0.95</priority>
   </url>
 
+  <!-- Páginas específicas de servicios (SEO individual por keyword) -->
+
+  <!-- PIPC — keyword: Programa Interno de Protección Civil Morelos -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/programa-interno-proteccion-civil</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+
+  <!-- Brigadas — keyword: Capacitación Brigadas de Emergencia -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/capacitacion-brigadas-emergencia</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Riesgo — keyword: Estudio y Análisis de Riesgo -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/estudio-analisis-riesgo</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- CCTV — keyword: Videovigilancia CCTV empresas -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/videovigilancia-cctv</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- GPS — keyword: GPS monitoreo vehicular flotillas -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/gps-monitoreo-vehicular</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Auditoría — keyword: Auditoría de Seguridad institucional -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/auditoria-seguridad</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Continuidad — keyword: Plan de Continuidad de Operaciones -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/plan-continuidad-operaciones</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Dictamen — keyword: Dictamen de Seguridad -->
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/dictamen-seguridad</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
   <!-- Coverage Index -->
   <url>
     <loc>https://www.stratecsecurity.com/cobertura</loc>
