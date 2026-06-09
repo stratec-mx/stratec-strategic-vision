@@ -10,7 +10,7 @@ export const SITE_CONSULTANT = {
   name: "Juan Carlos González",
   title: "Coordinador General · STRATEC",
   bio: "12 años de trayectoria en seguridad institucional, implementación de Programas Internos de Protección Civil, auditorías de seguridad y gestión de riesgos para organizaciones públicas y privadas en México.",
-  linkedin: "https://www.linkedin.com/company/stratec",
+  linkedin: "https://www.linkedin.com/in/carlos-gonz%C3%A1lez-04b27b13a/",
   methodologies: [
     { label: "ISO 31000:2018", desc: "Gestión del Riesgo" },
     { label: "ISO 22301",       desc: "Continuidad de Negocio" },
