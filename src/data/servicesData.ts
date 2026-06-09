@@ -10,6 +10,12 @@ export interface ServiceBlock {
   blockImage: string; // imagen específica del sub-servicio (verificada en Unsplash)
 }
 
+export interface ServiceSeo {
+  title: string;
+  description: string;
+  keywords: string[];
+}
+
 export interface ServiceData {
   slug: string;
   numero: string;
@@ -26,6 +32,7 @@ export interface ServiceData {
   nota?: string;
   cta: string;
   gancho: string;
+  seo?: ServiceSeo;
 }
 
 // ─── Índice de servicios (usado en homepage + /servicios) ──────────────────
@@ -121,6 +128,22 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
     cta: "Solicitar diagnóstico especializado",
+    seo: {
+      title: "Consultoría en Seguridad Institucional | STRATEC",
+      description:
+        "Diagnósticos de seguridad, auditorías de vulnerabilidades y estrategias de protección a medida para empresas e instituciones en México. Soluciones profesionales con enfoque ejecutivo.",
+      keywords: [
+        "consultoría en seguridad",
+        "diagnóstico de seguridad institucional",
+        "auditoría de seguridad",
+        "análisis de riesgos y vulnerabilidades",
+        "prevención de pérdidas",
+        "protocolos de seguridad",
+        "seguridad institucional México",
+        "consultoría seguridad empresas",
+        "gestión de riesgos corporativos",
+      ],
+    },
   },
 
   // ── 02 · Protección Civil y Gestión Integral de Riesgos ──────────────────
@@ -164,6 +187,25 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "Una emergencia no avisa. La diferencia entre una crisis y una contingencia manejada es la preparación previa. Diseñamos tu programa, formamos tus brigadas y garantizamos la continuidad operativa.",
     cta: "Solicitar propuesta especializada",
+    seo: {
+      title: "Programa Interno de Protección Civil para Municipios de Morelos | STRATEC",
+      description:
+        "Diseño e implementación de Programas Internos de Protección Civil (PIPC) para empresas, instituciones y municipios del Estado de Morelos. Brigadas de emergencia, simulacros y planes de continuidad operativa.",
+      keywords: [
+        "Programa Interno de Protección Civil",
+        "PIPC",
+        "protección civil Morelos",
+        "protección civil municipios Estado de Morelos",
+        "programa protección civil empresa",
+        "brigadas de emergencia",
+        "simulacros de evacuación",
+        "gestión integral de riesgos",
+        "plan de emergencia institucional",
+        "protección civil Cuernavaca",
+        "protección civil municipios Morelos",
+        "continuidad operativa",
+      ],
+    },
   },
 
   // ── 03 · Capacitación Especializada ──────────────────────────────────────
@@ -208,6 +250,24 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
     cta: "Solicitar programa de capacitación",
+    seo: {
+      title: "Capacitación Policial y en Seguridad Institucional | Programas de Prevención | STRATEC",
+      description:
+        "Programas especializados de capacitación policial, formación en protección civil y programas de prevención social del delito para corporaciones, instituciones y municipios en México.",
+      keywords: [
+        "capacitación policial",
+        "capacitación policía municipal",
+        "programas de prevención",
+        "prevención social del delito",
+        "capacitación en seguridad institucional",
+        "formación en protección civil",
+        "capacitación brigadas de emergencia",
+        "prevención de riesgos",
+        "cultura de seguridad",
+        "capacitación corporativa seguridad",
+        "prevención social violencia México",
+      ],
+    },
   },
 
   // ── 04 · Integración Tecnológica para la Seguridad ───────────────────────
@@ -257,6 +317,23 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "No compras cámaras ni GPS: compras visibilidad, control operativo y capacidad de respuesta. Diseñamos arquitecturas tecnológicas integradas que trabajan al servicio de tu estrategia de seguridad.",
     cta: "Solicitar evaluación tecnológica",
+    seo: {
+      title: "Videovigilancia, Monitoreo Vehicular y Control de Accesos | STRATEC",
+      description:
+        "Integración de sistemas tecnológicos de seguridad: videovigilancia CCTV, monitoreo vehicular GPS, control de accesos y proyectos integrales para empresas e instituciones en México.",
+      keywords: [
+        "sistemas de videovigilancia",
+        "videovigilancia CCTV empresas",
+        "monitoreo vehicular GPS",
+        "control de accesos",
+        "cámaras de seguridad",
+        "sistemas de alarma",
+        "videotelemática",
+        "integración tecnológica seguridad",
+        "proyectos integrales de seguridad",
+        "tecnología de seguridad institucional",
+      ],
+    },
   },
 
   // ── 05 · Consultoría para Gobierno e Instituciones ───────────────────────
@@ -301,5 +378,24 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     gancho:
       "La seguridad institucional requiere análisis técnico, planeación rigurosa y capacidad operativa sostenida. Acompañamos a dependencias y organismos en el fortalecimiento de sus modelos de seguridad con soluciones objetivas y auditables.",
     cta: "Solicitar propuesta dirigida",
+    seo: {
+      title: "Consultoría en Seguridad para Municipios y Gobierno | Plan de Prevención Social | STRATEC",
+      description:
+        "Consultoría especializada en seguridad pública, planeación estratégica y Plan de Prevención Social para municipios del Estado de Morelos y todo México. Diagnósticos institucionales con resultados auditables.",
+      keywords: [
+        "consultoría seguridad municipal",
+        "plan de prevención social municipios",
+        "Plan de Prevención Social para Municipios",
+        "seguridad pública municipal",
+        "diagnóstico institucional seguridad",
+        "planeación estratégica seguridad pública",
+        "seguridad urbana México",
+        "consultoría gobierno Morelos",
+        "prevención social violencia",
+        "programa prevención social delito municipios",
+        "seguridad municipal Estado de Morelos",
+        "modelo de seguridad institucional",
+      ],
+    },
   },
 };

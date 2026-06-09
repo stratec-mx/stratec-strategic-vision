@@ -408,20 +408,8 @@ function ServiceCard({
               transition={{ duration: 0.38, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
-              {/* Imagen de referencia */}
-              <div className="relative h-48 overflow-hidden mx-8 md:mx-10">
-                <img
-                  src={item.heroImage}
-                  alt={item.titulo}
-                  className="w-full h-full object-cover"
-                  style={{ opacity: 0.7 }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#232330] via-[#232330]/20 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#232330]/40 to-transparent" />
-              </div>
-
               {/* Texto de gancho + CTA */}
-              <div className="px-8 md:px-10 pt-6 pb-10">
+              <div className="px-8 md:px-10 pt-4 pb-10">
                 <p className="font-condensed font-light text-[0.95rem] text-smoke/70 leading-[1.85] mb-7 italic border-l-2 border-[rgba(196,160,74,0.3)] pl-4">
                   {item.gancho}
                 </p>

@@ -109,6 +109,7 @@ export const SERVICE_SCHEMA = (service: {
   description: string;
   image: string;
   url: string;
+  keywords?: string[];
 }) => ({
   "@context": "https://schema.org",
   "@type": "Service",
@@ -119,11 +120,20 @@ export const SERVICE_SCHEMA = (service: {
   "provider": {
     "@type": "Organization",
     "name": "STRATEC",
-    "url": SITE_URL
+    "url": SITE_URL,
+    "foundingLocation": "Morelos, México",
+    "areaServed": ["Morelos", "Estado de Morelos", "Cuernavaca", "México"]
   },
-  "areaServed": {
-    "@type": "Country",
-    "name": "MX"
+  "areaServed": [
+    { "@type": "AdministrativeArea", "name": "Estado de Morelos" },
+    { "@type": "AdministrativeArea", "name": "Municipios de Morelos" },
+    { "@type": "Country", "name": "México" }
+  ],
+  "serviceType": service.name,
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "MXN",
+    "availability": "https://schema.org/InStock"
   }
 });
 

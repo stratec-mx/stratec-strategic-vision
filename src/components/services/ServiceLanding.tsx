@@ -6,16 +6,48 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { NetworkBackground } from "@/components/NetworkBackground";
 import { ServiceBlock, ServiceData } from "@/data/servicesData";
+import { SeoHelmet } from "@/components/SEO/SeoHelmet";
+import { SchemaMarkup } from "@/components/SEO/SchemaMarkup";
+import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL } from "@/lib/seo";
 
 interface ServiceLandingProps {
   data: ServiceData;
 }
 
 export default function ServiceLanding({ data }: ServiceLandingProps) {
-  const { heroImage, breadcrumb, h1, lead, intro, blocks, modalidades, nota, cta } = data;
+  const { heroImage, breadcrumb, h1, lead, intro, blocks, modalidades, nota, cta, seo, href } = data;
+
+  const pageUrl = `${SITE_URL}${href}`;
+  const seoTitle = seo?.title ?? `${h1} | STRATEC`;
+  const seoDesc = seo?.description ?? lead.slice(0, 160);
+  const seoKeywords = seo?.keywords ?? [];
+
+  const serviceSchema = SERVICE_SCHEMA({
+    name: h1,
+    description: seoDesc,
+    image: heroImage,
+    url: pageUrl,
+  });
+
+  const breadcrumbSchema = BREADCRUMB_SCHEMA([
+    { name: "Inicio", url: SITE_URL },
+    { name: "Servicios", url: `${SITE_URL}/servicios` },
+    { name: breadcrumb, url: pageUrl },
+  ]);
 
   return (
     <div className="min-h-screen bg-navy-deep">
+      <SeoHelmet
+        title={seoTitle}
+        description={seoDesc}
+        keywords={seoKeywords}
+        url={pageUrl}
+        canonical={pageUrl}
+        image={heroImage}
+        type="website"
+      />
+      <SchemaMarkup schema={serviceSchema} />
+      <SchemaMarkup schema={breadcrumbSchema} />
       <Navbar />
 
       <main id="main-content">
@@ -147,7 +179,6 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
                   key={block.h2}
                   block={block}
                   index={i}
-                  titulo={h1}
                   cta={cta}
                   total={blocks.length}
                 />
@@ -224,12 +255,10 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
 function BlockItem({
   block,
   index,
-  titulo,
   cta,
 }: {
   block: ServiceBlock;
   index: number;
-  titulo: string;
   cta: string;
   total: number;
 }) {
@@ -309,8 +338,8 @@ function BlockItem({
               {/* Espaciador (columna del número) */}
               <div className="hidden md:block md:col-span-1" />
 
-              {/* Descripción + CTA */}
-              <div className="md:col-span-7">
+              {/* Descripción + CTA — ocupa el espacio completo */}
+              <div className="md:col-span-11">
                 <p
                   className="font-condensed font-light text-[1rem] leading-[1.85] mb-7"
                   style={{ color: "rgba(230, 228, 224, 0.72)" }}
@@ -326,26 +355,6 @@ function BlockItem({
                   {cta}
                   <ArrowRight className="h-3 w-3" />
                 </a>
-              </div>
-
-              {/* Imagen específica del sub-servicio */}
-              <div className="md:col-span-4">
-                <div className="relative h-36 md:h-full min-h-[9rem] overflow-hidden">
-                  <img
-                    src={block.blockImage}
-                    alt={block.h2}
-                    className="w-full h-full object-cover"
-                    style={{ opacity: 0.6 }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy-deep/80 via-navy-deep/20 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-navy-deep/30 to-transparent" />
-                  {/* Etiqueta decorativa */}
-                  <div className="absolute bottom-3 left-3">
-                    <span className="font-condensed text-[0.62rem] uppercase tracking-[0.22em] text-[#C4A04A]/70">
-                      STRATEC · {titulo.split(" ").slice(0, 2).join(" ")}
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
           </motion.div>

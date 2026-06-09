@@ -74,20 +74,8 @@ function HomeServiceCard({
               transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
-              {/* Imagen */}
-              <div className="relative h-40 overflow-hidden mx-6">
-                <img
-                  src={s.heroImage}
-                  alt={s.titulo}
-                  className="w-full h-full object-cover"
-                  style={{ opacity: 0.65 }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#232330] via-[#232330]/20 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#232330]/40 to-transparent" />
-              </div>
-
               {/* Gancho + CTA */}
-              <div className="px-6 pt-5 pb-7">
+              <div className="px-6 pt-4 pb-7">
                 <p className="font-condensed font-light text-[0.88rem] text-smoke/65 leading-[1.85] mb-5 italic border-l-2 border-[rgba(196,160,74,0.3)] pl-3.5">
                   {s.gancho}
                 </p>
