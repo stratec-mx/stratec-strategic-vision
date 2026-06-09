@@ -1,4 +1,8 @@
 // ─── STRATEC · Datos centralizados de servicios ────────────────────────────
+// NOTA: Las imágenes de Unsplash son placeholders universales.
+// Reemplaza cada heroImage con fotografía propia de contexto mexicano
+// colocando los archivos en /public/images/servicios/ y referenciando
+// la ruta relativa, ej: "/images/servicios/consultoria-seguridad.jpg"
 
 export interface ServiceBlock {
   h2: string;
@@ -29,7 +33,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
-    heroImage: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
   },
@@ -38,7 +42,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",
     href: "/servicios/proteccion-civil",
-    heroImage: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "Una emergencia no avisa. La diferencia entre una crisis y una contingencia manejada es la preparación previa. Diseñamos tu programa, formamos tus brigadas y garantizamos la continuidad operativa.",
   },
@@ -47,7 +51,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Capacitación Especializada",
     descripcionCorta: "Formación operativa en seguridad, riesgos y protección civil.",
     href: "/servicios/capacitacion",
-    heroImage: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
   },
@@ -56,7 +60,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Integración Tecnológica para la Seguridad",
     descripcionCorta: "Videovigilancia, monitoreo vehicular, control de accesos y proyectos integrales.",
     href: "/servicios/integracion-tecnologica",
-    heroImage: "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "No compras cámaras ni GPS: compras visibilidad, control operativo y capacidad de respuesta. Diseñamos arquitecturas tecnológicas integradas que trabajan al servicio de tu estrategia de seguridad.",
   },
@@ -65,7 +69,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Consultoría para Gobierno e Instituciones",
     descripcionCorta: "Diagnósticos institucionales, planeación estratégica y seguridad urbana.",
     href: "/servicios/consultoria-gobierno",
-    heroImage: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "La seguridad institucional requiere análisis técnico, planeación rigurosa y capacidad operativa sostenida. Acompañamos a dependencias y organismos en el fortalecimiento de sus modelos de seguridad con soluciones objetivas y auditables.",
   },
@@ -78,7 +82,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
-    heroImage: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Consultoría en Seguridad",
     h1: "Consultoría en Seguridad",
     lead: "Toda organización enfrenta riesgos. La diferencia radica en conocerlos antes de que se conviertan en pérdidas, interrupciones operativas o afectaciones patrimoniales. STRATEC desarrolla diagnósticos, auditorías y estrategias de protección que permiten a empresas, instituciones y organizaciones fortalecer sus capacidades de seguridad mediante soluciones objetivas, medibles y alineadas a su operación.",
@@ -115,7 +119,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",
     href: "/servicios/proteccion-civil",
-    heroImage: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Protección Civil y Gestión Integral de Riesgos",
     h1: "Protección Civil y Gestión Integral de Riesgos",
     lead: "La preparación es la herramienta más efectiva para reducir el impacto de una emergencia. STRATEC acompaña a organizaciones públicas y privadas en la identificación de riesgos, cumplimiento normativo y fortalecimiento de capacidades de respuesta.",
@@ -152,7 +156,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Capacitación Especializada",
     descripcionCorta: "Formación operativa en seguridad, riesgos y protección civil.",
     href: "/servicios/capacitacion",
-    heroImage: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Capacitación Especializada",
     h1: "Capacitación Especializada",
     lead: "La seguridad depende de las personas que la ejecutan. STRATEC desarrolla programas de formación orientados a fortalecer competencias, mejorar la capacidad de respuesta y generar una cultura preventiva dentro de organizaciones públicas y privadas.",
@@ -190,7 +194,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Integración Tecnológica para la Seguridad",
     descripcionCorta: "Videovigilancia, monitoreo vehicular, control de accesos y proyectos integrales.",
     href: "/servicios/integracion-tecnologica",
-    heroImage: "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Integración Tecnológica para la Seguridad",
     h1: "Integración Tecnológica para la Seguridad",
     lead: "La tecnología genera valor cuando se integra a una estrategia de seguridad. STRATEC diseña soluciones tecnológicas orientadas a mejorar la supervisión, fortalecer el control operativo y proporcionar información útil para la toma de decisiones.",
@@ -232,7 +236,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Consultoría para Gobierno e Instituciones",
     descripcionCorta: "Diagnósticos institucionales, planeación estratégica y seguridad urbana.",
     href: "/servicios/consultoria-gobierno",
-    heroImage: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Consultoría para Gobierno e Instituciones",
     h1: "Consultoría para Gobierno e Instituciones",
     lead: "La seguridad institucional requiere análisis técnico, planeación estratégica y mecanismos de gestión que permitan fortalecer capacidades y optimizar recursos. STRATEC desarrolla soluciones dirigidas a dependencias públicas, organismos autónomos, instituciones educativas y organizaciones que requieren instrumentos especializados para la toma de decisiones.",
