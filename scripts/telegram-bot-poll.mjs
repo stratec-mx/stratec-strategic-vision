@@ -71,7 +71,7 @@ async function generarImagen(tema){
 
 async function generarCaptions(tema){
   const prompt=`Eres el community manager de STRATEC, consultoria en seguridad institucional y proteccion civil en Morelos Mexico. Clientes: Directores de Seguridad, CEOs, responsables de Proteccion Civil.\n\nTema: "${tema}"\n\nRedacta DOS publicaciones en espanol mexicano profesional.\n\nLINKEDIN (160-200 palabras, max 2 emojis, CTA: Agenda una consulta sin costo en stratecsecurity.com, hashtags: #SeguridadInstitucional #ProteccionCivil #GestionDeRiesgos + 2 relevantes)\n\nFACEBOOK (90-120 palabras, 2-3 emojis, CTA: Mas informacion en stratecsecurity.com, 4 hashtags)\n\nResponde UNICAMENTE con JSON: {"linkedin":"...","facebook":"..."}`;
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
   if(!r.ok)throw new Error(`Gemini ${r.status}`);
   const d=await r.json();
   const t=d.candidates[0].content.parts[0].text;
