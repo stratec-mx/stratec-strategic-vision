@@ -1,25 +1,33 @@
-name: Telegram BoSTRATEC
-h
+name: Telegram Bot - STRATEC Posts
+
 on:
   schedule:
     - cron: "* * * * *"
+
   workflow_dispatch:
 
 jobs:
   poll:
     name: Procesar mensajes
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Instalar Sharp
+
+      - name: Instalar dependencias
         run: npm install sharp
+
       - name: Ejecutar bot
         env:
           TELEGRAM_BOT_TOKEN:          ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -30,9 +38,10 @@ jobs:
           LINKEDIN_ACCESS_TOKEN:       ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_ORG_ID:             ${{ secrets.LINKEDIN_ORG_ID }}
         run: node scripts/telegram-bot-poll.mjs
-      - name: Guardar estado
+
+      - name: Guardar estado del bot
         run: |
-          git config user.name "STRATEC Bot"
+          git config user.name  "STRATEC Bot"
           git config user.email "bot@stratecsecurity.com"
           git add public/social-posts/
           git diff --staged --quiet || git commit -m "bot: estado telegram [skip ci]"
