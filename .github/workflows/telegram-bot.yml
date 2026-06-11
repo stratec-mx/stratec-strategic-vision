@@ -1,8 +1,8 @@
-name: Telegram Bot STRATEC
-
+name: Telegram BoSTRATEC
+h
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
   workflow_dispatch:
 
 jobs:
