@@ -815,14 +815,14 @@ async function main() {
     if (drain.ok && drain.result?.length) {
       const lastId = drain.result[drain.result.length - 1].update_id;
       offset = lastId + 1;
-      saveOffset(offset);
-      console.log(`Offset irreal detectado. Ajustado a ${offset} (último update real: ${lastId})`);
-      // Confirma el drain con Telegram
-      await tg("getUpdates", { offset, limit: 1, timeout: 0 });
     } else {
-      console.log("Sin mensajes pendientes en Telegram. Offset mantenido.");
-      return;
+      // Sin updates pendientes: resetear a 0 para que Telegram empiece a servir
+      // los próximos mensajes normalmente.
+      offset = 0;
     }
+    saveOffset(offset);
+    console.log(`Offset irreal corregido → ${offset}`);
+    await tg("getUpdates", { offset, limit: 1, timeout: 0 });
   }
 
   console.log(`Polling desde offset ${offset}...`);
