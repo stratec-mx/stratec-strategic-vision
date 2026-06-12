@@ -283,15 +283,45 @@ async function generarCaptionsDesdeImagen(imageBuffer, temaHint = "") {
 // ── Facebook ──────────────────────────────────────────────────────────────────
 
 async function publicarFacebookBuffer(imageBuffer, caption) {
-  if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) return false;
-  const form = new FormData();
-  form.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
-  form.append("message", caption);
-  form.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
-  const res = await fetch(`https://graph.facebook.com/v19.0/${FACEBOOK_PAGE_ID}/photos`, {
-    method: "POST", body: form,
-  });
-  if (!res.ok) throw new Error(`Facebook: ${await res.text()}`);
+  if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
+    console.warn("Facebook: FACEBOOK_PAGE_ACCESS_TOKEN o FACEBOOK_PAGE_ID no configurados");
+    return false;
+  }
+
+  // Paso 1: subir imagen sin publicar para obtener photo_id
+  const formImg = new FormData();
+  formImg.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
+  formImg.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
+  formImg.append("published", "false");
+
+  const imgRes = await fetch(
+    `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
+    { method: "POST", body: formImg }
+  );
+  const imgData = await imgRes.json();
+  if (!imgRes.ok || imgData.error) {
+    const err = imgData.error?.message || JSON.stringify(imgData);
+    throw new Error(`Facebook upload imagen: ${err}`);
+  }
+  const photoId = imgData.id;
+  console.log(`Facebook: imagen subida, photo_id=${photoId}`);
+
+  // Paso 2: publicar post con la imagen adjunta
+  const postForm = new FormData();
+  postForm.append("message", caption);
+  postForm.append("attached_media", JSON.stringify([{ media_fbid: photoId }]));
+  postForm.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
+
+  const postRes = await fetch(
+    `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`,
+    { method: "POST", body: postForm }
+  );
+  const postData = await postRes.json();
+  if (!postRes.ok || postData.error) {
+    const err = postData.error?.message || JSON.stringify(postData);
+    throw new Error(`Facebook publicar post: ${err}`);
+  }
+  console.log(`Facebook: publicado, post_id=${postData.id}`);
   return true;
 }
 
