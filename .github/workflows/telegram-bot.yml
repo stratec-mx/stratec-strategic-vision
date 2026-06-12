@@ -2,7 +2,7 @@ name: Telegram Bot - STRATEC Posts
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
   workflow_dispatch:
   # SIN trigger de push — era la causa del loop infinito:
   # cada commit del bot disparaba un nuevo run, que procesaba
