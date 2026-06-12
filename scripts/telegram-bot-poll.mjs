@@ -277,13 +277,49 @@ async function descargarFotoTelegram(fileId) {
 
 // ── Leonardo.ai — generar imagen ──────────────────────────────────────────────
 
+// Modelos en orden de preferencia. Si el primero falla, intenta el siguiente.
+const LEONARDO_MODELS = [
+  { id: "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf0", name: "Phoenix"       },
+  { id: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3", name: "Diffusion XL"  },
+];
+
+async function _leonardoGenerar(prompt, negative, modelId) {
+  const res = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${LEONARDO_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt, negative_prompt: negative,
+      modelId, width: 1024, height: 576, num_images: 1, guidance_scale: 7,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Leonardo ${res.status}: ${body}`);
+  }
+  const json = await res.json();
+  const genId = json.sdGenerationJob?.generationId;
+  if (!genId) throw new Error(`Leonardo: respuesta inesperada — ${JSON.stringify(json)}`);
+
+  for (let i = 0; i < 24; i++) {
+    await new Promise((r) => setTimeout(r, 3500));
+    const poll = await fetch(
+      `https://cloud.leonardo.ai/api/rest/v1/generations/${genId}`,
+      { headers: { Authorization: `Bearer ${LEONARDO_API_KEY}` } }
+    );
+    const { generations_by_pk } = await poll.json();
+    const imgs = generations_by_pk?.generated_images;
+    if (imgs?.length > 0) return Buffer.from(await (await fetch(imgs[0].url)).arrayBuffer());
+  }
+  throw new Error("Leonardo: timeout (84s) sin imagen");
+}
+
 async function generarImagen(tema) {
   const scenes = [
     `security operations center with multiple surveillance monitors, professional staff at workstations, blue ambient lighting`,
-    `professional security consultant in business attire reviewing safety documents in a modern office building in Mexico City`,
-    `emergency response team in safety vests conducting a risk assessment at an industrial facility`,
+    `professional security consultant in business attire reviewing safety documents in a modern Mexican office building`,
+    `emergency response team in safety vests conducting a risk assessment at an industrial facility in Mexico`,
     `corporate boardroom with business professionals reviewing security protocols, navy blue interior`,
-    `modern CCTV camera system on a commercial building facade, urban background`,
+    `modern CCTV camera system on a commercial building facade, urban Mexico City background`,
   ];
   const scene = scenes[Math.floor(Math.random() * scenes.length)];
   const prompt =
@@ -295,34 +331,19 @@ async function generarImagen(tema) {
     `surreal, fantasy, cartoon, anime, painting, illustration, sketch, ` +
     `low quality, blurry, deformed, watermark`;
 
-  const res = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LEONARDO_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt,
-      negative_prompt: negative,
-      modelId: "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf0",
-      width: 1024, height: 576, num_images: 1, guidance_scale: 7,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Leonardo ${res.status}: ${await res.text()}`);
-  const { sdGenerationJob } = await res.json();
-  const genId = sdGenerationJob.generationId;
-
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 3000));
-    const poll = await fetch(
-      `https://cloud.leonardo.ai/api/rest/v1/generations/${genId}`,
-      { headers: { Authorization: `Bearer ${LEONARDO_API_KEY}` } }
-    );
-    const { generations_by_pk } = await poll.json();
-    const imgs = generations_by_pk?.generated_images;
-    if (imgs?.length > 0) {
-      return Buffer.from(await (await fetch(imgs[0].url)).arrayBuffer());
+  let lastErr;
+  for (const model of LEONARDO_MODELS) {
+    try {
+      console.log(`Leonardo: intentando modelo ${model.name} (${model.id})`);
+      const buf = await _leonardoGenerar(prompt, negative, model.id);
+      console.log(`Leonardo: imagen generada con ${model.name}`);
+      return buf;
+    } catch (e) {
+      console.warn(`Leonardo ${model.name} falló: ${e.message}`);
+      lastErr = e;
     }
   }
-  throw new Error("Leonardo: timeout generando imagen (60s)");
+  throw new Error(`Leonardo: todos los modelos fallaron. Último error: ${lastErr?.message}`);
 }
 
 // ── Claude (Anthropic) — helper ───────────────────────────────────────────────
@@ -722,7 +743,14 @@ async function main() {
       console.error(`Error en update ${update.update_id}:`, err.message);
       try {
         const chatId = update.message?.chat.id || update.callback_query?.message?.chat.id;
-        if (chatId) await sendMessage(chatId, `❌ Error: ${err.message}`);
+        if (chatId) {
+          const msg = err.message.includes("Leonardo")
+            ? "⏳ La generación de imagen tardó demasiado. Intenta de nuevo con /genera"
+            : err.message.includes("Claude") || err.message.includes("JSON")
+            ? "⏳ Error generando el texto. Intenta de nuevo en un momento."
+            : `❌ ${err.message}`;
+          await sendMessage(chatId, msg);
+        }
       } catch (_) {}
     }
   }

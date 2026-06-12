@@ -15,10 +15,17 @@ on:
     paths:
       - "public/social-posts/.telegram-offset"
 
+# Solo una instancia del bot corre a la vez.
+# Si llega un nuevo disparo mientras hay uno activo, espera en cola.
+concurrency:
+  group: telegram-bot
+  cancel-in-progress: false
+
 jobs:
   poll:
     name: Procesar mensajes
     runs-on: ubuntu-latest
+    timeout-minutes: 8
 
     permissions:
       contents: write
