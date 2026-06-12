@@ -1,22 +1,14 @@
 name: Telegram Bot - STRATEC Posts
 
 on:
-  # Respaldo cada 5 min (mínimo real de GitHub Actions)
   schedule:
     - cron: "*/5 * * * *"
-
-  # Disparo manual para pruebas
   workflow_dispatch:
-
-  # Auto-encadenamiento: cuando el bot procesa mensajes y actualiza
-  # el offset, el push re-dispara el workflow hasta vaciar la cola
   push:
     branches: [main]
     paths:
       - "public/social-posts/.telegram-offset"
 
-# Solo una instancia del bot corre a la vez.
-# Si llega un nuevo disparo mientras hay uno activo, espera en cola.
 concurrency:
   group: telegram-bot
   cancel-in-progress: false
@@ -44,6 +36,15 @@ jobs:
       - name: Instalar dependencias
         run: npm install sharp
 
+      # CRÍTICO: el checkout captura el offset del momento del dispatch.
+      # Si otro run terminó y empujó offset nuevo mientras este run
+      # esperaba en cola, el workspace tiene el offset viejo y
+      # re-procesaría los mismos mensajes. Este paso lo corrige.
+      - name: Sincronizar estado antes de ejecutar
+        run: |
+          git fetch origin
+          git checkout origin/main -- public/social-posts/ 2>/dev/null || true
+
       - name: Ejecutar bot
         env:
           TELEGRAM_BOT_TOKEN:          ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -56,25 +57,24 @@ jobs:
           LINKEDIN_ORG_ID:             ${{ secrets.LINKEDIN_ORG_ID }}
         run: node scripts/telegram-bot-poll.mjs
 
-      # if: always() garantiza que el offset se guarda aunque el bot falle
       - name: Guardar estado del bot
         if: always()
         run: |
           git config user.name  "STRATEC Bot"
           git config user.email "bot@stratecsecurity.com"
-          # Snapshot bot state before syncing with remote
           OFFSET=$(cat public/social-posts/.telegram-offset 2>/dev/null || echo "")
           mkdir -p /tmp/bot-state/pending
           cp -r public/social-posts/pending/. /tmp/bot-state/pending/ 2>/dev/null || true
-          # Reset to remote (eliminates push conflicts — no rebase needed)
           git fetch origin
           git reset --hard origin/main
-          # Restore bot state on top of clean remote
-          [ -n "$OFFSET" ] && echo "$OFFSET" > public/social-posts/.telegram-offset
+          # Solo avanzar el offset, nunca retrocederlo
+          REMOTE_OFFSET=$(cat public/social-posts/.telegram-offset 2>/dev/null || echo "0")
+          if [ -n "$OFFSET" ] && [ "$OFFSET" -gt "$REMOTE_OFFSET" ]; then
+            echo "$OFFSET" > public/social-posts/.telegram-offset
+          fi
           rm -rf public/social-posts/pending
           mkdir -p public/social-posts/pending
           cp -r /tmp/bot-state/pending/. public/social-posts/pending/ 2>/dev/null || true
-          # Commit and push — remote is already synced, so this cannot fail
           git add public/social-posts/
           git diff --staged --quiet || git commit -m "bot: estado telegram"
           git push

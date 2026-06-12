@@ -169,58 +169,65 @@ function svgTextLines(text, maxChars, x, startY, lh, sz, fill, weight) {
 }
 
 function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
-  const lp = 60;
-  const BH = 130;
-  let y = 72;
+  const lp = 64;
+  const BH = 140;
+  let y = 76;
   let c = "";
 
   // Category badge
-  c += `\n<rect x="${lp}" y="${y}" width="245" height="34" rx="5" fill="#c9a22718"/>
-<rect x="${lp}" y="${y}" width="4" height="34" rx="2" fill="#c9a227"/>
-<text x="${lp + 16}" y="${y + 23}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold">${xmlEsc(String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase())}</text>`;
-  y += 60;
+  c += `
+<rect x="${lp}" y="${y}" width="270" height="36" rx="5" fill="#c9a22720"/>
+<rect x="${lp}" y="${y}" width="4" height="36" rx="2" fill="#c9a227"/>
+<text x="${lp + 18}" y="${y + 24}" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase())}</text>`;
+  y += 70;
 
-  // Headline
-  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 23, lp, y, 50, 40, "white", "bold");
+  // Headline — 50px, wrap at 19 chars
+  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 19, lp, y, 60, 50, "white", "bold");
   c += `\n${tit.svg}`;
-  y += tit.count * 50 + 22;
+  y += tit.count * 60 + 30;
 
   // Gold divider
-  c += `\n<rect x="${lp}" y="${y}" width="80" height="4" rx="2" fill="#c9a227"/>`;
-  y += 28;
+  c += `\n<rect x="${lp}" y="${y}" width="90" height="4" rx="2" fill="#c9a227"/>`;
+  y += 38;
 
   // Subtitle
-  const sub = svgTextLines(subtitulo || "", 38, lp, y, 29, 20, "#c9a227", "bold");
+  const sub = svgTextLines(subtitulo || "", 34, lp, y, 32, 20, "#c9a227", "bold");
   c += `\n${sub.svg}`;
-  y += sub.count * 29 + 32;
+  y += sub.count * 32 + 44;
 
-  // Bullet points
-  for (const p of (Array.isArray(puntos) ? puntos.slice(0, 5) : [])) {
-    c += `\n<rect x="${lp}" y="${y - 14}" width="10" height="10" rx="2" fill="#c9a227"/>
-<text x="${lp + 20}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="19" fill="white">${xmlEsc(String(p))}</text>`;
-    y += 38;
+  // Bullet points — more spacing
+  for (const p of (Array.isArray(puntos) ? puntos.slice(0, 4) : [])) {
+    c += `
+<rect x="${lp}" y="${y - 15}" width="10" height="10" rx="2" fill="#c9a227"/>
+<text x="${lp + 22}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="19" fill="white">${xmlEsc(String(p))}</text>`;
+    y += 46;
   }
+
+  // Separator + CTA
+  y += 28;
+  c += `\n<rect x="${lp}" y="${y}" width="420" height="1" fill="#c9a22730"/>`;
+  y += 28;
+  c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22799">Diagnóstico sin costo · stratecsecurity.com</text>`;
 
   // Bottom bar
   const mid = Math.round(W / 2);
-  c += `\n<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.96"/>
-<rect x="${mid - 1}" y="${H - BH + 20}" width="1" height="${BH - 40}" fill="#c9a22750"/>
-<!-- Izquierda: marca -->
-<text x="60" y="${H - 66}" font-family="Liberation Sans,Arial,sans-serif" font-size="26" fill="white" font-weight="bold">STRATEC</text>
-<text x="60" y="${H - 38}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="2">CONSULTORÍA EN SEGURIDAD</text>
-<!-- Derecha: web -->
-<text x="${mid + 40}" y="${H - 60}" font-family="Liberation Sans,Arial,sans-serif" font-size="20" fill="white" font-weight="bold">stratecsecurity.com</text>
-<text x="${mid + 40}" y="${H - 36}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+  c += `
+<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.97"/>
+<rect x="${mid - 1}" y="${H - BH + 22}" width="1" height="${BH - 44}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 72}" font-family="Liberation Sans,Arial,sans-serif" font-size="28" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 42}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="2">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 40}" y="${H - 70}" font-family="Liberation Sans,Arial,sans-serif" font-size="21" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 40}" y="${H - 44}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
 <defs>
-  <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="540" y1="0" x2="760" y2="0">
-    <stop offset="0" stop-color="#0d1b2a" stop-opacity="0.96"/>
+  <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="520" y1="0" x2="780" y2="0">
+    <stop offset="0" stop-color="#0d1b2a" stop-opacity="0.98"/>
     <stop offset="1" stop-color="#0d1b2a" stop-opacity="0"/>
   </linearGradient>
 </defs>
-<rect x="0" y="0" width="580" height="${H - BH}" fill="#0d1b2a" opacity="0.97"/>
-<rect x="540" y="0" width="220" height="${H - BH}" fill="url(#fade)"/>
+<rect x="0" y="0" width="560" height="${H - BH}" fill="#0d1b2a" opacity="0.98"/>
+<rect x="520" y="0" width="260" height="${H - BH}" fill="url(#fade)"/>
 ${c}
 </svg>`;
 }
@@ -233,8 +240,8 @@ async function buildInfografia(photoBuffer, captionData) {
   }).png().toBuffer();
 
   const photo = await sharp(photoBuffer)
-    .resize(540, H, { fit: "cover", position: "center" })
-    .modulate({ brightness: 0.45 })
+    .resize(560, H, { fit: "cover", position: "center" })
+    .modulate({ brightness: 0.60 })
     .png().toBuffer();
 
   const overlay = Buffer.from(buildSVGOverlay(
@@ -245,7 +252,7 @@ async function buildInfografia(photoBuffer, captionData) {
 
   return sharp(base)
     .composite([
-      { input: photo,   left: 540, top: 0 },
+      { input: photo,   left: 520, top: 0 },
       { input: overlay, left: 0,   top: 0 },
     ])
     .png().toBuffer();
@@ -564,75 +571,90 @@ async function publicarLinkedIn(imageBuffer, caption) {
 // ── Flujo: foto subida por el usuario ────────────────────────────────────────
 
 async function procesarFoto(chatId, fileId, temaHint) {
-  await sendMessage(chatId,
-    `📸 Imagen recibida. Analizando con IA...\n⏳ Generando captions en ~15 segundos...`
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
   );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
 
-  // Flujo foto: preservar imagen del usuario + solo watermark de marca
-  const rawBuffer  = await descargarFotoTelegram(fileId);
-  const [conMarca, captions] = await Promise.all([
-    aplicarLogoWatermark(rawBuffer),
-    generarCaptionsDesdeImagen(rawBuffer, temaHint),
-  ]);
-  const tema = temaHint || "imagen personalizada STRATEC";
+  try {
+    const rawBuffer  = await descargarFotoTelegram(fileId);
+    const [conMarca, captions] = await Promise.all([
+      aplicarLogoWatermark(rawBuffer),
+      generarCaptionsDesdeImagen(rawBuffer, temaHint),
+    ]);
+    clearInterval(actionTick);
 
-  const pendingId = savePending({
-    imageBase64:    conMarca.toString("base64"),
-    rawImageBase64: rawBuffer.toString("base64"),
-    linkedin:       captions.linkedin,
-    facebook:       captions.facebook,
-    tema,
-  });
+    const tema = temaHint || "imagen personalizada STRATEC";
+    const pendingId = savePending({
+      imageBase64:    conMarca.toString("base64"),
+      rawImageBase64: rawBuffer.toString("base64"),
+      linkedin:       captions.linkedin,
+      facebook:       captions.facebook,
+      tema,
+    });
 
-  const preview =
-    `📋 <b>Preview${temaHint ? ` — ${temaHint}` : ""}</b>\n\n` +
-    `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
-    `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
+    const preview =
+      `📋 <b>Preview${temaHint ? ` — ${temaHint}` : ""}</b>\n\n` +
+      `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
+      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, conMarca, preview, [
-    [
-      { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
-      { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
-    ],
-  ]);
+    await sendPhotoBuffer(chatId, conMarca, preview, [
+      [
+        { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
+        { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
+      ],
+    ]);
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
 }
 
 // ── Flujo: generar imagen con IA ──────────────────────────────────────────────
 
 async function procesarComando(chatId, tema) {
-  await sendMessage(chatId,
-    `🎨 Generando post sobre: <b>${tema}</b>\n\n⏳ Imagen + texto en ~30 segundos...`
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
   );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
 
-  const [rawPhoto, captions] = await Promise.all([
-    generarImagen(tema),
-    generarCaptions(tema),
-  ]);
-  const imageBuffer = await buildInfografia(rawPhoto, captions);
+  try {
+    const [rawPhoto, captions] = await Promise.all([
+      generarImagen(tema),
+      generarCaptions(tema),
+    ]);
+    const imageBuffer = await buildInfografia(rawPhoto, captions);
+    clearInterval(actionTick);
 
-  const pendingId = savePending({
-    imageBase64:    imageBuffer.toString("base64"),
-    rawImageBase64: rawPhoto.toString("base64"),
-    linkedin:       captions.linkedin,
-    facebook:       captions.facebook,
-    titular:        captions.titular,
-    subtitulo:      captions.subtitulo,
-    puntos:         captions.puntos,
-    categoria:      captions.categoria,
-    tema,
-  });
+    const pendingId = savePending({
+      imageBase64:    imageBuffer.toString("base64"),
+      rawImageBase64: rawPhoto.toString("base64"),
+      linkedin:       captions.linkedin,
+      facebook:       captions.facebook,
+      titular:        captions.titular,
+      subtitulo:      captions.subtitulo,
+      puntos:         captions.puntos,
+      categoria:      captions.categoria,
+      tema,
+    });
 
-  const preview =
-    `📋 <b>Preview — ${tema}</b>\n\n` +
-    `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
-    `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
+    const preview =
+      `📋 <b>Preview — ${tema}</b>\n\n` +
+      `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
+      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, imageBuffer, preview, [
-    [
-      { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
-      { text: "🔄 Regenerar todo", callback_data: `reg:${pendingId}` },
-    ],
-  ]);
+    await sendPhotoBuffer(chatId, imageBuffer, preview, [
+      [
+        { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+        { text: "🔄 Regenerar todo", callback_data: `reg:${pendingId}` },
+      ],
+    ]);
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
 }
 
 // ── Callbacks inline ──────────────────────────────────────────────────────────
