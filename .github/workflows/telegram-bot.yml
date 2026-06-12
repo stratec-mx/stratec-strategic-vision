@@ -62,7 +62,19 @@ jobs:
         run: |
           git config user.name  "STRATEC Bot"
           git config user.email "bot@stratecsecurity.com"
+          # Snapshot bot state before syncing with remote
+          OFFSET=$(cat public/social-posts/.telegram-offset 2>/dev/null || echo "")
+          mkdir -p /tmp/bot-state/pending
+          cp -r public/social-posts/pending/. /tmp/bot-state/pending/ 2>/dev/null || true
+          # Reset to remote (eliminates push conflicts — no rebase needed)
+          git fetch origin
+          git reset --hard origin/main
+          # Restore bot state on top of clean remote
+          [ -n "$OFFSET" ] && echo "$OFFSET" > public/social-posts/.telegram-offset
+          rm -rf public/social-posts/pending
+          mkdir -p public/social-posts/pending
+          cp -r /tmp/bot-state/pending/. public/social-posts/pending/ 2>/dev/null || true
+          # Commit and push — remote is already synced, so this cannot fail
           git add public/social-posts/
           git diff --staged --quiet || git commit -m "bot: estado telegram"
-          git pull --rebase origin main || true
-          git push || true
+          git push

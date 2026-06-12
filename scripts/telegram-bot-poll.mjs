@@ -61,20 +61,45 @@ function saveOffset(offset) {
 
 function savePending(data) {
   if (!existsSync(PENDING_DIR)) mkdirSync(PENDING_DIR, { recursive: true });
-  const id = randomUUID();
-  writeFileSync(join(PENDING_DIR, `${id}.json`), JSON.stringify(data));
+  const id   = randomUUID();
+  const meta = { ...data };
+
+  // Store images as separate PNG files — keeps JSON tiny and git push fast
+  if (data.imageBase64) {
+    writeFileSync(join(PENDING_DIR, `${id}.png`), Buffer.from(data.imageBase64, "base64"));
+    delete meta.imageBase64;
+  }
+  if (data.rawImageBase64) {
+    writeFileSync(join(PENDING_DIR, `${id}-raw.png`), Buffer.from(data.rawImageBase64, "base64"));
+    delete meta.rawImageBase64;
+  }
+
+  writeFileSync(join(PENDING_DIR, `${id}.json`), JSON.stringify(meta));
   return id;
 }
 
 function readPending(id) {
   const file = join(PENDING_DIR, `${id}.json`);
   if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, "utf8"));
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+
+  const imgFile = join(PENDING_DIR, `${id}.png`);
+  const rawFile = join(PENDING_DIR, `${id}-raw.png`);
+  if (existsSync(imgFile)) meta.imageBase64    = readFileSync(imgFile).toString("base64");
+  if (existsSync(rawFile)) meta.rawImageBase64 = readFileSync(rawFile).toString("base64");
+
+  return meta;
+}
+
+function updatePendingImage(id, imageBuffer) {
+  writeFileSync(join(PENDING_DIR, `${id}.png`), imageBuffer);
 }
 
 function deletePending(id) {
-  const file = join(PENDING_DIR, `${id}.json`);
-  if (existsSync(file)) unlinkSync(file);
+  for (const suffix of [".json", ".png", "-raw.png"]) {
+    const f = join(PENDING_DIR, `${id}${suffix}`);
+    if (existsSync(f)) unlinkSync(f);
+  }
 }
 
 // ── Telegram helpers ──────────────────────────────────────────────────────────
@@ -661,10 +686,13 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
   const captions  = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
   const conMarca  = await aplicarLogoWatermark(rawBuffer);
 
-  pending.imageBase64 = conMarca.toString("base64");
-  pending.linkedin    = captions.linkedin;
-  pending.facebook    = captions.facebook;
-  writeFileSync(join(PENDING_DIR, `${pendingId}.json`), JSON.stringify(pending));
+  // Update image file and caption metadata separately
+  updatePendingImage(pendingId, conMarca);
+  const metaFile = join(PENDING_DIR, `${pendingId}.json`);
+  const meta     = JSON.parse(readFileSync(metaFile, "utf8"));
+  meta.linkedin  = captions.linkedin;
+  meta.facebook  = captions.facebook;
+  writeFileSync(metaFile, JSON.stringify(meta));
 
   const preview =
     `📋 <b>Nueva caption</b>\n\n` +
