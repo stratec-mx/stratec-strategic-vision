@@ -38,6 +38,7 @@ const OFFSET_FILE = join(ROOT, "public", "social-posts", ".telegram-offset");
 const {
   TELEGRAM_BOT_TOKEN,
   OPENAI_API_KEY,
+  FAL_API_KEY,
   LEONARDO_API_KEY,
   ANTHROPIC_API_KEY,
   FACEBOOK_PAGE_ACCESS_TOKEN,
@@ -308,9 +309,7 @@ async function descargarFotoTelegram(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ── Leonardo.ai — generar imagen ──────────────────────────────────────────────
-
-// ── DALL-E 3 (OpenAI) — generador principal ──────────────────────────────────
+// ── DALL-E 3 (OpenAI) ────────────────────────────────────────────────────────
 
 async function _dalleGenerar(tema) {
   const scenes = [
@@ -343,7 +342,72 @@ async function _dalleGenerar(tema) {
   return Buffer.from(await (await fetch(data[0].url)).arrayBuffer());
 }
 
-// ── Leonardo (respaldo si no hay clave OpenAI) ────────────────────────────────
+// ── Fal.ai — Flux.1 Pro (respaldo principal si no hay OpenAI) ────────────────
+
+async function _falGenerar(tema) {
+  const scenes = [
+    "security operations center with surveillance monitors, professional staff at workstations",
+    "professional security consultant in a modern Mexican corporate office reviewing safety protocols",
+    "emergency response team in high-visibility vests conducting a safety inspection at an industrial facility",
+    "corporate boardroom meeting focused on institutional security strategy and risk management",
+    "modern IP security camera installation on a commercial building exterior, Mexico City skyline",
+  ];
+  const scene = scenes[Math.floor(Math.random() * scenes.length)];
+  const prompt =
+    `Professional corporate photograph: ${scene}. ` +
+    `Subject: ${tema}. ` +
+    `Style: clean, modern, high-quality business photography, natural lighting, sharp focus, Mexico setting. ` +
+    `No text overlays, no watermarks, no abstract elements, no violence, photorealistic.`;
+
+  // Submit request
+  const submitRes = await fetch("https://queue.fal.run/fal-ai/flux-pro/v1.1", {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${FAL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      image_size: "landscape_16_9",
+      num_inference_steps: 25,
+      num_images: 1,
+      enable_safety_checker: false,
+    }),
+  });
+  if (!submitRes.ok) throw new Error(`Fal.ai submit ${submitRes.status}: ${await submitRes.text()}`);
+  const { request_id, status_url } = await submitRes.json();
+  if (!request_id) throw new Error("Fal.ai: sin request_id en respuesta");
+
+  // Poll for result
+  const pollUrl = status_url || `https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/${request_id}/status`;
+  for (let i = 0; i < 30; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const statusRes = await fetch(pollUrl, {
+      headers: { Authorization: `Key ${FAL_API_KEY}` },
+    });
+    const status = await statusRes.json();
+    if (status.status === "COMPLETED" || status.images?.length > 0) {
+      const resultUrl =
+        status.images?.[0]?.url ||
+        `https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/${request_id}`;
+      // If images already in status, use directly; otherwise fetch result
+      if (status.images?.[0]?.url) {
+        return Buffer.from(await (await fetch(status.images[0].url)).arrayBuffer());
+      }
+      const resultRes = await fetch(resultUrl, {
+        headers: { Authorization: `Key ${FAL_API_KEY}` },
+      });
+      const result = await resultRes.json();
+      if (result.images?.[0]?.url) {
+        return Buffer.from(await (await fetch(result.images[0].url)).arrayBuffer());
+      }
+    }
+    if (status.status === "FAILED") throw new Error(`Fal.ai: generación fallida — ${status.error || "error desconocido"}`);
+  }
+  throw new Error("Fal.ai: timeout 90s");
+}
+
+// ── Leonardo (respaldo final) ─────────────────────────────────────────────────
 
 async function _leonardoGenerar(tema) {
   const prompt =
@@ -388,14 +452,24 @@ async function generarImagen(tema) {
       console.log("DALL-E 3: imagen generada OK");
       return buf;
     } catch (e) {
-      console.warn(`DALL-E 3 falló (${e.message}), intentando Leonardo...`);
+      console.warn(`DALL-E 3 falló (${e.message}), intentando Fal.ai...`);
+    }
+  }
+  if (FAL_API_KEY) {
+    try {
+      console.log("Generando imagen con Fal.ai (Flux.1 Pro)...");
+      const buf = await _falGenerar(tema);
+      console.log("Fal.ai: imagen generada OK");
+      return buf;
+    } catch (e) {
+      console.warn(`Fal.ai falló (${e.message}), intentando Leonardo...`);
     }
   }
   if (LEONARDO_API_KEY) {
     console.log("Generando imagen con Leonardo...");
     return _leonardoGenerar(tema);
   }
-  throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY o LEONARDO_API_KEY)");
+  throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY, FAL_API_KEY o LEONARDO_API_KEY)");
 }
 
 // ── Claude (Anthropic) — helper ───────────────────────────────────────────────
