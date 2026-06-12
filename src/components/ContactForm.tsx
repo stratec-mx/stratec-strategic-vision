@@ -19,10 +19,11 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// EmailJS — reemplazar TEMPLATE_ID después de crear el template en emailjs.com
-const EMAILJS_SERVICE_ID  = "service_3wysprf";
-const EMAILJS_TEMPLATE_ID = "template_dqu8jlc";
-const EMAILJS_PUBLIC_KEY  = "QrsTojpa7iz8FVM-n";
+// EmailJS
+const EMAILJS_SERVICE_ID       = "service_3wysprf";
+const EMAILJS_TEMPLATE_ID      = "template_dqu8jlc";   // notificación interna STRATEC
+const EMAILJS_CONFIRM_TEMPLATE = "template_iexzjcp";    // confirmación al cliente
+const EMAILJS_PUBLIC_KEY       = "QrsTojpa7iz8FVM-n";
 
 export const ContactForm = () => {
   const [submitted, setSubmitted] = useState(false);
@@ -51,13 +52,17 @@ export const ContactForm = () => {
     mensaje:    data.mensaje  || "—",
   });
 
-  const sendEmailJS = (templateParams: ReturnType<typeof buildTemplateParams>, toEmail: string) =>
+  const sendEmailJS = (
+    templateParams: ReturnType<typeof buildTemplateParams>,
+    toEmail: string,
+    templateId = EMAILJS_TEMPLATE_ID,
+  ) =>
     fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         service_id:      EMAILJS_SERVICE_ID,
-        template_id:     EMAILJS_TEMPLATE_ID,
+        template_id:     templateId,
         user_id:         EMAILJS_PUBLIC_KEY,
         template_params: { ...templateParams, to_email: toEmail },
       }),
@@ -69,10 +74,11 @@ export const ContactForm = () => {
     try {
       const params = buildTemplateParams(data);
 
-      // Enviar a contacto@ (principal) y coordinacion@ (copia interna)
+      // Notificaciones internas + confirmación al cliente
       const [res] = await Promise.all([
         sendEmailJS(params, "contacto@stratecsecurity.com"),
         sendEmailJS(params, "coordinacion@stratecsecurity.com").catch(() => null),
+        sendEmailJS(params, data.email, EMAILJS_CONFIRM_TEMPLATE).catch(() => null),
       ]);
       if (!res.ok) throw new Error("Error al enviar");
 
