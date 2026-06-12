@@ -175,8 +175,6 @@ async function generarImagen(tema) {
       negative_prompt: negative,
       modelId: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3",
       width: 1024, height: 1024, num_images: 1, guidance_scale: 12,
-      photoReal: true, photoRealVersion: "v2",
-      alchemy: true,
     }),
   });
 
