@@ -176,10 +176,15 @@ function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
   }
 
   // Bottom bar
+  const mid = Math.round(W / 2);
   c += `\n<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.96"/>
-<rect x="${Math.round(W / 2) - 10}" y="${H - BH + 24}" width="1" height="${BH - 48}" fill="#c9a22760"/>
-<text x="${Math.round(W * 3 / 4)}" y="${H - 66}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold" text-anchor="middle">stratecsecurity.com</text>
-<text x="${Math.round(W * 3 / 4)}" y="${H - 40}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a227" text-anchor="middle">CONSULTORÍA EN SEGURIDAD</text>`;
+<rect x="${mid - 1}" y="${H - BH + 20}" width="1" height="${BH - 40}" fill="#c9a22750"/>
+<!-- Izquierda: marca -->
+<text x="60" y="${H - 66}" font-family="Liberation Sans,Arial,sans-serif" font-size="26" fill="white" font-weight="bold">STRATEC</text>
+<text x="60" y="${H - 38}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="2">CONSULTORÍA EN SEGURIDAD</text>
+<!-- Derecha: web -->
+<text x="${mid + 40}" y="${H - 60}" font-family="Liberation Sans,Arial,sans-serif" font-size="20" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 40}" y="${H - 36}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -212,17 +217,50 @@ async function buildInfografia(photoBuffer, captionData) {
     W, H
   ));
 
-  const logoPath = join(ROOT, "public", "stratec-logo.png");
-  const layers = [
-    { input: photo,   left: 540, top: 0 },
-    { input: overlay, left: 0,   top: 0 },
-  ];
-  if (existsSync(logoPath)) {
-    const logo = await sharp(logoPath).resize(150).png().toBuffer();
-    layers.push({ input: logo, left: 60, top: H - 112 });
-  }
+  return sharp(base)
+    .composite([
+      { input: photo,   left: 540, top: 0 },
+      { input: overlay, left: 0,   top: 0 },
+    ])
+    .png().toBuffer();
+}
 
-  return sharp(base).composite(layers).png().toBuffer();
+// ── Watermark profesional para fotos del usuario ──────────────────────────────
+// Preserva la imagen original intacta; solo agrega un sello STRATEC en la esquina.
+
+async function aplicarLogoWatermark(imageBuffer) {
+  const meta = await sharp(imageBuffer).metadata();
+  const W = meta.width  || 1080;
+  const H = meta.height || 1080;
+
+  // Barra inferior semi-transparente con marca STRATEC
+  const barH   = Math.round(H * 0.07);
+  const fontSize = Math.round(barH * 0.38);
+  const subSize  = Math.round(barH * 0.24);
+  const pad      = Math.round(barH * 0.25);
+  const mid      = Math.round(W / 2);
+
+  const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="${H - barH}" width="${W}" height="${barH}" fill="#060d15" opacity="0.84"/>
+  <rect x="0" y="${H - barH}" width="4" height="${barH}" fill="#c9a227"/>
+  <text x="${pad}" y="${H - barH + Math.round(barH * 0.58)}"
+    font-family="Liberation Sans,Arial,sans-serif" font-size="${fontSize}"
+    fill="white" font-weight="bold">STRATEC</text>
+  <text x="${pad}" y="${H - Math.round(barH * 0.18)}"
+    font-family="Liberation Sans,Arial,sans-serif" font-size="${subSize}"
+    fill="#c9a227">CONSULTORÍA EN SEGURIDAD</text>
+  <text x="${mid + pad}" y="${H - barH + Math.round(barH * 0.58)}"
+    font-family="Liberation Sans,Arial,sans-serif" font-size="${Math.round(fontSize * 0.85)}"
+    fill="white">stratecsecurity.com</text>
+  <text x="${mid + pad}" y="${H - Math.round(barH * 0.18)}"
+    font-family="Liberation Sans,Arial,sans-serif" font-size="${subSize}"
+    fill="#c9a22799">Análisis · Estrategia · Soluciones</text>
+</svg>`;
+
+  return sharp(imageBuffer)
+    .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
+    .png()
+    .toBuffer();
 }
 
 // ── Descargar foto desde Telegram ─────────────────────────────────────────────
@@ -464,20 +502,19 @@ async function procesarFoto(chatId, fileId, temaHint) {
     `📸 Imagen recibida. Analizando con IA...\n⏳ Generando captions en ~15 segundos...`
   );
 
+  // Flujo foto: preservar imagen del usuario + solo watermark de marca
   const rawBuffer  = await descargarFotoTelegram(fileId);
-  const captions   = await generarCaptionsDesdeImagen(rawBuffer, temaHint);
-  const infografia = await buildInfografia(rawBuffer, captions);
-  const tema       = temaHint || "imagen personalizada STRATEC";
+  const [conMarca, captions] = await Promise.all([
+    aplicarLogoWatermark(rawBuffer),
+    generarCaptionsDesdeImagen(rawBuffer, temaHint),
+  ]);
+  const tema = temaHint || "imagen personalizada STRATEC";
 
   const pendingId = savePending({
-    imageBase64:    infografia.toString("base64"),
+    imageBase64:    conMarca.toString("base64"),
     rawImageBase64: rawBuffer.toString("base64"),
     linkedin:       captions.linkedin,
     facebook:       captions.facebook,
-    titular:        captions.titular,
-    subtitulo:      captions.subtitulo,
-    puntos:         captions.puntos,
-    categoria:      captions.categoria,
     tema,
   });
 
@@ -486,7 +523,7 @@ async function procesarFoto(chatId, fileId, temaHint) {
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, infografia, preview, [
+  await sendPhotoBuffer(chatId, conMarca, preview, [
     [
       { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
@@ -579,17 +616,13 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
     return;
   }
 
-  const rawBuffer  = Buffer.from(pending.rawImageBase64 || pending.imageBase64, "base64");
-  const captions   = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
-  const infografia = await buildInfografia(rawBuffer, captions);
+  const rawBuffer = Buffer.from(pending.rawImageBase64 || pending.imageBase64, "base64");
+  const captions  = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
+  const conMarca  = await aplicarLogoWatermark(rawBuffer);
 
-  pending.imageBase64 = infografia.toString("base64");
+  pending.imageBase64 = conMarca.toString("base64");
   pending.linkedin    = captions.linkedin;
   pending.facebook    = captions.facebook;
-  pending.titular     = captions.titular;
-  pending.subtitulo   = captions.subtitulo;
-  pending.puntos      = captions.puntos;
-  pending.categoria   = captions.categoria;
   writeFileSync(join(PENDING_DIR, `${pendingId}.json`), JSON.stringify(pending));
 
   const preview =
@@ -597,7 +630,7 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, infografia, preview, [
+  await sendPhotoBuffer(chatId, conMarca, preview, [
     [
       { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
