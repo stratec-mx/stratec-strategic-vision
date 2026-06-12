@@ -115,26 +115,114 @@ const answerCb = (id, text = "") =>
 const getUpdates = (offset) =>
   tg("getUpdates", { offset, timeout: 5, allowed_updates: ["message", "callback_query"] });
 
-// ── Logo overlay con Sharp ────────────────────────────────────────────────────
+// ── Infografía corporativa con Sharp + SVG ────────────────────────────────────
 
-async function aplicarLogo(imageBuffer) {
-  const logoPath = join(ROOT, "public", "stratec-logo.png");
-  if (!existsSync(logoPath)) {
-    console.warn("Logo no encontrado, se omite overlay.");
-    return imageBuffer;
+function xmlEsc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function svgTextLines(text, maxChars, x, startY, lh, sz, fill, weight) {
+  const words = String(text || "").split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? `${cur} ${w}` : w;
+    if (t.length <= maxChars) { cur = t; }
+    else { if (cur) lines.push(cur); cur = w; }
   }
-  const base = sharp(imageBuffer);
-  const { width, height } = await base.metadata();
-  const logoWidth  = Math.round(width * 0.18);
-  const logoBuffer = await sharp(logoPath).resize(logoWidth).png().toBuffer();
-  const logoMeta   = await sharp(logoBuffer).metadata();
-  const margin     = Math.round(width * 0.03);
-  const left       = width  - logoMeta.width  - margin;
-  const top        = height - logoMeta.height - margin;
-  return base
-    .composite([{ input: logoBuffer, left, top, blend: "over" }])
-    .png()
-    .toBuffer();
+  if (cur) lines.push(cur);
+  return {
+    svg: lines.map((l, i) =>
+      `<text x="${x}" y="${startY + i * lh}" font-family="Liberation Sans,Arial,sans-serif" ` +
+      `font-size="${sz}" fill="${fill}" font-weight="${weight || "normal"}">${xmlEsc(l)}</text>`
+    ).join("\n"),
+    count: lines.length,
+  };
+}
+
+function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
+  const lp = 60;
+  const BH = 130;
+  let y = 72;
+  let c = "";
+
+  // Category badge
+  c += `\n<rect x="${lp}" y="${y}" width="245" height="34" rx="5" fill="#c9a22718"/>
+<rect x="${lp}" y="${y}" width="4" height="34" rx="2" fill="#c9a227"/>
+<text x="${lp + 16}" y="${y + 23}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold">${xmlEsc(String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase())}</text>`;
+  y += 60;
+
+  // Headline
+  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 23, lp, y, 50, 40, "white", "bold");
+  c += `\n${tit.svg}`;
+  y += tit.count * 50 + 22;
+
+  // Gold divider
+  c += `\n<rect x="${lp}" y="${y}" width="80" height="4" rx="2" fill="#c9a227"/>`;
+  y += 28;
+
+  // Subtitle
+  const sub = svgTextLines(subtitulo || "", 38, lp, y, 29, 20, "#c9a227", "bold");
+  c += `\n${sub.svg}`;
+  y += sub.count * 29 + 32;
+
+  // Bullet points
+  for (const p of (Array.isArray(puntos) ? puntos.slice(0, 5) : [])) {
+    c += `\n<rect x="${lp}" y="${y - 14}" width="10" height="10" rx="2" fill="#c9a227"/>
+<text x="${lp + 20}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="19" fill="white">${xmlEsc(String(p))}</text>`;
+    y += 38;
+  }
+
+  // Bottom bar
+  c += `\n<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.96"/>
+<rect x="${Math.round(W / 2) - 10}" y="${H - BH + 24}" width="1" height="${BH - 48}" fill="#c9a22760"/>
+<text x="${Math.round(W * 3 / 4)}" y="${H - 66}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold" text-anchor="middle">stratecsecurity.com</text>
+<text x="${Math.round(W * 3 / 4)}" y="${H - 40}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a227" text-anchor="middle">CONSULTORÍA EN SEGURIDAD</text>`;
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="540" y1="0" x2="760" y2="0">
+    <stop offset="0" stop-color="#0d1b2a" stop-opacity="0.96"/>
+    <stop offset="1" stop-color="#0d1b2a" stop-opacity="0"/>
+  </linearGradient>
+</defs>
+<rect x="0" y="0" width="580" height="${H - BH}" fill="#0d1b2a" opacity="0.97"/>
+<rect x="540" y="0" width="220" height="${H - BH}" fill="url(#fade)"/>
+${c}
+</svg>`;
+}
+
+async function buildInfografia(photoBuffer, captionData) {
+  const W = 1080, H = 1080;
+
+  const base = await sharp({
+    create: { width: W, height: H, channels: 4, background: { r: 13, g: 27, b: 42, alpha: 255 } }
+  }).png().toBuffer();
+
+  const photo = await sharp(photoBuffer)
+    .resize(540, H, { fit: "cover", position: "center" })
+    .modulate({ brightness: 0.45 })
+    .png().toBuffer();
+
+  const overlay = Buffer.from(buildSVGOverlay(
+    captionData.categoria, captionData.titular,
+    captionData.subtitulo, captionData.puntos,
+    W, H
+  ));
+
+  const logoPath = join(ROOT, "public", "stratec-logo.png");
+  const layers = [
+    { input: photo,   left: 540, top: 0 },
+    { input: overlay, left: 0,   top: 0 },
+  ];
+  if (existsSync(logoPath)) {
+    const logo = await sharp(logoPath).resize(150).png().toBuffer();
+    layers.push({ input: logo, left: 60, top: H - 112 });
+  }
+
+  return sharp(base).composite(layers).png().toBuffer();
 }
 
 // ── Descargar foto desde Telegram ─────────────────────────────────────────────
@@ -193,8 +281,7 @@ async function generarImagen(tema) {
     const { generations_by_pk } = await poll.json();
     const imgs = generations_by_pk?.generated_images;
     if (imgs?.length > 0) {
-      const rawBuffer = Buffer.from(await (await fetch(imgs[0].url)).arrayBuffer());
-      return aplicarLogo(rawBuffer);
+      return Buffer.from(await (await fetch(imgs[0].url)).arrayBuffer());
     }
   }
   throw new Error("Leonardo: timeout generando imagen (60s)");
@@ -212,7 +299,7 @@ async function llamarClaude(messages) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1200,
+      max_tokens: 1600,
       messages,
     }),
   });
@@ -253,7 +340,8 @@ function promptCaptions(tema, contextoExtra = "") {
     `- 2-3 emojis naturales (no decorativos)\n` +
     `- Cierra con: "Escríbenos o entra a stratecsecurity.com 🔗"\n` +
     `- 4 hashtags\n\n` +
-    `Responde ÚNICAMENTE con JSON válido: {"linkedin":"...","facebook":"..."}`
+    `Responde ÚNICAMENTE con JSON válido con estos 6 campos exactos:\n` +
+    `{"linkedin":"...","facebook":"...","titular":"TITULAR IMPACTANTE EN MAYÚSCULAS (máx 52 chars, pregunta o afirmación directa)","subtitulo":"una frase corta en minúsculas que complementa el titular (máx 42 chars)","puntos":["acción o beneficio concreto 1","acción o beneficio concreto 2","acción o beneficio concreto 3"],"categoria":"TIPO DE CONTENIDO (ej: PROTECCIÓN CIVIL, ANÁLISIS DE RIESGOS, CAPACITACIÓN)"}`
   );
 }
 
@@ -359,16 +447,20 @@ async function procesarFoto(chatId, fileId, temaHint) {
     `📸 Imagen recibida. Analizando con IA...\n⏳ Generando captions en ~15 segundos...`
   );
 
-  const rawBuffer = await descargarFotoTelegram(fileId);
-  const withLogo  = await aplicarLogo(rawBuffer);
-  const captions  = await generarCaptionsDesdeImagen(rawBuffer, temaHint);
-  const tema      = temaHint || "imagen personalizada STRATEC";
+  const rawBuffer  = await descargarFotoTelegram(fileId);
+  const captions   = await generarCaptionsDesdeImagen(rawBuffer, temaHint);
+  const infografia = await buildInfografia(rawBuffer, captions);
+  const tema       = temaHint || "imagen personalizada STRATEC";
 
   const pendingId = savePending({
-    imageBase64:     withLogo.toString("base64"),
-    fotoOrigBase64:  rawBuffer.toString("base64"),
-    linkedin:        captions.linkedin,
-    facebook:        captions.facebook,
+    imageBase64:    infografia.toString("base64"),
+    rawImageBase64: rawBuffer.toString("base64"),
+    linkedin:       captions.linkedin,
+    facebook:       captions.facebook,
+    titular:        captions.titular,
+    subtitulo:      captions.subtitulo,
+    puntos:         captions.puntos,
+    categoria:      captions.categoria,
     tema,
   });
 
@@ -377,7 +469,7 @@ async function procesarFoto(chatId, fileId, temaHint) {
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, withLogo, preview, [
+  await sendPhotoBuffer(chatId, infografia, preview, [
     [
       { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
@@ -392,15 +484,21 @@ async function procesarComando(chatId, tema) {
     `🎨 Generando post sobre: <b>${tema}</b>\n\n⏳ Imagen + texto en ~30 segundos...`
   );
 
-  const [imageBuffer, captions] = await Promise.all([
+  const [rawPhoto, captions] = await Promise.all([
     generarImagen(tema),
     generarCaptions(tema),
   ]);
+  const imageBuffer = await buildInfografia(rawPhoto, captions);
 
   const pendingId = savePending({
-    imageBase64: imageBuffer.toString("base64"),
-    linkedin:    captions.linkedin,
-    facebook:    captions.facebook,
+    imageBase64:    imageBuffer.toString("base64"),
+    rawImageBase64: rawPhoto.toString("base64"),
+    linkedin:       captions.linkedin,
+    facebook:       captions.facebook,
+    titular:        captions.titular,
+    subtitulo:      captions.subtitulo,
+    puntos:         captions.puntos,
+    categoria:      captions.categoria,
     tema,
   });
 
@@ -463,21 +561,25 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
     return;
   }
 
-  const rawBuffer = Buffer.from(pending.fotoOrigBase64 || pending.imageBase64, "base64");
-  const captions  = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
+  const rawBuffer  = Buffer.from(pending.rawImageBase64 || pending.imageBase64, "base64");
+  const captions   = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
+  const infografia = await buildInfografia(rawBuffer, captions);
 
-  // Actualizar pending con la nueva caption
-  pending.linkedin = captions.linkedin;
-  pending.facebook = captions.facebook;
+  pending.imageBase64 = infografia.toString("base64");
+  pending.linkedin    = captions.linkedin;
+  pending.facebook    = captions.facebook;
+  pending.titular     = captions.titular;
+  pending.subtitulo   = captions.subtitulo;
+  pending.puntos      = captions.puntos;
+  pending.categoria   = captions.categoria;
   writeFileSync(join(PENDING_DIR, `${pendingId}.json`), JSON.stringify(pending));
 
-  const imageBuffer = Buffer.from(pending.imageBase64, "base64");
   const preview =
     `📋 <b>Nueva caption</b>\n\n` +
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, imageBuffer, preview, [
+  await sendPhotoBuffer(chatId, infografia, preview, [
     [
       { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
