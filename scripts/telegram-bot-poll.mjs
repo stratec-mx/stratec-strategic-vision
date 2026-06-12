@@ -37,6 +37,7 @@ const OFFSET_FILE = join(ROOT, "public", "social-posts", ".telegram-offset");
 
 const {
   TELEGRAM_BOT_TOKEN,
+  OPENAI_API_KEY,
   LEONARDO_API_KEY,
   ANTHROPIC_API_KEY,
   FACEBOOK_PAGE_ACCESS_TOKEN,
@@ -113,7 +114,7 @@ const answerCb = (id, text = "") =>
   tg("answerCallbackQuery", { callback_query_id: id, text });
 
 const getUpdates = (offset) =>
-  tg("getUpdates", { offset, timeout: 5, allowed_updates: ["message", "callback_query"] });
+  tg("getUpdates", { offset, timeout: 5, limit: 3, allowed_updates: ["message", "callback_query"] });
 
 // ── Infografía corporativa con Sharp + SVG ────────────────────────────────────
 
@@ -277,31 +278,65 @@ async function descargarFotoTelegram(fileId) {
 
 // ── Leonardo.ai — generar imagen ──────────────────────────────────────────────
 
-// Modelos en orden de preferencia. Si el primero falla, intenta el siguiente.
-const LEONARDO_MODELS = [
-  { id: "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf0", name: "Phoenix"       },
-  { id: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3", name: "Diffusion XL"  },
-];
+// ── DALL-E 3 (OpenAI) — generador principal ──────────────────────────────────
 
-async function _leonardoGenerar(prompt, negative, modelId) {
+async function _dalleGenerar(tema) {
+  const scenes = [
+    "security operations center with surveillance monitors showing real-time footage, professional staff",
+    "professional security consultant reviewing safety protocols in a modern Mexican corporate office",
+    "emergency response team in high-visibility vests conducting a safety inspection at an industrial facility",
+    "corporate boardroom meeting focused on institutional security and risk management planning",
+    "modern IP security camera installation on a commercial building exterior in Mexico City",
+  ];
+  const scene = scenes[Math.floor(Math.random() * scenes.length)];
+  const prompt =
+    `Professional corporate photograph: ${scene}. ` +
+    `Subject matter: ${tema}. ` +
+    `Style: clean, modern, high-quality business photography, natural lighting, sharp focus. ` +
+    `Setting: Mexico. No text overlays, no watermarks, no abstract elements, no violence.`;
+
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`DALL-E: ${body.error?.message || res.status}`);
+  }
+  const { data } = await res.json();
+  return Buffer.from(await (await fetch(data[0].url)).arrayBuffer());
+}
+
+// ── Leonardo (respaldo si no hay clave OpenAI) ────────────────────────────────
+
+async function _leonardoGenerar(tema) {
+  const prompt =
+    `Professional corporate photography, security consulting firm, Mexico, ` +
+    `theme: ${tema}, modern office or industrial setting, photorealistic, 4K, no text`;
+  const negative =
+    `abstract, mandala, ornament, pattern, violent, weapon, blood, ` +
+    `cartoon, anime, painting, sketch, low quality, blurry, watermark`;
+
   const res = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${LEONARDO_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt, negative_prompt: negative,
-      modelId, width: 1024, height: 576, num_images: 1, guidance_scale: 7,
+      modelId: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3",
+      width: 1024, height: 576, num_images: 1, guidance_scale: 7,
     }),
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Leonardo ${res.status}: ${body}`);
-  }
-  const json = await res.json();
-  const genId = json.sdGenerationJob?.generationId;
-  if (!genId) throw new Error(`Leonardo: respuesta inesperada — ${JSON.stringify(json)}`);
+  if (!res.ok) throw new Error(`Leonardo ${res.status}: ${await res.text()}`);
+  const { sdGenerationJob } = await res.json();
+  const genId = sdGenerationJob?.generationId;
+  if (!genId) throw new Error("Leonardo: sin generationId en respuesta");
 
-  for (let i = 0; i < 24; i++) {
-    await new Promise((r) => setTimeout(r, 3500));
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
     const poll = await fetch(
       `https://cloud.leonardo.ai/api/rest/v1/generations/${genId}`,
       { headers: { Authorization: `Bearer ${LEONARDO_API_KEY}` } }
@@ -310,40 +345,25 @@ async function _leonardoGenerar(prompt, negative, modelId) {
     const imgs = generations_by_pk?.generated_images;
     if (imgs?.length > 0) return Buffer.from(await (await fetch(imgs[0].url)).arrayBuffer());
   }
-  throw new Error("Leonardo: timeout (84s) sin imagen");
+  throw new Error("Leonardo: timeout 60s");
 }
 
 async function generarImagen(tema) {
-  const scenes = [
-    `security operations center with multiple surveillance monitors, professional staff at workstations, blue ambient lighting`,
-    `professional security consultant in business attire reviewing safety documents in a modern Mexican office building`,
-    `emergency response team in safety vests conducting a risk assessment at an industrial facility in Mexico`,
-    `corporate boardroom with business professionals reviewing security protocols, navy blue interior`,
-    `modern CCTV camera system on a commercial building facade, urban Mexico City background`,
-  ];
-  const scene = scenes[Math.floor(Math.random() * scenes.length)];
-  const prompt =
-    `${scene}, theme: ${tema}, ` +
-    `photorealistic photograph, Canon EOS R5, professional corporate photography, sharp focus, 4K, ` +
-    `no text, no watermarks, no logos`;
-  const negative =
-    `abstract, mandala, ornament, circular pattern, aztec, mayan, kaleidoscope, fractal, ` +
-    `surreal, fantasy, cartoon, anime, painting, illustration, sketch, ` +
-    `low quality, blurry, deformed, watermark`;
-
-  let lastErr;
-  for (const model of LEONARDO_MODELS) {
+  if (OPENAI_API_KEY) {
     try {
-      console.log(`Leonardo: intentando modelo ${model.name} (${model.id})`);
-      const buf = await _leonardoGenerar(prompt, negative, model.id);
-      console.log(`Leonardo: imagen generada con ${model.name}`);
+      console.log("Generando imagen con DALL-E 3...");
+      const buf = await _dalleGenerar(tema);
+      console.log("DALL-E 3: imagen generada OK");
       return buf;
     } catch (e) {
-      console.warn(`Leonardo ${model.name} falló: ${e.message}`);
-      lastErr = e;
+      console.warn(`DALL-E 3 falló (${e.message}), intentando Leonardo...`);
     }
   }
-  throw new Error(`Leonardo: todos los modelos fallaron. Último error: ${lastErr?.message}`);
+  if (LEONARDO_API_KEY) {
+    console.log("Generando imagen con Leonardo...");
+    return _leonardoGenerar(tema);
+  }
+  throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY o LEONARDO_API_KEY)");
 }
 
 // ── Claude (Anthropic) — helper ───────────────────────────────────────────────
@@ -760,6 +780,6 @@ async function main() {
 }
 
 main().catch((err) => {
+  // Salida 0 para que GitHub Actions ejecute siempre el paso de guardar estado
   console.error("Error fatal:", err.message);
-  process.exit(1);
 });
