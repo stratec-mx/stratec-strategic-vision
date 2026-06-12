@@ -38,7 +38,7 @@ const OFFSET_FILE = join(ROOT, "public", "social-posts", ".telegram-offset");
 const {
   TELEGRAM_BOT_TOKEN,
   LEONARDO_API_KEY,
-  GEMINI_API_KEY,
+  ANTHROPIC_API_KEY,
   FACEBOOK_PAGE_ACCESS_TOKEN,
   FACEBOOK_PAGE_ID,
   LINKEDIN_ACCESS_TOKEN,
@@ -187,13 +187,36 @@ async function generarImagen(tema) {
   throw new Error("Leonardo: timeout generando imagen (60s)");
 }
 
-// ── Gemini Flash — captions por texto ────────────────────────────────────────
+// ── Claude (Anthropic) — helper ───────────────────────────────────────────────
 
-async function generarCaptions(tema) {
-  const prompt =
+async function llamarClaude(messages) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1200,
+      messages,
+    }),
+  });
+  if (!res.ok) throw new Error(`Claude ${res.status}: ${await res.text()}`);
+  const data  = await res.json();
+  const text  = data.content[0].text;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Claude: JSON no encontrado en respuesta");
+  return JSON.parse(match[0]);
+}
+
+function promptCaptions(tema, contextoExtra = "") {
+  return (
     `Eres el community manager de STRATEC, consultoría en seguridad institucional ` +
     `y protección civil con sede en Morelos, México. ` +
     `Clientes objetivo: Directores de Seguridad, CEOs, responsables de Protección Civil.\n\n` +
+    (contextoExtra ? contextoExtra + "\n\n" : "") +
     `Tema del post: "${tema}"\n\n` +
     `Redacta DOS publicaciones en español mexicano, profesional y directo.\n\n` +
     `LINKEDIN (160-200 palabras):\n` +
@@ -206,74 +229,33 @@ async function generarCaptions(tema) {
     `- Pregunta o dato → propuesta → CTA\n` +
     `- CTA: "Más información en stratecsecurity.com 🔗"\n` +
     `- 4 hashtags\n\n` +
-    `Responde ÚNICAMENTE con JSON válido: {"linkedin":"...","facebook":"..."}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    }
+    `Responde ÚNICAMENTE con JSON válido: {"linkedin":"...","facebook":"..."}`
   );
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const data  = await res.json();
-  const text  = data.candidates[0].content.parts[0].text;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Gemini: JSON no encontrado en respuesta");
-  return JSON.parse(match[0]);
 }
 
-// ── Gemini Vision — captions desde imagen ────────────────────────────────────
+// ── Captions por texto (tema) ─────────────────────────────────────────────────
+
+async function generarCaptions(tema) {
+  return llamarClaude([{ role: "user", content: promptCaptions(tema) }]);
+}
+
+// ── Claude Vision — captions desde imagen ────────────────────────────────────
 
 async function generarCaptionsDesdeImagen(imageBuffer, temaHint = "") {
-  const base64   = imageBuffer.toString("base64");
-  const isPng    = imageBuffer[0] === 0x89 && imageBuffer[1] === 0x50;
-  const mimeType = isPng ? "image/png" : "image/jpeg";
-
-  const contexto = temaHint
+  const base64    = imageBuffer.toString("base64");
+  const isPng     = imageBuffer[0] === 0x89 && imageBuffer[1] === 0x50;
+  const mediaType = isPng ? "image/png" : "image/jpeg";
+  const contexto  = temaHint
     ? `El usuario indica que el tema es: "${temaHint}". Úsalo como guía principal.`
     : `Analiza la imagen y determina el tema de seguridad más relevante para STRATEC.`;
 
-  const prompt =
-    `Eres el community manager de STRATEC, consultoría en seguridad institucional ` +
-    `y protección civil con sede en Morelos, México. ` +
-    `Clientes objetivo: Directores de Seguridad, CEOs, responsables de Protección Civil.\n\n` +
-    `${contexto}\n\n` +
-    `Redacta DOS publicaciones en español mexicano, profesional y directo.\n\n` +
-    `LINKEDIN (160-200 palabras):\n` +
-    `- Tono ejecutivo B2B, máximo 2 emojis\n` +
-    `- Gancho → insight de seguridad → beneficio → CTA\n` +
-    `- CTA: "Agenda una consulta sin costo en stratecsecurity.com"\n` +
-    `- Hashtags: #SeguridadInstitucional #ProteccionCivil #GestionDeRiesgos + 2 relevantes\n\n` +
-    `FACEBOOK (90-120 palabras):\n` +
-    `- Tono directo, 2-3 emojis\n` +
-    `- Pregunta o dato → propuesta → CTA\n` +
-    `- CTA: "Más información en stratecsecurity.com 🔗"\n` +
-    `- 4 hashtags\n\n` +
-    `Responde ÚNICAMENTE con JSON válido: {"linkedin":"...","facebook":"..."}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: mimeType, data: base64 } },
-            { text: prompt },
-          ],
-        }],
-      }),
-    }
-  );
-  if (!res.ok) throw new Error(`Gemini Vision ${res.status}: ${await res.text()}`);
-  const data  = await res.json();
-  const text  = data.candidates[0].content.parts[0].text;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Gemini Vision: JSON no encontrado en respuesta");
-  return JSON.parse(match[0]);
+  return llamarClaude([{
+    role: "user",
+    content: [
+      { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+      { type: "text",  text: promptCaptions(temaHint || "imagen STRATEC", contexto) },
+    ],
+  }]);
 }
 
 // ── Facebook ──────────────────────────────────────────────────────────────────
