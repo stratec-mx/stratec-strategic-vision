@@ -4,10 +4,9 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "public/social-posts/.telegram-offset"
+  # SIN trigger de push — era la causa del loop infinito:
+  # cada commit del bot disparaba un nuevo run, que procesaba
+  # los mismos mensajes y volvía a hacer commit, sin fin.
 
 concurrency:
   group: telegram-bot
@@ -36,11 +35,9 @@ jobs:
       - name: Instalar dependencias
         run: npm install sharp
 
-      # CRÍTICO: el checkout captura el offset del momento del dispatch.
-      # Si otro run terminó y empujó offset nuevo mientras este run
-      # esperaba en cola, el workspace tiene el offset viejo y
-      # re-procesaría los mismos mensajes. Este paso lo corrige.
-      - name: Sincronizar estado antes de ejecutar
+      # Evita race condition: si otro run terminó mientras este esperaba
+      # en la cola de concurrencia, el workspace tiene el offset viejo.
+      - name: Sincronizar estado
         run: |
           git fetch origin
           git checkout origin/main -- public/social-posts/ 2>/dev/null || true
