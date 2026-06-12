@@ -372,15 +372,32 @@ async function generarCaptionsDesdeImagen(imageBuffer, temaHint = "") {
 
 // ── Facebook ──────────────────────────────────────────────────────────────────
 
+// Intercambia el System User Token por el Page Access Token de la página.
+// El System User Token de Business Manager no puede publicar directamente —
+// necesita el token específico de la página.
+async function obtenerPageToken() {
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}?fields=access_token&access_token=${FACEBOOK_PAGE_ACCESS_TOKEN}`
+  );
+  const data = await res.json();
+  if (data.access_token) {
+    console.log("Facebook: page token obtenido correctamente");
+    return data.access_token;
+  }
+  console.warn("Facebook: no se pudo obtener page token:", data.error?.message);
+  return FACEBOOK_PAGE_ACCESS_TOKEN;
+}
+
 async function publicarFacebookBuffer(imageBuffer, caption) {
   if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
     console.warn("Facebook: token o page_id no configurados");
     return false;
   }
+  const pageToken = await obtenerPageToken();
   const form = new FormData();
   form.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
   form.append("message", caption);
-  form.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
+  form.append("access_token", pageToken);
   const res = await fetch(
     `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
     { method: "POST", body: form }
