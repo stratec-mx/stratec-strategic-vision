@@ -533,11 +533,12 @@ async function procesarAprobacion(chatId, messageId, pendingId, callbackId) {
   deletePending(pendingId);
 
   const redes = [];
-  if (fb.status === "fulfilled") redes.push("Facebook ✅");
-  else redes.push(`Facebook ❌ ${fb.reason?.message || ""}`);
-  if (li.value === true) redes.push("LinkedIn ✅");
+  if (fb.status === "fulfilled" && fb.value === true) redes.push("Facebook ✅");
+  else if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) redes.push("Facebook ⏭️ (sin token)");
+  else redes.push(`Facebook ❌ ${fb.reason?.message || fb.value || ""}`);
+  if (li.status === "fulfilled" && li.value === true) redes.push("LinkedIn ✅");
   else if (!LINKEDIN_ACCESS_TOKEN) redes.push("LinkedIn ⏭️ (token pendiente)");
-  else redes.push("LinkedIn ❌");
+  else redes.push(`LinkedIn ❌ ${li.reason?.message || ""}`);
 
   await editCaption(chatId, messageId,
     `🚀 <b>Publicación completada</b>\n\n${redes.join("\n")}\n\nTema: ${pending.tema}`

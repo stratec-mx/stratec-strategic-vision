@@ -54,4 +54,5 @@ jobs:
           git config user.email "bot@stratecsecurity.com"
           git add public/social-posts/
           git diff --staged --quiet || git commit -m "bot: estado telegram"
+          git pull --rebase origin main
           git push
