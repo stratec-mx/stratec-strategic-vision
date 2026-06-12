@@ -1,10 +1,19 @@
 name: Telegram Bot - STRATEC Posts
 
 on:
+  # Respaldo cada 5 min (mínimo real de GitHub Actions)
   schedule:
-    - cron: "* * * * *"
+    - cron: "*/5 * * * *"
 
+  # Disparo manual para pruebas
   workflow_dispatch:
+
+  # Auto-encadenamiento: cuando el bot procesa mensajes y actualiza
+  # el offset, el push re-dispara el workflow hasta vaciar la cola
+  push:
+    branches: [main]
+    paths:
+      - "public/social-posts/.telegram-offset"
 
 jobs:
   poll:
@@ -44,5 +53,5 @@ jobs:
           git config user.name  "STRATEC Bot"
           git config user.email "bot@stratecsecurity.com"
           git add public/social-posts/
-          git diff --staged --quiet || git commit -m "bot: estado telegram [skip ci]"
+          git diff --staged --quiet || git commit -m "bot: estado telegram"
           git push
