@@ -24,7 +24,7 @@ serve(async (req: Request) => {
                       });
               }
 
-      const { name, email, organization, role, message, honeypot } = body;
+      const { name, email, organization, role, message, honeypot, telefono, servicio } = body;
 
       // Honeypot check (secondary server-side defence)
       if (honeypot) {
@@ -114,6 +114,28 @@ serve(async (req: Request) => {
                             headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
                 },
                       );
+      }
+
+      // — 5. Notificación Telegram ————————————————————————
+      const botToken  = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const chatId    = Deno.env.get("TELEGRAM_CHAT_ID");
+      if (botToken && chatId) {
+        const hora = new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" });
+        const texto =
+          `🔔 *Nuevo contacto en stratecsecurity.com*\n\n` +
+          `👤 ${name}\n` +
+          `🏢 ${organization}\n` +
+          `💼 ${role || "—"}\n` +
+          `📧 ${email}\n` +
+          `📞 ${telefono || "—"}\n` +
+          `📋 Servicio: ${servicio || message || "—"}\n` +
+          `💬 ${message || "—"}\n\n` +
+          `🕐 ${hora}`;
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: "Markdown" }),
+        }).catch((e: Error) => console.warn("Telegram notify failed:", e.message));
       }
 
       return new Response(JSON.stringify({ ok: true }), {

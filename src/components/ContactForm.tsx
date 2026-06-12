@@ -38,37 +38,66 @@ export const ContactForm = () => {
 
   const selectedService = watch("servicio");
 
+  const buildTemplateParams = (data: FormData) => ({
+    name:       data.nombre,
+    message:    `Servicio: ${data.servicio}. ${data.mensaje || ""}`.trim(),
+    time:       new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),
+    from_name:  data.nombre,
+    from_email: data.email,
+    empresa:    data.empresa,
+    cargo:      data.cargo    || "—",
+    telefono:   data.telefono || "—",
+    servicio:   data.servicio,
+    mensaje:    data.mensaje  || "—",
+  });
+
+  const sendEmailJS = (templateParams: ReturnType<typeof buildTemplateParams>, toEmail: string) =>
+    fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id:      EMAILJS_SERVICE_ID,
+        template_id:     EMAILJS_TEMPLATE_ID,
+        user_id:         EMAILJS_PUBLIC_KEY,
+        template_params: { ...templateParams, to_email: toEmail },
+      }),
+    });
+
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     setError("");
     try {
-      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          service_id:  EMAILJS_SERVICE_ID,
-          template_id: EMAILJS_TEMPLATE_ID,
-          user_id:     EMAILJS_PUBLIC_KEY,
-          template_params: {
-            // Variables del header HTML del template
-            name:      data.nombre,
-            message:   `Servicio: ${data.servicio}. ${data.mensaje || ""}`.trim(),
-            time:      new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),
-            // Variables del cuerpo del template
-            from_name:  data.nombre,
-            from_email: data.email,
-            empresa:    data.empresa,
-            cargo:      data.cargo    || "—",
-            telefono:   data.telefono || "—",
-            servicio:   data.servicio,
-            mensaje:    data.mensaje  || "—",
-          },
-        }),
-      });
-      if (!res.ok) throw new Error("Error al enviar");
-      setSubmitted(true);
+      const params = buildTemplateParams(data);
 
-      // Registrar eventos de conversión
+      // Enviar a contacto@ (principal) y coordinacion@ (copia interna)
+      const [res] = await Promise.all([
+        sendEmailJS(params, "contacto@stratecsecurity.com"),
+        sendEmailJS(params, "coordinacion@stratecsecurity.com").catch(() => null),
+      ]);
+      if (!res.ok) throw new Error("Error al enviar");
+
+      // Guardar lead en CRM y disparar notificación Telegram (fire-and-forget)
+      fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-lead`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            name:         data.nombre,
+            email:        data.email,
+            organization: data.empresa,
+            role:         data.cargo,
+            message:      `${data.servicio}: ${data.mensaje || ""}`.trim(),
+            telefono:     data.telefono,
+            servicio:     data.servicio,
+          }),
+        }
+      ).catch(() => null);
+
+      setSubmitted(true);
       track.formSubmit(selectedService);
       track.metaLead();
     } catch {
