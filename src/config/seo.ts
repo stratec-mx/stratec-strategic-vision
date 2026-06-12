@@ -17,8 +17,8 @@ const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/a
 
 export const seoConfig: Record<string, PageSEO> = {
   "/": {
-    title: "STRATEC Security | Firma de Consultoría Especializada en Seguridad Institucional",
-    description: "STRATEC Security es una firma de consultoría especializada en seguridad institucional, integrada por profesionales y expertos universitarios con más de 20 años de trayectoria. Diagnósticos técnicos, análisis de riesgos, protección civil, inteligencia estratégica e integración tecnológica para gobierno, corporativos, industria e instituciones educativas en México.",
+    title: "STRATEC Security | Firma de Consultoría Especializada en Seguridad Institucional | México",
+    description: "STRATEC Security es una firma de consultoría especializada en seguridad institucional con cobertura nacional en México. Consultores profesionales universitarios con más de 20 años de trayectoria. Diagnósticos técnicos, análisis de riesgos, protección civil, inteligencia estratégica e integración tecnológica para gobierno, corporativos, industria e instituciones educativas en CDMX, Monterrey, Guadalajara, Puebla, Morelos y toda la República.",
     keywords: [
       // Variantes de marca (con c, k, z, s, sin e, con h, mal escritas)
       "STRATEC", "Stratec", "stratec",
