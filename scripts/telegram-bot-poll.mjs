@@ -152,20 +152,22 @@ async function descargarFotoTelegram(fileId) {
 // ── Leonardo.ai — generar imagen ──────────────────────────────────────────────
 
 async function generarImagen(tema) {
+  const scenes = [
+    `security operations center with multiple surveillance monitors, professional staff at workstations, blue ambient lighting`,
+    `professional security consultant in business attire reviewing safety documents in a modern office building in Mexico City`,
+    `emergency response team in safety vests conducting a risk assessment at an industrial facility`,
+    `corporate boardroom with business professionals reviewing security protocols, navy blue interior`,
+    `modern CCTV camera system on a commercial building facade, urban background`,
+  ];
+  const scene = scenes[Math.floor(Math.random() * scenes.length)];
   const prompt =
-    `Corporate photography for Mexican security consulting firm STRATEC. ` +
-    `Theme: ${tema}. ` +
-    `Style: modern office building exterior, professional security equipment, ` +
-    `control room with monitors, corporate meeting room, industrial facility, ` +
-    `or emergency response team in action. ` +
-    `Color palette: deep navy blue and gold accents. ` +
-    `Photorealistic, high resolution, professional business photography. ` +
-    `No text, no watermarks, no logos.`;
-
+    `${scene}, theme: ${tema}, ` +
+    `photorealistic photograph, Canon EOS R5, professional corporate photography, sharp focus, 4K, ` +
+    `no text, no watermarks, no logos`;
   const negative =
-    `abstract art, mandala, ornamental, decorative pattern, aztec, mayan, ` +
-    `circular pattern, kaleidoscope, fractal, surreal, fantasy, cartoon, ` +
-    `anime, illustration, painting, sketch, low quality, blurry`;
+    `abstract, mandala, ornament, circular pattern, aztec, mayan, kaleidoscope, fractal, ` +
+    `surreal, fantasy, cartoon, anime, painting, illustration, sketch, ` +
+    `low quality, blurry, deformed, watermark`;
 
   const res = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
     method: "POST",
@@ -173,8 +175,8 @@ async function generarImagen(tema) {
     body: JSON.stringify({
       prompt,
       negative_prompt: negative,
-      modelId: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3",
-      width: 1024, height: 1024, num_images: 1, guidance_scale: 12,
+      modelId: "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf0",
+      width: 1024, height: 576, num_images: 1, guidance_scale: 7,
     }),
   });
 
@@ -284,44 +286,22 @@ async function generarCaptionsDesdeImagen(imageBuffer, temaHint = "") {
 
 async function publicarFacebookBuffer(imageBuffer, caption) {
   if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
-    console.warn("Facebook: FACEBOOK_PAGE_ACCESS_TOKEN o FACEBOOK_PAGE_ID no configurados");
+    console.warn("Facebook: token o page_id no configurados");
     return false;
   }
-
-  // Paso 1: subir imagen sin publicar para obtener photo_id
-  const formImg = new FormData();
-  formImg.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
-  formImg.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
-  formImg.append("published", "false");
-
-  const imgRes = await fetch(
+  const form = new FormData();
+  form.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
+  form.append("message", caption);
+  form.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
+  const res = await fetch(
     `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
-    { method: "POST", body: formImg }
+    { method: "POST", body: form }
   );
-  const imgData = await imgRes.json();
-  if (!imgRes.ok || imgData.error) {
-    const err = imgData.error?.message || JSON.stringify(imgData);
-    throw new Error(`Facebook upload imagen: ${err}`);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(`Facebook: ${data.error?.message || JSON.stringify(data)}`);
   }
-  const photoId = imgData.id;
-  console.log(`Facebook: imagen subida, photo_id=${photoId}`);
-
-  // Paso 2: publicar post con la imagen adjunta
-  const postForm = new FormData();
-  postForm.append("message", caption);
-  postForm.append("attached_media", JSON.stringify([{ media_fbid: photoId }]));
-  postForm.append("access_token", FACEBOOK_PAGE_ACCESS_TOKEN);
-
-  const postRes = await fetch(
-    `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`,
-    { method: "POST", body: postForm }
-  );
-  const postData = await postRes.json();
-  if (!postRes.ok || postData.error) {
-    const err = postData.error?.message || JSON.stringify(postData);
-    throw new Error(`Facebook publicar post: ${err}`);
-  }
-  console.log(`Facebook: publicado, post_id=${postData.id}`);
+  console.log(`Facebook: publicado OK, id=${data.id}`);
   return true;
 }
 
