@@ -153,17 +153,30 @@ async function descargarFotoTelegram(fileId) {
 
 async function generarImagen(tema) {
   const prompt =
-    `Professional B2B security consulting image for Mexican firm STRATEC. ` +
-    `Theme: ${tema}. Corporate style, dark navy blue and gold palette, ` +
-    `clean modern design, no text overlay, no human faces, high quality.`;
+    `Corporate photography for Mexican security consulting firm STRATEC. ` +
+    `Theme: ${tema}. ` +
+    `Style: modern office building exterior, professional security equipment, ` +
+    `control room with monitors, corporate meeting room, industrial facility, ` +
+    `or emergency response team in action. ` +
+    `Color palette: deep navy blue and gold accents. ` +
+    `Photorealistic, high resolution, professional business photography. ` +
+    `No text, no watermarks, no logos.`;
+
+  const negative =
+    `abstract art, mandala, ornamental, decorative pattern, aztec, mayan, ` +
+    `circular pattern, kaleidoscope, fractal, surreal, fantasy, cartoon, ` +
+    `anime, illustration, painting, sketch, low quality, blurry`;
 
   const res = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${LEONARDO_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt,
+      negative_prompt: negative,
       modelId: "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3",
-      width: 1024, height: 1024, num_images: 1, guidance_scale: 7,
+      width: 1024, height: 1024, num_images: 1, guidance_scale: 12,
+      photoReal: true, photoRealVersion: "v2",
+      alchemy: true,
     }),
   });
 
