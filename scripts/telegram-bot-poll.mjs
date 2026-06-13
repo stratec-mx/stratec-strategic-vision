@@ -24,7 +24,7 @@
  *   LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORG_ID
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
@@ -595,51 +595,187 @@ async function publicarFacebookBuffer(imageBuffer, caption) {
   return true;
 }
 
-// ── LinkedIn ──────────────────────────────────────────────────────────────────
+// ── LinkedIn (Posts API 2024) ─────────────────────────────────────────────────
 
 async function publicarLinkedIn(imageBuffer, caption) {
   if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_ORG_ID) return false;
-  const orgUrn  = `urn:li:organization:${LINKEDIN_ORG_ID}`;
+  const orgUrn = `urn:li:organization:${LINKEDIN_ORG_ID}`;
   const headers = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
+    "LinkedIn-Version": "202406",
     "X-Restli-Protocol-Version": "2.0.0",
   };
-  const regRes = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+
+  // Paso 1: inicializar subida de imagen
+  const initRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
     method: "POST", headers,
-    body: JSON.stringify({
-      registerUploadRequest: {
-        recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-        owner: orgUrn,
-        serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
-      },
-    }),
+    body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }),
   });
-  if (!regRes.ok) return false;
-  const { value } = await regRes.json();
-  const uploadUrl = value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
-  const assetId   = value.asset;
-  await fetch(uploadUrl, {
+  if (!initRes.ok) {
+    const txt = await initRes.text();
+    console.error(`LinkedIn initializeUpload ${initRes.status}:`, txt);
+    return false;
+  }
+  const { value } = await initRes.json();
+  const uploadUrl = value.uploadUrl;
+  const imageUrn  = value.image;
+
+  // Paso 2: subir imagen
+  const upRes = await fetch(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
     body: imageBuffer,
   });
-  const postRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+  if (!upRes.ok) {
+    console.error(`LinkedIn image upload ${upRes.status}`);
+    return false;
+  }
+
+  // Paso 3: crear publicación
+  const postRes = await fetch("https://api.linkedin.com/rest/posts", {
     method: "POST", headers,
     body: JSON.stringify({
       author: orgUrn,
-      lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: { text: caption },
-          shareMediaCategory: "IMAGE",
-          media: [{ status: "READY", media: assetId, title: { text: "STRATEC" } }],
-        },
+      commentary: caption,
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
       },
-      visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+      content: {
+        media: { title: "STRATEC Security", id: imageUrn },
+      },
+      lifecycleState: "PUBLISHED",
+      isReshareDisabledByAuthor: false,
     }),
   });
-  return postRes.ok;
+  if (!postRes.ok) {
+    const txt = await postRes.text();
+    console.error(`LinkedIn post ${postRes.status}:`, txt);
+    return false;
+  }
+  return true;
+}
+
+// ── Programación de posts ─────────────────────────────────────────────────────
+
+// Devuelve los próximos 4 horarios óptimos para México (UTC-6)
+function proximosHorariosOptimos() {
+  const OFFSET_MS  = -6 * 3600 * 1000; // UTC-6 México Central
+  const SLOTS_MX   = [9, 12, 18];       // 9am, 12pm, 6pm días hábiles
+  const now        = Date.now();
+  const MIN_AHEAD  = 5 * 60 * 1000;     // al menos 5 min en el futuro
+  const dias       = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const result     = [];
+
+  for (let dayDelta = 0; dayDelta <= 4 && result.length < 4; dayDelta++) {
+    const base = new Date(now + dayDelta * 86400000);
+    // Fecha en México
+    const mxBase = new Date(base.getTime() + OFFSET_MS);
+    const mxDow  = mxBase.getUTCDay(); // 0=Dom … 6=Sáb
+
+    // Fines de semana: un solo slot a las 10am
+    const horasDelDia = (mxDow === 0 || mxDow === 6) ? [10] : SLOTS_MX;
+
+    for (const h of horasDelDia) {
+      // Construir el instante exacto en UTC
+      const slotMx  = new Date(Date.UTC(
+        mxBase.getUTCFullYear(), mxBase.getUTCMonth(), mxBase.getUTCDate(),
+        h, 0, 0, 0
+      ));
+      const slotUtc = new Date(slotMx.getTime() - OFFSET_MS);
+
+      if (slotUtc.getTime() < now + MIN_AHEAD) continue;
+
+      const hLabel = h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
+      const dateStr = `${mxBase.getUTCDate()}/${mxBase.getUTCMonth() + 1}`;
+      result.push({ label: `${dias[mxDow]} ${dateStr} ${hLabel}`, iso: slotUtc.toISOString() });
+      if (result.length >= 4) break;
+    }
+  }
+  return result;
+}
+
+async function procesarProgramar(chatId, pendingId, callbackId) {
+  await answerCb(callbackId, "Eligiendo horario...");
+  const slots = proximosHorariosOptimos();
+  if (!slots.length) {
+    await sendMessage(chatId, "❌ No se encontraron horarios disponibles.");
+    return;
+  }
+  const keyboard = slots.map(s => [
+    { text: `🕐 ${s.label}`, callback_data: `scheds:${pendingId}:${new Date(s.iso).getTime()}` },
+  ]);
+  keyboard.push([{ text: "❌ Cancelar", callback_data: `pub:${pendingId}` }]);
+  await sendMessage(chatId,
+    "📅 <b>Elige el horario de publicación</b>\n(Hora México — máxima afluencia en redes)",
+    { reply_markup: { inline_keyboard: keyboard } }
+  );
+}
+
+async function procesarAgendarSlot(chatId, pendingId, tsMs, callbackId) {
+  await answerCb(callbackId, "Programando...");
+  const pending = readPending(pendingId);
+  if (!pending) {
+    await sendMessage(chatId, "❌ Post no encontrado. Genera uno nuevo.");
+    return;
+  }
+  pending.scheduledAt = new Date(Number(tsMs)).toISOString();
+  writeFileSync(join(PENDING_DIR, `${pendingId}.json`), JSON.stringify(pending));
+
+  const OFFSET_MS = -6 * 3600 * 1000;
+  const mxDate    = new Date(Number(tsMs) + OFFSET_MS);
+  const dias      = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const h         = mxDate.getUTCHours();
+  const hLabel    = h < 12 ? `${h}:00am` : h === 12 ? "12:00pm" : `${h-12}:00pm`;
+  await sendMessage(chatId,
+    `✅ <b>Post programado</b>\n\n` +
+    `📅 ${dias[mxDate.getUTCDay()]} ${mxDate.getUTCDate()}/${mxDate.getUTCMonth()+1} a las ${hLabel} (hora México)\n\n` +
+    `El bot publicará automáticamente en Facebook y LinkedIn a esa hora.`
+  );
+}
+
+// Revisa posts pendientes con scheduledAt y los publica si ya llegó la hora
+async function publicarPendientesAgendados() {
+  if (!existsSync(PENDING_DIR)) return;
+  const files = readdirSync(PENDING_DIR).filter(f => f.endsWith(".json"));
+  const now   = Date.now();
+
+  for (const file of files) {
+    try {
+      const meta = JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8"));
+      if (!meta.scheduledAt) continue;
+      if (new Date(meta.scheduledAt).getTime() > now) continue;
+
+      const pendingId   = file.replace(".json", "");
+      const imageBuffer = Buffer.from(meta.imageBase64, "base64");
+      console.log(`Publicando post agendado: ${pendingId} (${meta.tema})`);
+
+      const [fb, li] = await Promise.allSettled([
+        publicarFacebookBuffer(imageBuffer, meta.facebook),
+        publicarLinkedIn(imageBuffer, meta.linkedin),
+      ]);
+      deletePending(pendingId);
+
+      const redes = [];
+      if (fb.status === "fulfilled" && fb.value) redes.push("Facebook ✅");
+      else redes.push(`Facebook ❌`);
+      if (li.status === "fulfilled" && li.value) redes.push("LinkedIn ✅");
+      else if (!LINKEDIN_ACCESS_TOKEN) redes.push("LinkedIn ⏭️");
+      else redes.push(`LinkedIn ❌`);
+
+      // Notificar al chat original si hay chatId guardado
+      if (meta.chatId) {
+        await sendMessage(meta.chatId,
+          `🚀 <b>Post publicado automáticamente</b>\n\n${redes.join("\n")}\nTema: ${meta.tema}`
+        );
+      }
+    } catch (err) {
+      console.error("Error publicando agendado:", err.message);
+    }
+  }
 }
 
 // ── Flujo: foto subida por el usuario ────────────────────────────────────────
@@ -676,6 +812,9 @@ async function procesarFoto(chatId, fileId, temaHint) {
     await sendPhotoBuffer(chatId, conMarca, preview, [
       [
         { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
+        { text: "📅 Programar",       callback_data: `sched:${pendingId}` },
+      ],
+      [
         { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
       ],
     ]);
@@ -712,6 +851,7 @@ async function procesarComando(chatId, tema) {
       puntos:         captions.puntos,
       categoria:      captions.categoria,
       tema,
+      chatId,
     });
 
     const preview =
@@ -722,6 +862,9 @@ async function procesarComando(chatId, tema) {
     await sendPhotoBuffer(chatId, imageBuffer, preview, [
       [
         { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+        { text: "📅 Programar",      callback_data: `sched:${pendingId}` },
+      ],
+      [
         { text: "🔄 Regenerar todo", callback_data: `reg:${pendingId}` },
       ],
     ]);
@@ -806,6 +949,9 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
+  // Publicar posts programados cuya hora ya llegó
+  await publicarPendientesAgendados();
+
   let offset = getOffset();
 
   // Si el offset guardado es irreal (p.ej. de una parada de emergencia),
@@ -844,9 +990,14 @@ async function main() {
         const { id, data, message } = update.callback_query;
         const chatId    = message.chat.id;
         const messageId = message.message_id;
-        if (data.startsWith("pub:"))   await procesarAprobacion(chatId, messageId, data.slice(4), id);
+        if (data.startsWith("pub:"))        await procesarAprobacion(chatId, messageId, data.slice(4), id);
         else if (data.startsWith("reg:"))   await procesarRegeneracion(chatId, data.slice(4), id);
         else if (data.startsWith("recap:")) await procesarRecaptionado(chatId, data.slice(6), id);
+        else if (data.startsWith("sched:")) await procesarProgramar(chatId, data.slice(6), id);
+        else if (data.startsWith("scheds:")) {
+          const [pid, ts] = data.slice(7).split(":");
+          await procesarAgendarSlot(chatId, pid, ts, id);
+        }
         continue;
       }
 
