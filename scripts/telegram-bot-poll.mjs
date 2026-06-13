@@ -170,65 +170,89 @@ function svgTextLines(text, maxChars, x, startY, lh, sz, fill, weight) {
 }
 
 function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
-  const lp = 64;
-  const BH = 140;
-  let y = 76;
-  let c = "";
+  const lp  = 64;   // left padding
+  const BH  = 175;  // bottom bar height
+  const PW  = 660;  // solid dark panel zone width
+  let y     = 78;
+  let c     = "";
 
-  // Category badge
+  // 1. Category badge
+  const catTxt = String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
   c += `
-<rect x="${lp}" y="${y}" width="270" height="36" rx="5" fill="#c9a22720"/>
+<rect x="${lp}" y="${y}" width="310" height="36" rx="4" fill="#c9a22718"/>
 <rect x="${lp}" y="${y}" width="4" height="36" rx="2" fill="#c9a227"/>
-<text x="${lp + 18}" y="${y + 24}" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase())}</text>`;
-  y += 70;
+<text x="${lp + 18}" y="${y + 24}" font-family="Liberation Sans,Arial,sans-serif" font-size="11" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(catTxt)}</text>`;
+  y += 68;
 
-  // Headline — 50px, wrap at 19 chars
-  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 19, lp, y, 60, 50, "white", "bold");
+  // 2. Headline — 62px, wrap at 18 chars
+  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 18, lp, y, 74, 62, "white", "bold");
   c += `\n${tit.svg}`;
-  y += tit.count * 60 + 30;
+  y += tit.count * 74 + 28;
 
-  // Gold divider
-  c += `\n<rect x="${lp}" y="${y}" width="90" height="4" rx="2" fill="#c9a227"/>`;
+  // 3. Gold divider
+  c += `\n<rect x="${lp}" y="${y}" width="80" height="4" rx="2" fill="#c9a227"/>`;
   y += 38;
 
-  // Subtitle
-  const sub = svgTextLines(subtitulo || "", 34, lp, y, 32, 20, "#c9a227", "bold");
-  c += `\n${sub.svg}`;
-  y += sub.count * 32 + 44;
-
-  // Bullet points — more spacing
-  for (const p of (Array.isArray(puntos) ? puntos.slice(0, 4) : [])) {
-    c += `
-<rect x="${lp}" y="${y - 15}" width="10" height="10" rx="2" fill="#c9a227"/>
-<text x="${lp + 22}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="19" fill="white">${xmlEsc(String(p))}</text>`;
-    y += 46;
+  // 4. Subtitle — 26px, wrap at 36 chars
+  if (subtitulo) {
+    const sub = svgTextLines(subtitulo, 36, lp, y, 36, 26, "#c9a227", "normal");
+    c += `\n${sub.svg}`;
+    y += sub.count * 36 + 44;
+  } else {
+    y += 28;
   }
 
-  // Separator + CTA
-  y += 28;
-  c += `\n<rect x="${lp}" y="${y}" width="420" height="1" fill="#c9a22730"/>`;
-  y += 28;
+  // 5. Bullet points — círculo dorado, 3 max
+  const pts = Array.isArray(puntos) ? puntos.slice(0, 3) : [];
+  for (const p of pts) {
+    c += `
+<circle cx="${lp + 7}" cy="${y - 8}" r="5" fill="#c9a227"/>
+<text x="${lp + 24}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="21" fill="white">${xmlEsc(String(p))}</text>`;
+    y += 56;
+  }
+
+  // 6. CTA line
+  y += 24;
+  c += `\n<rect x="${lp}" y="${y}" width="460" height="1" fill="#c9a22740"/>`;
+  y += 26;
   c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22799">Diagnóstico sin costo · stratecsecurity.com</text>`;
 
-  // Bottom bar
+  // 7. Etiquetas de servicio (llenan el espacio vacío antes de la barra inferior)
+  const tagY   = H - BH - 80;
+  const tagW   = 285;
+  const tagH   = 46;
+  const tagGap = 16;
+  const tags   = ["ANÁLISIS DE RIESGOS", "ESTRATEGIAS A MEDIDA", "COBERTURA NACIONAL"];
+  for (let i = 0; i < 3; i++) {
+    const tx = lp + i * (tagW + tagGap);
+    if (tx + tagW > PW + 80) break;
+    c += `
+<rect x="${tx}" y="${tagY}" width="${tagW}" height="${tagH}" rx="4" fill="#c9a22712" stroke="#c9a22760" stroke-width="1"/>
+<text x="${tx + tagW / 2}" y="${tagY + 30}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold" text-anchor="middle" letter-spacing="1">${tags[i]}</text>`;
+  }
+
+  // 8. Barra inferior STRATEC
   const mid = Math.round(W / 2);
   c += `
 <rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.97"/>
-<rect x="${mid - 1}" y="${H - BH + 22}" width="1" height="${BH - 44}" fill="#c9a22750"/>
-<text x="${lp}" y="${H - 72}" font-family="Liberation Sans,Arial,sans-serif" font-size="28" fill="white" font-weight="bold">STRATEC</text>
-<text x="${lp}" y="${H - 42}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="2">CONSULTORÍA EN SEGURIDAD</text>
-<text x="${mid + 40}" y="${H - 70}" font-family="Liberation Sans,Arial,sans-serif" font-size="21" fill="white" font-weight="bold">stratecsecurity.com</text>
-<text x="${mid + 40}" y="${H - 44}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+<rect x="0" y="${H - BH}" width="${W}" height="3" fill="#c9a227"/>
+<rect x="${mid}" y="${H - BH + 26}" width="1" height="${BH - 52}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 90}" font-family="Liberation Sans,Arial,sans-serif" font-size="38" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 54}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 44}" y="${H - 88}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 44}" y="${H - 56}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
 
+  // Gradiente: oscuro en izquierda (texto legible), se abre hacia la derecha (foto visible)
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
 <defs>
-  <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="520" y1="0" x2="780" y2="0">
-    <stop offset="0" stop-color="#0d1b2a" stop-opacity="0.98"/>
-    <stop offset="1" stop-color="#0d1b2a" stop-opacity="0"/>
+  <linearGradient id="panelFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
+    <stop offset="0"                    stop-color="#07101d" stop-opacity="0.97"/>
+    <stop offset="${PW / W}"            stop-color="#07101d" stop-opacity="0.93"/>
+    <stop offset="${(PW + 180) / W}"    stop-color="#07101d" stop-opacity="0.28"/>
+    <stop offset="1"                    stop-color="#07101d" stop-opacity="0.05"/>
   </linearGradient>
 </defs>
-<rect x="0" y="0" width="560" height="${H - BH}" fill="#0d1b2a" opacity="0.98"/>
-<rect x="520" y="0" width="260" height="${H - BH}" fill="url(#fade)"/>
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="url(#panelFade)"/>
 ${c}
 </svg>`;
 }
@@ -236,13 +260,10 @@ ${c}
 async function buildInfografia(photoBuffer, captionData) {
   const W = 1080, H = 1080;
 
-  const base = await sharp({
-    create: { width: W, height: H, channels: 4, background: { r: 13, g: 27, b: 42, alpha: 255 } }
-  }).png().toBuffer();
-
+  // Foto como fondo completo — el gradiente SVG oscurece la zona del texto
   const photo = await sharp(photoBuffer)
-    .resize(560, H, { fit: "cover", position: "center" })
-    .modulate({ brightness: 0.60 })
+    .resize(W, H, { fit: "cover", position: "center" })
+    .modulate({ brightness: 0.55 })
     .png().toBuffer();
 
   const overlay = Buffer.from(buildSVGOverlay(
@@ -251,11 +272,8 @@ async function buildInfografia(photoBuffer, captionData) {
     W, H
   ));
 
-  return sharp(base)
-    .composite([
-      { input: photo,   left: 520, top: 0 },
-      { input: overlay, left: 0,   top: 0 },
-    ])
+  return sharp(photo)
+    .composite([{ input: overlay, left: 0, top: 0 }])
     .png().toBuffer();
 }
 
