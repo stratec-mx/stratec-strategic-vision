@@ -807,15 +807,12 @@ async function procesarFoto(chatId, fileId, temaHint) {
 
   try {
     const rawBuffer  = await descargarFotoTelegram(fileId);
-    const [conMarca, captions] = await Promise.all([
-      aplicarLogoWatermark(rawBuffer),
-      generarCaptionsDesdeImagen(rawBuffer, temaHint),
-    ]);
+    const captions   = await generarCaptionsDesdeImagen(rawBuffer, temaHint);
     clearInterval(actionTick);
 
     const tema = temaHint || "imagen personalizada STRATEC";
     const pendingId = savePending({
-      imageBase64:    conMarca.toString("base64"),
+      imageBase64:    rawBuffer.toString("base64"),
       rawImageBase64: rawBuffer.toString("base64"),
       linkedin:       captions.linkedin,
       facebook:       captions.facebook,
@@ -941,10 +938,8 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
 
   const rawBuffer = Buffer.from(pending.rawImageBase64 || pending.imageBase64, "base64");
   const captions  = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
-  const conMarca  = await aplicarLogoWatermark(rawBuffer);
 
-  // Update image file and caption metadata separately
-  updatePendingImage(pendingId, conMarca);
+  updatePendingImage(pendingId, rawBuffer);
   const metaFile = join(PENDING_DIR, `${pendingId}.json`);
   const meta     = JSON.parse(readFileSync(metaFile, "utf8"));
   meta.linkedin  = captions.linkedin;
@@ -956,7 +951,7 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, conMarca, preview, [
+  await sendPhotoBuffer(chatId, rawBuffer, preview, [
     [
       { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
