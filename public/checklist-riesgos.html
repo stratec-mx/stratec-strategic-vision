@@ -1,1127 +1,836 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Checklist de Riesgos Críticos — STRATEC Consultoría en Seguridad</title>
-<meta name="description" content="Evalúe en 10 minutos la preparación de su organización ante emergencias y riesgos operativos. Herramienta gratuita de STRATEC Consultoría en Seguridad." />
-<meta name="robots" content="index, follow" />
-<meta property="og:title" content="Checklist de Riesgos Críticos — STRATEC" />
-<meta property="og:description" content="¿Su organización está preparada? Identifique vulnerabilidades críticas en menos de 10 minutos." />
-<meta property="og:type" content="website" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Diagnóstico de Riesgos Críticos — STRATEC Consultoría en Seguridad</title>
+<meta name="description" content="Evalúe en 10 minutos el nivel de preparación de su organización ante emergencias. Herramienta gratuita de STRATEC."/>
+<meta property="og:title" content="Diagnóstico de Riesgos Críticos — STRATEC"/>
+<meta property="og:description" content="¿Su organización está preparada? Identifique vulnerabilidades críticas en menos de 10 minutos y reciba un plan de acción personalizado."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1F3A;--navy-deep:#071528;--navy-mid:#122944;
+  --olive:#7B7F42;--olive-lt:#9DA352;
+  --smoke:#F7F7F5;--smoke-d:#EDEDEA;
+  --steel:#5E646E;--carbon:#111111;--white:#ffffff;
+  --green:#2D6A4F;--green-bg:#E8F5EE;
+  --amber:#8C5C0A;--amber-bg:#FDF3E0;
+  --red:#8B1A1A;--red-bg:#FDEAEA;
+  --c-consultoria:#0B1F3A;--bg-consultoria:#E6ECF5;
+  --c-proteccion:#3A5208;--bg-proteccion:#EDF3DC;
+  --c-capacitacion:#0C3D6B;--bg-capacitacion:#DFF0FF;
+  --c-tecnologia:#3B2070;--bg-tecnologia:#EDE8F8;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--smoke);color:var(--carbon);line-height:1.6;font-size:16px}
 
-  :root {
-    --navy: #0B1F3A;
-    --navy-deep: #071528;
-    --navy-mid: #122944;
-    --olive: #7B7F42;
-    --olive-light: #9DA352;
-    --smoke: #F7F7F5;
-    --smoke-dark: #EDEDEA;
-    --steel: #5E646E;
-    --carbon: #111111;
-    --white: #ffffff;
+/* HEADER */
+.hdr{background:var(--navy-deep);position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,0.06)}
+.hdr-i{max-width:980px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:58px}
+.hdr-logo{height:32px;width:auto;display:block}
+.hdr-cta{font-size:13px;font-weight:500;color:var(--olive-lt);text-decoration:none;letter-spacing:.03em;transition:color .2s}
+.hdr-cta:hover{color:var(--smoke)}
 
-    --green-ok: #2D6A4F;
-    --green-bg: #E8F5EE;
-    --amber-ok: #92580A;
-    --amber-bg: #FDF3E0;
-    --red-ok: #8B1A1A;
-    --red-bg: #FDEAEA;
-  }
+/* HERO */
+.hero{background:var(--navy-deep);background-image:linear-gradient(150deg,#071528 0%,#0B1F3A 55%,#162D50 100%);padding:3.5rem 1.5rem 3rem;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.018) 40px);pointer-events:none}
+.hero-i{max-width:700px;margin:0 auto;position:relative}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(123,127,66,.18);border:1px solid rgba(123,127,66,.35);border-radius:2px;padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--olive-lt);margin-bottom:1.5rem}
+.badge-dot{width:6px;height:6px;background:var(--olive-lt);border-radius:50%;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.hero h1{font-family:'DM Serif Display',Georgia,serif;font-size:clamp(1.8rem,5vw,2.9rem);font-weight:400;color:var(--smoke);line-height:1.12;margin-bottom:.9rem}
+.hero h1 em{font-style:italic;color:rgba(247,247,245,.65)}
+.hero-sub{font-size:1rem;color:rgba(247,247,245,.6);max-width:540px;margin:0 auto 1.75rem;font-weight:300;line-height:1.7}
+.hero-meta{display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap}
+.hero-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(247,247,245,.45)}
 
-  html { scroll-behavior: smooth; }
+/* PROGRESS */
+.prog-strip{background:var(--white);border-bottom:1px solid rgba(0,0,0,.07);padding:.85rem 1.5rem;position:sticky;top:58px;z-index:90}
+.prog-i{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:1rem}
+.prog-lbl{font-size:12px;color:var(--steel);font-weight:500;white-space:nowrap;min-width:95px}
+.prog-track{flex:1;height:4px;background:var(--smoke-d);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--olive),var(--olive-lt));border-radius:2px;transition:width .4s ease;width:0%}
+.prog-cnt{font-size:13px;font-weight:600;color:var(--navy);min-width:36px;text-align:right}
 
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--smoke);
-    color: var(--carbon);
-    line-height: 1.6;
-    font-size: 16px;
-  }
+/* CONTENT */
+.content{max-width:720px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
 
-  /* HEADER */
-  .site-header {
-    background: var(--navy-deep);
-    padding: 0 1.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .header-inner {
-    max-width: 960px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 56px;
-  }
-  .logo-mark {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-  }
-  .logo-diamond {
-    width: 28px;
-    height: 28px;
-    background: var(--olive);
-    transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-  .logo-text {
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.12em;
-    color: var(--smoke);
-    text-transform: uppercase;
-  }
-  .header-cta {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--olive-light);
-    text-decoration: none;
-    letter-spacing: 0.04em;
-    transition: color 0.2s;
-  }
-  .header-cta:hover { color: var(--smoke); }
+/* SECTION INTROS */
+.sec-intro{text-align:center;margin-bottom:1.75rem}
+.sec-intro p{font-size:.9rem;color:var(--steel);max-width:500px;margin:0 auto}
 
-  /* HERO */
-  .hero {
-    background: var(--navy);
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(123,127,66,0.15) 0%, transparent 70%),
-      linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 50%, #162D50 100%);
-    padding: 4rem 1.5rem 3.5rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: repeating-linear-gradient(
-      0deg, transparent, transparent 39px,
-      rgba(255,255,255,0.025) 39px, rgba(255,255,255,0.025) 40px
-    ), repeating-linear-gradient(
-      90deg, transparent, transparent 39px,
-      rgba(255,255,255,0.025) 39px, rgba(255,255,255,0.025) 40px
-    );
-    pointer-events: none;
-  }
-  .hero-inner { max-width: 720px; margin: 0 auto; position: relative; }
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(123,127,66,0.18);
-    border: 1px solid rgba(123,127,66,0.35);
-    border-radius: 2px;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--olive-light);
-    margin-bottom: 1.75rem;
-  }
-  .hero-badge-dot {
-    width: 6px; height: 6px;
-    background: var(--olive-light);
-    border-radius: 50%;
-    animation: pulse-dot 2s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-  .hero h1 {
-    font-family: 'DM Serif Display', Georgia, serif;
-    font-size: clamp(1.9rem, 5vw, 3rem);
-    font-weight: 400;
-    color: var(--smoke);
-    line-height: 1.15;
-    margin-bottom: 1rem;
-  }
-  .hero h1 em {
-    font-style: italic;
-    color: rgba(247,247,245,0.7);
-  }
-  .hero-sub {
-    font-size: 1.05rem;
-    color: rgba(247,247,245,0.65);
-    max-width: 560px;
-    margin: 0 auto 2rem;
-    font-weight: 300;
-    line-height: 1.7;
-  }
-  .hero-meta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-  }
-  .hero-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: rgba(247,247,245,0.5);
-    font-weight: 400;
-  }
-  .hero-pill svg { opacity: 0.6; }
+/* QUESTION CARDS */
+.qcard{background:var(--white);border:1px solid rgba(0,0,0,.08);border-radius:6px;margin-bottom:.85rem;overflow:hidden;transition:border-color .2s}
+.qcard.ans-si{border-color:rgba(45,106,79,.35)}
+.qcard.ans-no{border-color:rgba(139,26,26,.3)}
+.qcard.ans-ns{border-color:rgba(140,92,10,.3)}
+.qhdr{display:flex;align-items:flex-start;gap:1rem;padding:1.1rem 1.25rem 0}
+.qnum{min-width:30px;height:30px;background:var(--navy);color:var(--smoke);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0;margin-top:2px;transition:background .2s}
+.qcard.ans-si .qnum{background:var(--green)}
+.qcard.ans-no .qnum{background:#B42020}
+.qcard.ans-ns .qnum{background:var(--amber)}
+.qtxt{font-size:.92rem;font-weight:500;color:var(--navy);line-height:1.5;padding-top:3px}
+.qopts{display:flex;gap:.45rem;padding:.85rem 1.25rem 1.1rem 3.6rem;flex-wrap:wrap}
+.opt{cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid rgba(0,0,0,.13);border-radius:3px;font-size:12.5px;font-weight:500;color:var(--steel);background:var(--smoke);transition:all .17s;user-select:none;-webkit-user-select:none}
+.opt:hover{border-color:var(--navy);color:var(--navy);background:rgba(11,31,58,.04)}
+.opt input{display:none}
+.opt.sel-si{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.opt.sel-no{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.opt.sel-ns{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
 
-  /* PROGRESS */
-  .progress-strip {
-    background: var(--white);
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding: 1rem 1.5rem;
-    position: sticky;
-    top: 56px;
-    z-index: 90;
-  }
-  .progress-inner {
-    max-width: 720px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .progress-label {
-    font-size: 12px;
-    color: var(--steel);
-    font-weight: 500;
-    white-space: nowrap;
-    min-width: 100px;
-  }
-  .progress-bar-wrap {
-    flex: 1;
-    height: 4px;
-    background: var(--smoke-dark);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--olive) 0%, var(--olive-light) 100%);
-    border-radius: 2px;
-    transition: width 0.4s ease;
-    width: 0%;
-  }
-  .progress-count {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--navy);
-    min-width: 40px;
-    text-align: right;
-  }
+/* SUBMIT ROW */
+.submit-row{text-align:center;margin-top:1.75rem}
+.btn-diagnose{background:var(--navy);color:var(--smoke);font-size:15px;font-weight:600;padding:13px 38px;border-radius:3px;border:none;cursor:pointer;transition:background .2s,transform .15s;letter-spacing:.03em;display:inline-flex;align-items:center;gap:10px}
+.btn-diagnose:hover:not(:disabled){background:var(--navy-mid);transform:translateY(-1px)}
+.btn-diagnose:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-reset{background:transparent;color:var(--steel);font-size:13px;padding:9px 18px;border-radius:3px;border:1px solid rgba(0,0,0,.12);cursor:pointer;margin-left:.6rem;transition:all .18s}
+.btn-reset:hover{color:var(--navy);border-color:rgba(0,0,0,.25)}
 
-  /* MAIN CONTENT */
-  .content {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 2.5rem 1.5rem 4rem;
-  }
+/* DIVIDER */
+.divider{border:none;border-top:1px solid rgba(0,0,0,.08);margin:2.5rem 0}
 
-  /* SECTION TITLES */
-  .section-intro {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-  .section-intro p {
-    font-size: 0.95rem;
-    color: var(--steel);
-    max-width: 520px;
-    margin: 0 auto;
-  }
+/* PHASES */
+.phase{display:none}
+.phase.active{display:block;animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
-  /* QUESTION CARDS */
-  .question-card {
-    background: var(--white);
-    border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    transition: border-color 0.25s, box-shadow 0.25s;
-    overflow: hidden;
-  }
-  .question-card.answered {
-    border-color: rgba(123,127,66,0.3);
-  }
-  .question-card.answered-no {
-    border-color: rgba(180,40,40,0.25);
-  }
-  .question-card.answered-unsure {
-    border-color: rgba(180,130,30,0.3);
-  }
+/* SCORE HERO */
+.score-hero{display:flex;align-items:center;gap:2rem;margin-bottom:2rem;flex-wrap:wrap}
+.ring-wrap{position:relative;width:148px;height:148px;flex-shrink:0}
+.ring-wrap svg{width:100%;height:100%}
+.ring-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-num{font-size:2.1rem;font-weight:600;color:var(--navy);line-height:1;font-family:'DM Serif Display',serif}
+.ring-den{font-size:.75rem;color:var(--steel);margin-top:1px}
+.ring-track{fill:none;stroke:var(--smoke-d);stroke-width:9}
+.ring-progress{fill:none;stroke-width:9;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:339.3;transform:rotate(-90deg);transform-origin:60px 60px;transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1),stroke .4s}
+.score-info{flex:1;min-width:220px}
+.level-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:4px 12px;border-radius:2px;margin-bottom:.6rem}
+.lv-alto .level-badge{background:var(--green-bg);color:var(--green)}
+.lv-medio .level-badge{background:var(--amber-bg);color:var(--amber)}
+.lv-bajo .level-badge{background:var(--red-bg);color:var(--red)}
+.lv-alto .ring-progress{stroke:var(--green)}
+.lv-medio .ring-progress{stroke:var(--amber)}
+.lv-bajo .ring-progress{stroke:var(--red)}
+.lv-alto .ring-num{color:var(--green)}
+.lv-medio .ring-num{color:var(--amber)}
+.lv-bajo .ring-num{color:var(--red)}
+.score-heading{font-family:'DM Serif Display',Georgia,serif;font-size:1.35rem;font-weight:400;color:var(--navy);margin-bottom:.4rem;line-height:1.25}
+.score-body{font-size:.88rem;color:var(--steel);line-height:1.65}
 
-  .question-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1.25rem 1.25rem 0;
-  }
-  .question-number {
-    min-width: 32px;
-    height: 32px;
-    background: var(--navy);
-    color: var(--smoke);
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 3px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    transition: background 0.25s;
-  }
-  .question-card.answered .question-number { background: var(--olive); }
-  .question-card.answered-no .question-number { background: #C0392B; }
-  .question-card.answered-unsure .question-number { background: #B87A1A; }
+/* NS NOTE */
+.ns-note{background:rgba(140,92,10,.07);border:1px solid rgba(140,92,10,.2);border-radius:4px;padding:.6rem 1rem;font-size:.8rem;color:var(--amber);margin-bottom:1.5rem;display:none}
+.ns-note.visible{display:block}
 
-  .question-text {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--navy);
-    line-height: 1.5;
-    padding-top: 4px;
-  }
+/* VULN SECTION */
+.vuln-head{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--steel);margin-bottom:1rem}
+.vuln-card{background:var(--white);border:1px solid rgba(0,0,0,.07);border-radius:5px;padding:1.1rem 1.25rem;margin-bottom:.7rem;display:flex;gap:1rem;align-items:flex-start}
+.vuln-q{font-size:.88rem;font-weight:500;color:var(--navy);margin-bottom:.3rem;line-height:1.4}
+.vuln-risk{font-size:.8rem;color:var(--steel);line-height:1.5}
+.vuln-badge-wrap{flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.ans-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:2px;white-space:nowrap}
+.ab-no{background:var(--red-bg);color:var(--red)}
+.ab-ns{background:var(--amber-bg);color:var(--amber)}
+.svc-badge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:2px;white-space:nowrap;text-align:center}
 
-  .options-row {
-    display: flex;
-    gap: 0.5rem;
-    padding: 1rem 1.25rem 1.25rem 3.75rem;
-    flex-wrap: wrap;
-  }
-  .opt-label {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 7px 16px;
-    border: 1px solid rgba(0,0,0,0.12);
-    border-radius: 3px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--steel);
-    background: var(--smoke);
-    transition: all 0.18s;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  .opt-label:hover {
-    border-color: var(--navy);
-    color: var(--navy);
-    background: rgba(11,31,58,0.04);
-  }
-  .opt-label input[type="radio"] { display: none; }
+/* GATE */
+.gate-card{background:var(--white);border:2px solid var(--navy);border-radius:8px;padding:2rem;margin-top:2rem}
+.gate-icon-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
+.gate-lock{width:36px;height:36px;background:var(--navy);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gate-lock svg{fill:var(--smoke)}
+.gate-h{font-family:'DM Serif Display',Georgia,serif;font-size:1.2rem;font-weight:400;color:var(--navy)}
+.gate-p{font-size:.88rem;color:var(--steel);margin-bottom:1.5rem;line-height:1.65}
+.gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem}
+.gate-full{grid-column:1/-1}
+.gate-field input,.gate-field select{width:100%;border:1px solid rgba(0,0,0,.15);border-radius:4px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:13.5px;color:var(--carbon);background:var(--smoke);outline:none;transition:border-color .2s,background .2s;appearance:none;-webkit-appearance:none}
+.gate-field input:focus,.gate-field select:focus{border-color:var(--olive);background:var(--white)}
+.gate-field input::placeholder{color:rgba(94,100,110,.55)}
+.gate-field label{display:block;font-size:11.5px;font-weight:600;color:var(--steel);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase}
+.gate-field select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E646E' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.field-hp{opacity:0;position:absolute;left:-9999px;height:0}
+.btn-gate{width:100%;background:var(--olive);color:var(--smoke);font-size:14.5px;font-weight:600;padding:13px;border-radius:4px;border:none;cursor:pointer;transition:background .2s,transform .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1rem}
+.btn-gate:hover:not(:disabled){background:var(--olive-lt);transform:translateY(-1px)}
+.btn-gate:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.gate-privacy{font-size:11.5px;color:var(--steel);text-align:center;margin-top:.75rem;opacity:.75}
+.gate-err{font-size:12.5px;color:var(--red);background:var(--red-bg);border:1px solid rgba(139,26,26,.25);border-radius:4px;padding:8px 12px;margin-top:.75rem;display:none}
+.gate-err.visible{display:block}
 
-  .opt-label.sel-si {
-    background: var(--green-bg);
-    border-color: var(--green-ok);
-    color: var(--green-ok);
-  }
-  .opt-label.sel-no {
-    background: var(--red-bg);
-    border-color: var(--red-ok);
-    color: var(--red-ok);
-  }
-  .opt-label.sel-unsure {
-    background: var(--amber-bg);
-    border-color: var(--amber-ok);
-    color: var(--amber-ok);
-  }
+/* REPORT */
+.report-success{background:var(--green-bg);border:1px solid rgba(45,106,79,.3);border-radius:5px;padding:1rem 1.25rem;margin-bottom:1.75rem;display:flex;align-items:flex-start;gap:.75rem}
+.report-success svg{flex-shrink:0;color:var(--green);margin-top:2px}
+.report-success p{font-size:.88rem;color:var(--green);line-height:1.6}
+.urgency-block{margin-bottom:1.75rem}
+.urgency-label{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem;padding:4px 0 4px 12px;border-left:3px solid}
+.ulbl-inmediato{color:#8B1A1A;border-color:#B42020}
+.ulbl-corto{color:var(--amber);border-color:var(--amber)}
+.ulbl-medio{color:var(--navy);border-color:var(--olive)}
+.action-item-r{background:var(--white);border:1px solid rgba(0,0,0,.07);border-radius:5px;padding:1rem 1.25rem;margin-bottom:.6rem;display:flex;align-items:flex-start;gap:.85rem}
+.action-check{width:20px;height:20px;border:2px solid rgba(0,0,0,.15);border-radius:3px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s}
+.action-check.checked{background:var(--olive);border-color:var(--olive)}
+.action-check.checked svg{display:block}
+.action-check svg{display:none;width:12px;height:12px;fill:none;stroke:white;stroke-width:2.5}
+.action-txt{flex:1}
+.action-txt p{font-size:.88rem;color:var(--navy);line-height:1.55}
+.action-svc{font-size:10.5px;font-weight:600;margin-top:5px;display:inline-block;padding:2px 8px;border-radius:2px}
 
-  .opt-check { font-size: 14px; }
+/* NOTES */
+.notes-section{background:var(--white);border:1px solid rgba(0,0,0,.07);border-radius:6px;padding:1.5rem;margin-top:2rem}
+.notes-section h3{font-size:.95rem;font-weight:600;color:var(--navy);margin-bottom:.3rem}
+.notes-section p{font-size:.82rem;color:var(--steel);margin-bottom:1.1rem}
+.note-item{margin-bottom:.85rem}
+.note-num{font-size:11px;font-weight:700;color:var(--olive);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.note-ta{width:100%;border:1px solid rgba(0,0,0,.12);border-radius:4px;padding:9px 12px;font-family:'Inter',sans-serif;font-size:13px;color:var(--carbon);background:var(--smoke);resize:vertical;min-height:58px;line-height:1.5;transition:border-color .2s;outline:none}
+.note-ta:focus{border-color:var(--olive);background:var(--white)}
+.note-ta::placeholder{color:rgba(94,100,110,.5)}
 
-  /* DIVIDER */
-  .divider {
-    border: none;
-    border-top: 1px solid rgba(0,0,0,0.08);
-    margin: 2.5rem 0;
-  }
+/* CTA */
+.cta-block{background:var(--navy-deep);background-image:linear-gradient(135deg,#071528 0%,var(--navy-mid) 100%);border-radius:6px;padding:2rem;text-align:center;margin-top:2rem}
+.cta-block h2{font-family:'DM Serif Display',Georgia,serif;font-size:1.45rem;font-weight:400;color:var(--smoke);margin-bottom:.5rem}
+.cta-block p{font-size:.875rem;color:rgba(247,247,245,.55);margin-bottom:1.4rem;max-width:430px;margin-left:auto;margin-right:auto;line-height:1.7}
+.cta-btns{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap}
+.btn-wa{display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;font-size:14px;font-weight:600;padding:12px 22px;border-radius:3px;text-decoration:none;transition:background .2s,transform .15s}
+.btn-wa:hover{background:#20B858;transform:translateY(-1px)}
+.btn-outline{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--smoke);font-size:14px;font-weight:500;padding:12px 22px;border-radius:3px;text-decoration:none;border:1px solid rgba(247,247,245,.25);transition:all .2s}
+.btn-outline:hover{border-color:rgba(247,247,245,.5);background:rgba(247,247,245,.07)}
 
-  /* RESULTS */
-  #results-section {
-    display: none;
-    animation: fadeUp 0.5s ease forwards;
-  }
-  #results-section.visible { display: block; }
+/* PRINT BUTTON */
+.print-row{text-align:center;margin-top:1rem}
+.btn-print{background:transparent;color:var(--steel);font-size:12.5px;padding:7px 16px;border-radius:3px;border:1px solid rgba(0,0,0,.12);cursor:pointer;transition:all .18s}
+.btn-print:hover{color:var(--navy);border-color:rgba(0,0,0,.25)}
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+/* WA FLOAT */
+.wa-float{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:#25D366;color:#fff;border-radius:50%;width:52px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.35);text-decoration:none;transition:transform .2s}
+.wa-float:hover{transform:scale(1.08)}
 
-  .result-banner {
-    border-radius: 6px;
-    padding: 1.75rem;
-    margin-bottom: 1.5rem;
-    border-left: 4px solid;
-  }
-  .result-banner.level-alto {
-    background: var(--green-bg);
-    border-color: var(--green-ok);
-  }
-  .result-banner.level-medio {
-    background: var(--amber-bg);
-    border-color: var(--amber-ok);
-  }
-  .result-banner.level-bajo {
-    background: var(--red-bg);
-    border-color: var(--red-ok);
-  }
+/* FOOTER */
+.site-footer{background:var(--navy-deep);padding:1.75rem 1.5rem;text-align:center;margin-top:3rem}
+.site-footer p{font-size:11.5px;color:rgba(247,247,245,.3)}
+.site-footer a{color:rgba(247,247,245,.5);text-decoration:none}
+.site-footer a:hover{color:var(--olive-lt)}
 
-  .result-score-row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  .result-score-num {
-    font-size: 2.5rem;
-    font-weight: 600;
-    font-family: 'DM Serif Display', Georgia, serif;
-    line-height: 1;
-  }
-  .level-alto .result-score-num  { color: var(--green-ok); }
-  .level-medio .result-score-num { color: var(--amber-ok); }
-  .level-bajo .result-score-num  { color: var(--red-ok); }
-
-  .result-score-label {
-    font-size: 14px;
-    color: var(--steel);
-  }
-  .result-heading {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-  .level-alto .result-heading  { color: var(--green-ok); }
-  .level-medio .result-heading { color: var(--amber-ok); }
-  .level-bajo .result-heading  { color: var(--red-ok); }
-
-  .result-body {
-    font-size: 0.95rem;
-    line-height: 1.65;
-    color: var(--carbon);
-  }
-
-  /* SCORE BREAKDOWN */
-  .score-bars {
-    background: var(--white);
-    border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 6px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-  }
-  .score-bars h3 {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--steel);
-    margin-bottom: 1rem;
-  }
-  .bar-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-  .bar-row:last-child { margin-bottom: 0; }
-  .bar-label { font-size: 13px; width: 130px; flex-shrink: 0; color: var(--navy); font-weight: 500; }
-  .bar-track { flex: 1; height: 8px; background: var(--smoke-dark); border-radius: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
-  .bar-si   { background: var(--green-ok); }
-  .bar-no   { background: #C0392B; }
-  .bar-unsure { background: #B87A1A; }
-  .bar-count { font-size: 13px; font-weight: 600; min-width: 20px; text-align: right; }
-  .bar-count.si-c { color: var(--green-ok); }
-  .bar-count.no-c { color: #C0392B; }
-  .bar-count.unsure-c { color: #B87A1A; }
-
-  /* FAILED QUESTIONS LIST */
-  .failed-list {
-    background: var(--white);
-    border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 6px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-  }
-  .failed-list h3 {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--steel);
-    margin-bottom: 1rem;
-  }
-  .failed-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-  }
-  .failed-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .failed-badge {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 2px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .badge-no { background: var(--red-bg); color: var(--red-ok); }
-  .badge-unsure { background: var(--amber-bg); color: var(--amber-ok); }
-  .failed-text { font-size: 13px; color: var(--navy); line-height: 1.4; }
-
-  /* ACTION ITEMS */
-  .action-section {
-    background: var(--white);
-    border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 6px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-  .action-section h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--navy);
-    margin-bottom: 0.35rem;
-  }
-  .action-section p {
-    font-size: 13px;
-    color: var(--steel);
-    margin-bottom: 1.25rem;
-  }
-  .action-item {
-    margin-bottom: 1rem;
-  }
-  .action-item:last-of-type { margin-bottom: 0; }
-  .action-num {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--olive);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .action-textarea {
-    width: 100%;
-    border: 1px solid rgba(0,0,0,0.12);
-    border-radius: 4px;
-    padding: 10px 12px;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    color: var(--carbon);
-    background: var(--smoke);
-    resize: vertical;
-    min-height: 62px;
-    line-height: 1.5;
-    transition: border-color 0.2s;
-    outline: none;
-  }
-  .action-textarea:focus {
-    border-color: var(--olive);
-    background: var(--white);
-  }
-  .action-textarea::placeholder { color: rgba(94,100,110,0.6); }
-
-  /* CTA */
-  .cta-block {
-    background: var(--navy);
-    border-radius: 6px;
-    padding: 2rem;
-    text-align: center;
-    background-image: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy-mid) 100%);
-  }
-  .cta-block h2 {
-    font-family: 'DM Serif Display', Georgia, serif;
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: var(--smoke);
-    margin-bottom: 0.6rem;
-  }
-  .cta-block p {
-    font-size: 14px;
-    color: rgba(247,247,245,0.6);
-    margin-bottom: 1.5rem;
-    max-width: 440px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.65;
-  }
-  .cta-buttons {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--olive);
-    color: var(--smoke);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 12px 24px;
-    border-radius: 3px;
-    text-decoration: none;
-    letter-spacing: 0.03em;
-    transition: background 0.2s, transform 0.15s;
-    border: none;
-    cursor: pointer;
-  }
-  .btn-primary:hover { background: var(--olive-light); transform: translateY(-1px); }
-
-  .btn-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    color: var(--smoke);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 12px 24px;
-    border-radius: 3px;
-    text-decoration: none;
-    border: 1px solid rgba(247,247,245,0.25);
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .btn-outline:hover {
-    border-color: rgba(247,247,245,0.5);
-    background: rgba(247,247,245,0.06);
-  }
-
-  /* WHATSAPP FLOAT */
-  .wa-float {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 200;
-    background: #25D366;
-    color: #fff;
-    border-radius: 50%;
-    width: 52px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 20px rgba(37,211,102,0.35);
-    text-decoration: none;
-    transition: transform 0.2s;
-  }
-  .wa-float:hover { transform: scale(1.08); }
-  .wa-float svg { width: 26px; height: 26px; }
-
-  /* SUBMIT BTN */
-  .submit-wrap {
-    text-align: center;
-    margin-top: 2rem;
-  }
-  .btn-submit {
-    background: var(--navy);
-    color: var(--smoke);
-    font-size: 15px;
-    font-weight: 600;
-    padding: 14px 40px;
-    border-radius: 3px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    letter-spacing: 0.03em;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .btn-submit:hover { background: var(--navy-mid); transform: translateY(-1px); }
-  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  .btn-reset {
-    background: transparent;
-    color: var(--steel);
-    font-size: 13px;
-    font-weight: 400;
-    padding: 10px 20px;
-    border-radius: 3px;
-    border: 1px solid rgba(0,0,0,0.12);
-    cursor: pointer;
-    margin-left: 0.75rem;
-    transition: all 0.18s;
-  }
-  .btn-reset:hover { color: var(--navy); border-color: rgba(0,0,0,0.25); }
-
-  /* FOOTER */
-  .site-footer {
-    background: var(--navy-deep);
-    padding: 2rem 1.5rem;
-    text-align: center;
-    margin-top: 4rem;
-  }
-  .site-footer p { font-size: 12px; color: rgba(247,247,245,0.35); }
-  .site-footer a { color: rgba(247,247,245,0.55); text-decoration: none; }
-  .site-footer a:hover { color: var(--olive-light); }
-
-  /* RESPONSIVE */
-  @media (max-width: 560px) {
-    .hero { padding: 2.5rem 1rem 2rem; }
-    .options-row { padding-left: 1.25rem; }
-    .question-header { flex-direction: row; }
-    .cta-buttons { flex-direction: column; align-items: center; }
-    .btn-primary, .btn-outline { width: 100%; justify-content: center; }
-  }
-
-  /* PRINT */
-  @media print {
-    .site-header, .progress-strip, .wa-float, .btn-submit, .btn-reset,
-    .cta-block, .site-footer { display: none !important; }
-    .question-card { break-inside: avoid; }
-    body { background: white; }
-  }
+/* RESPONSIVE */
+@media(max-width:580px){
+  .score-hero{flex-direction:column;align-items:flex-start;gap:1.25rem}
+  .gate-grid{grid-template-columns:1fr}
+  .cta-btns{flex-direction:column;align-items:center}
+  .btn-wa,.btn-outline{width:100%;justify-content:center}
+  .qopts{padding-left:1.25rem}
+}
+@media print{
+  .hdr,.prog-strip,.wa-float,.submit-row,.gate-card,.cta-block,.btn-print,.site-footer{display:none!important}
+  .phase{display:block!important}
+  body{background:white}
+  .qcard{break-inside:avoid}
+}
 </style>
 </head>
 <body>
 
-<!-- STICKY HEADER -->
-<header class="site-header">
-  <div class="header-inner">
-    <a href="https://stratecsecurity.com" class="logo-mark" aria-label="STRATEC — Ir al sitio principal">
-      <div class="logo-diamond" aria-hidden="true"></div>
-      <span class="logo-text">STRATEC</span>
+<header class="hdr">
+  <div class="hdr-i">
+    <a href="https://stratecsecurity.com" aria-label="STRATEC — inicio">
+      <img src="/stratec-logo-full.png" alt="STRATEC Consultoría en Seguridad" class="hdr-logo"/>
     </a>
-    <a href="https://stratecsecurity.com/#contacto" class="header-cta">Solicitar diagnóstico &rarr;</a>
+    <a href="https://stratecsecurity.com/#contacto" class="hdr-cta">Solicitar diagnóstico &rarr;</a>
   </div>
 </header>
 
-<!-- HERO -->
 <section class="hero" role="banner">
-  <div class="hero-inner">
-    <div class="hero-badge">
-      <div class="hero-badge-dot" aria-hidden="true"></div>
-      Herramienta de Evaluación Gratuita
-    </div>
-    <h1>Checklist de Riesgos Críticos<br><em>en 10 Minutos</em></h1>
-    <p class="hero-sub">
-      Identifique las principales vulnerabilidades de su organización antes de que se conviertan en un incidente.
-      Diseñado para directivos, responsables de seguridad e instituciones.
-    </p>
+  <div class="hero-i">
+    <div class="hero-badge"><div class="badge-dot" aria-hidden="true"></div>Evaluación gratuita de riesgos</div>
+    <h1>Diagnóstico de Riesgos Críticos<br><em>en 10 Minutos</em></h1>
+    <p class="hero-sub">10 preguntas que revelan las principales vulnerabilidades de su organización. Reciba un plan de acción personalizado vinculado a los servicios específicos que necesita.</p>
     <div class="hero-meta">
       <span class="hero-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        10 preguntas · ~5 minutos
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        ~5 minutos
       </span>
       <span class="hero-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Sin registro requerido
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Sin registro previo
       </span>
       <span class="hero-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Resultados inmediatos
       </span>
     </div>
   </div>
 </section>
 
-<!-- PROGRESS BAR -->
-<div class="progress-strip" role="complementary" aria-label="Progreso del checklist">
-  <div class="progress-inner">
-    <span class="progress-label" id="prog-label">Progreso</span>
-    <div class="progress-bar-wrap">
-      <div class="progress-bar-fill" id="prog-fill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10" aria-label="Preguntas completadas"></div>
-    </div>
-    <span class="progress-count" id="prog-count">0 / 10</span>
+<div class="prog-strip" role="complementary" aria-label="Progreso">
+  <div class="prog-i">
+    <span class="prog-lbl" id="prog-lbl">Progreso</span>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10"></div></div>
+    <span class="prog-cnt" id="prog-cnt">0 / 10</span>
   </div>
 </div>
 
-<!-- MAIN CONTENT -->
 <main class="content">
-  <div class="section-intro">
-    <p>Marque su respuesta en cada pregunta. El análisis se genera automáticamente al completar el checklist.</p>
+
+  <!-- ░░░ PHASE 1 — CHECKLIST ░░░ -->
+  <div id="ph1">
+    <div class="sec-intro"><p>Marque su respuesta en cada pregunta. "No estoy seguro" cuenta como vulnerabilidad parcial — en seguridad institucional, no saber equivale a riesgo.</p></div>
+    <form id="form-checklist" novalidate aria-label="Evaluación de riesgos">
+      <div id="qlist"></div>
+      <div class="submit-row">
+        <button type="button" class="btn-diagnose" id="btn-diagnose" onclick="showScore()" disabled aria-label="Ver diagnóstico completo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Ver mi diagnóstico
+        </button>
+        <button type="button" class="btn-reset" onclick="resetAll()">Reiniciar</button>
+      </div>
+    </form>
   </div>
 
-  <!-- CHECKLIST FORM -->
-  <form id="checklist-form" novalidate aria-label="Checklist de evaluación de riesgos">
+  <hr class="divider"/>
 
-    <!-- Q1 -->
-    <div class="question-card" id="qcard-1">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">01</span>
-        <p class="question-text">¿Existe una persona responsable de coordinar emergencias dentro de la organización?</p>
+  <!-- ░░░ PHASE 2 — SCORE + VULNERABILITIES + GATE ░░░ -->
+  <div id="ph2" class="phase" aria-live="polite">
+
+    <div class="score-hero" id="score-hero">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="54"/>
+          <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="54"/>
+        </svg>
+        <div class="ring-overlay">
+          <span class="ring-num" id="ring-num">0</span>
+          <span class="ring-den">/10</span>
+        </div>
       </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 1">
-        <label class="opt-label" id="lbl-1-si">
-          <input type="radio" name="q1" value="si" onchange="onAnswer(1,'si')" />
-          <span class="opt-check" aria-hidden="true">✓</span> Sí
-        </label>
-        <label class="opt-label" id="lbl-1-no">
-          <input type="radio" name="q1" value="no" onchange="onAnswer(1,'no')" />
-          <span class="opt-check" aria-hidden="true">✗</span> No
-        </label>
-        <label class="opt-label" id="lbl-1-ns">
-          <input type="radio" name="q1" value="ns" onchange="onAnswer(1,'ns')" />
-          <span class="opt-check" aria-hidden="true">?</span> No estoy seguro
-        </label>
+      <div class="score-info">
+        <span class="level-badge" id="level-badge"></span>
+        <h2 class="score-heading" id="score-heading"></h2>
+        <p class="score-body" id="score-body"></p>
       </div>
     </div>
 
-    <!-- Q2 -->
-    <div class="question-card" id="qcard-2">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">02</span>
-        <p class="question-text">¿Todos los colaboradores saben a quién reportar una amenaza, incidente o situación de riesgo?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 2">
-        <label class="opt-label" id="lbl-2-si"><input type="radio" name="q2" value="si" onchange="onAnswer(2,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-2-no"><input type="radio" name="q2" value="no" onchange="onAnswer(2,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-2-ns"><input type="radio" name="q2" value="ns" onchange="onAnswer(2,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
+    <div class="ns-note" id="ns-note" role="note">
+      <strong>Nota sobre las respuestas "No estoy seguro":</strong> Cada una equivale a 0.5 puntos de déficit. En un contexto de seguridad institucional, no saber si se cumple un estándar es en sí mismo una brecha.
     </div>
 
-    <!-- Q3 -->
-    <div class="question-card" id="qcard-3">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">03</span>
-        <p class="question-text">¿Los números de contacto de emergencia están visibles y actualizados en las instalaciones?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 3">
-        <label class="opt-label" id="lbl-3-si"><input type="radio" name="q3" value="si" onchange="onAnswer(3,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-3-no"><input type="radio" name="q3" value="no" onchange="onAnswer(3,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-3-ns"><input type="radio" name="q3" value="ns" onchange="onAnswer(3,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
+    <div id="vuln-section" style="margin-bottom:1.5rem">
+      <div class="vuln-head" id="vuln-head"></div>
+      <div id="vuln-list"></div>
     </div>
 
-    <!-- Q4 -->
-    <div class="question-card" id="qcard-4">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">04</span>
-        <p class="question-text">¿Las rutas de evacuación están señalizadas y permanecen libres de obstáculos?</p>
+    <!-- GATE FORM -->
+    <div class="gate-card" id="gate-card">
+      <div class="gate-icon-row">
+        <div class="gate-lock" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3 class="gate-h">Su plan de acción personalizado está listo</h3>
       </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 4">
-        <label class="opt-label" id="lbl-4-si"><input type="radio" name="q4" value="si" onchange="onAnswer(4,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-4-no"><input type="radio" name="q4" value="no" onchange="onAnswer(4,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-4-ns"><input type="radio" name="q4" value="ns" onchange="onAnswer(4,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
+      <p class="gate-p">Para recibir las recomendaciones específicas priorizadas por urgencia, vinculadas a los servicios que su organización necesita, ingrese sus datos. Un especialista de STRATEC revisará su evaluación.</p>
+      <form id="gate-form" onsubmit="submitGate(event)" novalidate>
+        <input type="text" name="hp_field" class="field-hp" tabindex="-1" autocomplete="off" aria-hidden="true"/>
+        <div class="gate-grid">
+          <div class="gate-field gate-full">
+            <label for="g-name">Nombre completo *</label>
+            <input type="text" id="g-name" name="name" placeholder="Lic. Juan García" autocomplete="name" required/>
+          </div>
+          <div class="gate-field gate-full">
+            <label for="g-org">Empresa / Institución *</label>
+            <input type="text" id="g-org" name="organization" placeholder="Nombre de su organización" autocomplete="organization" required/>
+          </div>
+          <div class="gate-field">
+            <label for="g-email">Correo electrónico *</label>
+            <input type="email" id="g-email" name="email" placeholder="correo@empresa.com" autocomplete="email" required/>
+          </div>
+          <div class="gate-field">
+            <label for="g-tel">Teléfono</label>
+            <input type="tel" id="g-tel" name="telefono" placeholder="55 1234 5678" autocomplete="tel"/>
+          </div>
+          <div class="gate-field gate-full">
+            <label for="g-sector">Sector</label>
+            <select id="g-sector" name="role">
+              <option value="">Seleccione su sector…</option>
+              <option value="Empresa privada">Empresa privada</option>
+              <option value="Institución pública / Dependencia">Institución pública / Dependencia</option>
+              <option value="Institución educativa">Institución educativa</option>
+              <option value="Industria / Manufactura">Industria / Manufactura</option>
+              <option value="Salud / Hospital">Salud / Hospital</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn-gate" id="btn-gate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          Recibir mi plan de acción
+        </button>
+        <p class="gate-privacy">Sin spam. Solo contacto de nuestros especialistas.</p>
+        <div class="gate-err" id="gate-err" role="alert"></div>
+      </form>
     </div>
 
-    <!-- Q5 -->
-    <div class="question-card" id="qcard-5">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">05</span>
-        <p class="question-text">¿Los extintores son visibles, accesibles y cuentan con mantenimiento vigente?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 5">
-        <label class="opt-label" id="lbl-5-si"><input type="radio" name="q5" value="si" onchange="onAnswer(5,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-5-no"><input type="radio" name="q5" value="no" onchange="onAnswer(5,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-5-ns"><input type="radio" name="q5" value="ns" onchange="onAnswer(5,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
+  </div>
+
+  <!-- ░░░ PHASE 3 — ACTION REPORT ░░░ -->
+  <div id="ph3" class="phase">
+
+    <div class="report-success">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      <p><strong>Evaluación recibida.</strong> Nuestro equipo revisará su caso y se pondrá en contacto en menos de 24 horas hábiles para agendar un diagnóstico profesional sin costo.</p>
     </div>
 
-    <!-- Q6 -->
-    <div class="question-card" id="qcard-6">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">06</span>
-        <p class="question-text">¿Existe un procedimiento documentado para actuar ante extorsiones, fraudes o amenazas externas?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 6">
-        <label class="opt-label" id="lbl-6-si"><input type="radio" name="q6" value="si" onchange="onAnswer(6,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-6-no"><input type="radio" name="q6" value="no" onchange="onAnswer(6,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-6-ns"><input type="radio" name="q6" value="ns" onchange="onAnswer(6,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
-    </div>
+    <div class="vuln-head" style="margin-bottom:1rem">Plan de acción — Recomendaciones priorizadas</div>
+    <div id="action-report"></div>
 
-    <!-- Q7 -->
-    <div class="question-card" id="qcard-7">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">07</span>
-        <p class="question-text">¿El personal ha recibido capacitación en seguridad o gestión de emergencias durante el último año?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 7">
-        <label class="opt-label" id="lbl-7-si"><input type="radio" name="q7" value="si" onchange="onAnswer(7,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-7-no"><input type="radio" name="q7" value="no" onchange="onAnswer(7,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-7-ns"><input type="radio" name="q7" value="ns" onchange="onAnswer(7,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
-    </div>
-
-    <!-- Q8 -->
-    <div class="question-card" id="qcard-8">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">08</span>
-        <p class="question-text">¿Los sistemas de videovigilancia y control de acceso funcionan correctamente y están monitoreados?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 8">
-        <label class="opt-label" id="lbl-8-si"><input type="radio" name="q8" value="si" onchange="onAnswer(8,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-8-no"><input type="radio" name="q8" value="no" onchange="onAnswer(8,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-8-ns"><input type="radio" name="q8" value="ns" onchange="onAnswer(8,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
-    </div>
-
-    <!-- Q9 -->
-    <div class="question-card" id="qcard-9">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">09</span>
-        <p class="question-text">¿Se realiza respaldo periódico y verificado de la información crítica de la organización?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 9">
-        <label class="opt-label" id="lbl-9-si"><input type="radio" name="q9" value="si" onchange="onAnswer(9,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-9-no"><input type="radio" name="q9" value="no" onchange="onAnswer(9,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-9-ns"><input type="radio" name="q9" value="ns" onchange="onAnswer(9,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
-    </div>
-
-    <!-- Q10 -->
-    <div class="question-card" id="qcard-10">
-      <div class="question-header">
-        <span class="question-number" aria-hidden="true">10</span>
-        <p class="question-text">¿Existe un plan de continuidad operativa para mantener funciones críticas tras una emergencia?</p>
-      </div>
-      <div class="options-row" role="radiogroup" aria-label="Pregunta 10">
-        <label class="opt-label" id="lbl-10-si"><input type="radio" name="q10" value="si" onchange="onAnswer(10,'si')" /><span class="opt-check" aria-hidden="true">✓</span> Sí</label>
-        <label class="opt-label" id="lbl-10-no"><input type="radio" name="q10" value="no" onchange="onAnswer(10,'no')" /><span class="opt-check" aria-hidden="true">✗</span> No</label>
-        <label class="opt-label" id="lbl-10-ns"><input type="radio" name="q10" value="ns" onchange="onAnswer(10,'ns')" /><span class="opt-check" aria-hidden="true">?</span> No estoy seguro</label>
-      </div>
-    </div>
-
-    <div class="submit-wrap">
-      <button type="button" class="btn-submit" id="btn-ver-resultados" onclick="mostrarResultados()" disabled aria-label="Ver análisis de resultados">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Ver mi diagnóstico
-      </button>
-      <button type="button" class="btn-reset" id="btn-reset" onclick="resetForm()" aria-label="Reiniciar checklist">Reiniciar</button>
-    </div>
-
-  </form>
-
-  <hr class="divider" />
-
-  <!-- RESULTS SECTION -->
-  <section id="results-section" aria-live="polite" aria-label="Resultados del diagnóstico">
-    <div id="result-banner" class="result-banner">
-      <div class="result-score-row">
-        <span class="result-score-num" id="score-num">0</span>
-        <span class="result-score-label">respuestas "Sí" de 10</span>
-      </div>
-      <h2 class="result-heading" id="result-heading">—</h2>
-      <p class="result-body" id="result-body">—</p>
-    </div>
-
-    <div class="score-bars">
-      <h3>Desglose de respuestas</h3>
-      <div class="bar-row">
-        <span class="bar-label">Cumplimiento (Sí)</span>
-        <div class="bar-track"><div class="bar-fill bar-si" id="bar-si" style="width:0%"></div></div>
-        <span class="bar-count si-c" id="cnt-si">0</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label">Brechas (No)</span>
-        <div class="bar-track"><div class="bar-fill bar-no" id="bar-no" style="width:0%"></div></div>
-        <span class="bar-count no-c" id="cnt-no">0</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label">Por verificar (?)</span>
-        <div class="bar-track"><div class="bar-fill bar-unsure" id="bar-ns" style="width:0%"></div></div>
-        <span class="bar-count unsure-c" id="cnt-ns">0</span>
-      </div>
-    </div>
-
-    <div class="failed-list" id="failed-list-wrap">
-      <h3>Áreas que requieren atención</h3>
-      <div id="failed-list-body"></div>
-    </div>
-
-    <div class="action-section">
-      <h3>Acción inmediata</h3>
-      <p>Anote las tres brechas que representan el mayor riesgo y comprométase a resolverlas en las próximas 24–72 horas.</p>
-      <div class="action-item">
-        <div class="action-num">Prioridad 1</div>
-        <textarea class="action-textarea" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 1"></textarea>
-      </div>
-      <div class="action-item">
-        <div class="action-num">Prioridad 2</div>
-        <textarea class="action-textarea" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 2"></textarea>
-      </div>
-      <div class="action-item">
-        <div class="action-num">Prioridad 3</div>
-        <textarea class="action-textarea" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 3"></textarea>
-      </div>
+    <div class="notes-section">
+      <h3>Sus tres prioridades inmediatas</h3>
+      <p>Anote las brechas que representan el mayor riesgo específico para su organización.</p>
+      <div class="note-item"><div class="note-num">Prioridad 1</div><textarea class="note-ta" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 1"></textarea></div>
+      <div class="note-item"><div class="note-num">Prioridad 2</div><textarea class="note-ta" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 2"></textarea></div>
+      <div class="note-item"><div class="note-num">Prioridad 3</div><textarea class="note-ta" placeholder="Describa la brecha y la acción correctiva…" aria-label="Prioridad 3"></textarea></div>
     </div>
 
     <div class="cta-block">
-      <h2>¿Necesita un análisis más profundo?</h2>
-      <p>
-        Nuestros especialistas realizan un diagnóstico integral de riesgos adaptado al sector, tamaño y contexto de su organización.
-        Más de 200 instituciones evaluadas en México.
-      </p>
-      <div class="cta-buttons">
-        <a href="https://wa.me/527771312049?text=Hola%2C%20acabo%20de%20completar%20el%20checklist%20de%20riesgos%20de%20STRATEC%20y%20me%20gustar%C3%ADa%20solicitar%20un%20diagn%C3%B3stico%20profesional."
-           class="btn-primary" target="_blank" rel="noopener noreferrer" aria-label="Solicitar diagnóstico por WhatsApp">
+      <h2>¿Listo para cerrar las brechas?</h2>
+      <p>Nuestros especialistas diseñan soluciones adaptadas al sector, tamaño y contexto de su organización. Más de 200 instituciones evaluadas en México.</p>
+      <div class="cta-btns">
+        <a id="wa-cta" href="#" class="btn-wa" target="_blank" rel="noopener noreferrer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.855L.057 23.882l6.174-1.438A11.924 11.924 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.012-1.377l-.36-.213-3.665.854.894-3.543-.233-.369A9.818 9.818 0 1112 21.818z"/></svg>
-          Contactar por WhatsApp
+          Contactar ahora por WhatsApp
         </a>
-        <a href="https://stratecsecurity.com/#contacto" class="btn-outline" target="_blank" rel="noopener noreferrer" aria-label="Ir al formulario de contacto en stratecsecurity.com">
+        <a href="https://stratecsecurity.com/#contacto" class="btn-outline" target="_blank" rel="noopener noreferrer">
           Solicitar diagnóstico formal &rarr;
         </a>
       </div>
     </div>
 
-  </section>
+    <div class="print-row">
+      <button class="btn-print" onclick="window.print()">Imprimir / Guardar como PDF</button>
+    </div>
+
+  </div>
+
 </main>
 
-<!-- WHATSAPP FLOAT BUTTON -->
-<a href="https://wa.me/527771312049" class="wa-float" target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp">
-  <svg viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.855L.057 23.882l6.174-1.438A11.924 11.924 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.012-1.377l-.36-.213-3.665.854.894-3.543-.233-.369A9.818 9.818 0 1112 21.818z"/></svg>
+<a href="https://wa.me/527771312049" class="wa-float" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp STRATEC">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.855L.057 23.882l6.174-1.438A11.924 11.924 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.012-1.377l-.36-.213-3.665.854.894-3.543-.233-.369A9.818 9.818 0 1112 21.818z"/></svg>
 </a>
 
-<!-- FOOTER -->
 <footer class="site-footer">
-  <p>
-    &copy; 2025 STRATEC Consultoría en Seguridad e Inteligencia Estratégica &nbsp;&bull;&nbsp;
-    <a href="https://stratecsecurity.com/privacidad">Aviso de Privacidad</a>
-    &nbsp;&bull;&nbsp;
-    <a href="https://stratecsecurity.com">stratecsecurity.com</a>
-  </p>
+  <p>&copy; 2025 STRATEC Consultoría en Seguridad e Inteligencia Estratégica &nbsp;&bull;&nbsp;
+  <a href="https://stratecsecurity.com/privacidad">Aviso de Privacidad</a> &nbsp;&bull;&nbsp;
+  <a href="https://stratecsecurity.com">stratecsecurity.com</a></p>
 </footer>
 
 <script>
-const TOTAL = 10;
-const answers = {};
+const SUPABASE_URL = 'https://xtfsqdwkbsghkzszpisz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0ZnNxZHdrYnNnaGt6c3pwaXN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwODAyMjYsImV4cCI6MjA5NTY1NjIyNn0.g0lUqVc-454htPpGPCAJXovZE4hmmnsaxKzuYZUZ60A';
+
+// TODO: Webhook n8n — descomentar cuando el pipeline esté listo
+// const N8N_WEBHOOK = 'https://carlosglez.app.n8n.cloud/webhook/stratec-checklist';
+
+const SERVICES = {
+  consultoria: {
+    name: 'Consultoría en Seguridad Institucional',
+    short: 'Consultoría en Seguridad',
+    url: 'https://stratecsecurity.com/servicios/consultoria-seguridad',
+    tagC: 'var(--c-consultoria)', tagBg: 'var(--bg-consultoria)',
+    actions: [
+      { urgency: 'inmediato', text: 'Designar formalmente un Coordinador de Seguridad con funciones documentadas y difundidas a toda la organización.' },
+      { urgency: 'inmediato', text: 'Definir y comunicar la cadena de reporte: quién notifica qué, a quién y en qué tiempo máximo.' },
+      { urgency: 'corto',    text: 'Elaborar protocolo escrito de respuesta ante extorsión, fraude y amenazas externas, con contactos de autoridad y pasos de contención.' },
+    ]
+  },
+  proteccion: {
+    name: 'Protección Civil (PIPC)',
+    short: 'Protección Civil',
+    url: 'https://stratecsecurity.com/servicios/proteccion-civil',
+    tagC: 'var(--c-proteccion)', tagBg: 'var(--bg-proteccion)',
+    actions: [
+      { urgency: 'inmediato', text: 'Verificar vigencia del dictamen de Protección Civil municipal e iniciar trámite de renovación si está vencido.' },
+      { urgency: 'inmediato', text: 'Liberar rutas de evacuación y colocar señalización conforme a NOM-003-SEGOB. Registrar con evidencia fotográfica.' },
+      { urgency: 'inmediato', text: 'Revisar estado de extintores: vigencia de recarga, accesibilidad y visibilidad. Programar mantenimiento correctivo.' },
+    ]
+  },
+  capacitacion: {
+    name: 'Capacitación y Brigadas',
+    short: 'Capacitación',
+    url: 'https://stratecsecurity.com/servicios/capacitacion',
+    tagC: 'var(--c-capacitacion)', tagBg: 'var(--bg-capacitacion)',
+    actions: [
+      { urgency: 'corto', text: 'Programar jornada de capacitación en gestión de emergencias y primeros auxilios básicos (mínimo una vez al año, con registro de asistencia).' },
+      { urgency: 'corto', text: 'Conformar brigadas documentadas de evacuación, primeros auxilios y comunicación. Asignar y comunicar responsables por área.' },
+      { urgency: 'medio', text: 'Realizar simulacro con registro fotográfico y acta conforme a lineamientos de Protección Civil estatal.' },
+    ]
+  },
+  tecnologia: {
+    name: 'Integración Tecnológica',
+    short: 'Tecnología de Seguridad',
+    url: 'https://stratecsecurity.com/servicios/integracion-tecnologica',
+    tagC: 'var(--c-tecnologia)', tagBg: 'var(--bg-tecnologia)',
+    actions: [
+      { urgency: 'inmediato', text: 'Auditar estado operativo de cámaras, grabadoras NVR/DVR y sistemas de control de acceso. Documentar fallas con fecha estimada de corrección.' },
+      { urgency: 'corto',    text: 'Implementar política de respaldo 3-2-1: tres copias, dos medios distintos, una fuera del sitio. Verificar restauración mensual.' },
+      { urgency: 'corto',    text: 'Elaborar Plan de Continuidad Operativa (BCP) con escenarios de falla crítica y protocolos de recuperación por área.' },
+    ]
+  }
+};
+
 const QUESTIONS = [
-  "¿Existe una persona responsable de coordinar emergencias?",
-  "¿Todos los colaboradores saben a quién reportar un incidente?",
-  "¿Los números de emergencia están visibles y actualizados?",
-  "¿Las rutas de evacuación están señalizadas y libres de obstáculos?",
-  "¿Los extintores son visibles, accesibles y con mantenimiento vigente?",
-  "¿Existe un procedimiento ante extorsiones, fraudes o amenazas?",
-  "¿El personal recibió capacitación en seguridad en el último año?",
-  "¿Los sistemas de videovigilancia están operativos y monitoreados?",
-  "¿Se realizan respaldos periódicos de información crítica?",
-  "¿Existe un plan de continuidad operativa ante emergencias?"
+  { id:1,  text:'¿Existe una persona responsable de coordinar emergencias dentro de la organización?',
+    short:'Coordinador de emergencias designado', services:['consultoria'],
+    riesgo:'Sin coordinador designado, cualquier incidente escala sin control. Esta omisión puede generar responsabilidad legal directa para la dirección y viola lineamientos de Protección Civil.' },
+  { id:2,  text:'¿Todos los colaboradores saben a quién reportar una amenaza, incidente o situación de riesgo?',
+    short:'Cadena de reporte de incidentes definida', services:['consultoria'],
+    riesgo:'La ausencia de cadena de reporte provoca respuestas tardías y contradictorias. El tiempo perdido en los primeros minutos determina el impacto final del incidente.' },
+  { id:3,  text:'¿Los números de contacto de emergencia están visibles y actualizados en las instalaciones?',
+    short:'Números de emergencia visibles', services:['proteccion'],
+    riesgo:'Los primeros 3 minutos de una emergencia son decisivos. Sin datos de contacto verificados y visibles, ese tiempo crítico se pierde buscando información básica.' },
+  { id:4,  text:'¿Las rutas de evacuación están señalizadas y permanecen libres de obstáculos?',
+    short:'Señalización de rutas de evacuación', services:['proteccion'],
+    riesgo:'Incumplimiento directo de la NOM-003-SEGOB. La ausencia de señalización en una evacuación real puede ser determinante para la integridad del personal y expone a sanciones administrativas.' },
+  { id:5,  text:'¿Los extintores son visibles, accesibles y cuentan con mantenimiento vigente?',
+    short:'Extintores operativos y accesibles', services:['proteccion'],
+    riesgo:'Extintores vencidos o bloqueados son inoperantes ante un incendio y representan infracción con multa y posible cierre temporal de instalaciones por parte de autoridades.' },
+  { id:6,  text:'¿Existe un procedimiento documentado para actuar ante extorsiones, fraudes o amenazas externas?',
+    short:'Protocolo ante extorsión y amenazas', services:['consultoria'],
+    riesgo:'Sin protocolo, la organización cede el control al agresor desde el primer momento. La improvisación en estos escenarios incrementa el daño económico y la exposición legal de los directivos.' },
+  { id:7,  text:'¿El personal ha recibido capacitación en seguridad o gestión de emergencias durante el último año?',
+    short:'Capacitación periódica en seguridad', services:['capacitacion'],
+    riesgo:'El factor humano sin entrenamiento es el principal amplificador de incidentes. Los protocolos existentes no se aplican correctamente sin capacitación verificable y periódica.' },
+  { id:8,  text:'¿Los sistemas de videovigilancia y control de acceso funcionan correctamente y están monitoreados?',
+    short:'Sistemas de CCTV y acceso operativos', services:['tecnologia'],
+    riesgo:'Un sistema de videovigilancia inoperante o sin monitoreo activo solo documenta daños después del hecho. No previene, no disuade y no genera alertas tempranas.' },
+  { id:9,  text:'¿Se realiza respaldo periódico y verificado de la información crítica de la organización?',
+    short:'Respaldos de información verificados', services:['tecnologia'],
+    riesgo:'Las organizaciones sin respaldos verificados son altamente vulnerables ante ransomware, fallas técnicas o desastres. La recuperación de datos sin respaldo puede ser imposible o extremadamente costosa.' },
+  { id:10, text:'¿Existe un plan para continuar operaciones después de una emergencia o interrupción significativa?',
+    short:'Plan de continuidad operativa (BCP)', services:['tecnologia','consultoria'],
+    riesgo:'Sin plan de continuidad, un incidente que podría resolverse en 48 horas puede paralizar la organización por semanas, con pérdidas operativas, contractuales y de reputación.' }
 ];
 
-function onAnswer(q, val) {
-  answers[q] = val;
+const answers = {};
+let currentScore = 0;
 
-  const card = document.getElementById('qcard-' + q);
-  card.classList.remove('answered', 'answered-no', 'answered-unsure');
-  if (val === 'si') card.classList.add('answered');
-  else if (val === 'no') card.classList.add('answered-no');
-  else card.classList.add('answered-unsure');
-
-  ['si','no','ns'].forEach(v => {
-    const lbl = document.getElementById('lbl-' + q + '-' + v);
-    if (lbl) lbl.classList.remove('sel-si','sel-no','sel-unsure');
+function buildChecklist() {
+  const container = document.getElementById('qlist');
+  QUESTIONS.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'qcard';
+    div.id = 'qcard-' + q.id;
+    div.innerHTML = `
+      <div class="qhdr">
+        <span class="qnum" id="qnum-${q.id}" aria-hidden="true">${String(q.id).padStart(2,'0')}</span>
+        <p class="qtxt">${q.text}</p>
+      </div>
+      <div class="qopts" role="radiogroup" aria-label="Pregunta ${q.id}">
+        <label class="opt" id="lbl-${q.id}-si">
+          <input type="radio" name="q${q.id}" value="si" onchange="onAnswer(${q.id},'si')"/>
+          <span aria-hidden="true">✓</span> Sí
+        </label>
+        <label class="opt" id="lbl-${q.id}-no">
+          <input type="radio" name="q${q.id}" value="no" onchange="onAnswer(${q.id},'no')"/>
+          <span aria-hidden="true">✗</span> No
+        </label>
+        <label class="opt" id="lbl-${q.id}-ns">
+          <input type="radio" name="q${q.id}" value="ns" onchange="onAnswer(${q.id},'ns')"/>
+          <span aria-hidden="true">?</span> No estoy seguro
+        </label>
+      </div>`;
+    container.appendChild(div);
   });
-  const selLbl = document.getElementById('lbl-' + q + '-' + (val === 'ns' ? 'ns' : val));
-  if (selLbl) selLbl.classList.add(val === 'si' ? 'sel-si' : val === 'no' ? 'sel-no' : 'sel-unsure');
+}
 
+function onAnswer(qid, val) {
+  answers[qid] = val;
+  const card = document.getElementById('qcard-' + qid);
+  card.classList.remove('ans-si','ans-no','ans-ns');
+  card.classList.add(val === 'si' ? 'ans-si' : val === 'no' ? 'ans-no' : 'ans-ns');
+  ['si','no','ns'].forEach(v => {
+    const lbl = document.getElementById('lbl-' + qid + '-' + v);
+    if (lbl) lbl.classList.remove('sel-si','sel-no','sel-ns');
+  });
+  const selLbl = document.getElementById('lbl-' + qid + '-' + val);
+  if (selLbl) selLbl.classList.add('sel-' + val);
   updateProgress();
 }
 
 function updateProgress() {
   const done = Object.keys(answers).length;
-  const pct = Math.round((done / TOTAL) * 100);
+  const pct = Math.round(done / 10 * 100);
   const fill = document.getElementById('prog-fill');
   fill.style.width = pct + '%';
   fill.setAttribute('aria-valuenow', done);
-  document.getElementById('prog-count').textContent = done + ' / ' + TOTAL;
-  document.getElementById('prog-label').textContent = done === TOTAL ? '¡Completado!' : 'Progreso';
-
-  const btn = document.getElementById('btn-ver-resultados');
-  btn.disabled = done < TOTAL;
+  document.getElementById('prog-cnt').textContent = done + ' / 10';
+  document.getElementById('prog-lbl').textContent = done === 10 ? '¡Completado!' : 'Progreso';
+  document.getElementById('btn-diagnose').disabled = done < 10;
 }
 
-function mostrarResultados() {
-  const si = Object.values(answers).filter(v => v === 'si').length;
-  const no = Object.values(answers).filter(v => v === 'no').length;
-  const ns = Object.values(answers).filter(v => v === 'ns').length;
+function calcScore() {
+  let s = 0;
+  Object.values(answers).forEach(v => { if (v === 'si') s += 1; else if (v === 'ns') s += 0.5; });
+  return Math.round(s * 10) / 10;
+}
 
-  document.getElementById('score-num').textContent = si;
-  document.getElementById('cnt-si').textContent = si;
-  document.getElementById('cnt-no').textContent = no;
-  document.getElementById('cnt-ns').textContent = ns;
+function fmtScore(s) {
+  return s === Math.floor(s) ? s.toString() : s.toFixed(1);
+}
 
-  document.getElementById('bar-si').style.width = (si / TOTAL * 100) + '%';
-  document.getElementById('bar-no').style.width = (no / TOTAL * 100) + '%';
-  document.getElementById('bar-ns').style.width = (ns / TOTAL * 100) + '%';
+function showScore() {
+  currentScore = calcScore();
+  const pct = currentScore / 10;
+  const circumference = 339.3;
+  const nsCount = Object.values(answers).filter(v => v === 'ns').length;
 
-  const banner = document.getElementById('result-banner');
-  const heading = document.getElementById('result-heading');
-  const body = document.getElementById('result-body');
+  const ph2 = document.getElementById('ph2');
+  ph2.classList.add('active');
+  ph2.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  banner.classList.remove('level-alto','level-medio','level-bajo');
+  const scoreHero = document.getElementById('score-hero');
+  scoreHero.classList.remove('lv-alto','lv-medio','lv-bajo');
+  const ring = document.getElementById('ring-progress');
 
-  if (si >= 8) {
-    banner.classList.add('level-alto');
-    heading.textContent = 'Nivel de preparación básico adecuado';
-    body.textContent = 'Su organización cumple con los elementos fundamentales de seguridad y gestión de riesgos. El reto ahora es mantener actualizados los procedimientos, equipos y programas de capacitación para que este nivel no decaiga con el tiempo. Considere realizar una evaluación integral periódica para detectar riesgos emergentes.';
-  } else if (si >= 5) {
-    banner.classList.add('level-medio');
-    heading.textContent = 'Vulnerabilidades que requieren atención prioritaria';
-    body.textContent = 'Su organización tiene una base, pero existen brechas que pueden amplificarse ante un incidente real. Las áreas marcadas como "No" representan puntos de falla que deben corregirse con acciones concretas. Un diagnóstico profesional permitirá priorizar correctamente e implementar mejoras sin interrumpir la operación.';
+  let level, badge, heading, body;
+  if (currentScore >= 8) {
+    level = 'lv-alto'; badge = 'Preparación básica adecuada';
+    heading = 'Su organización cumple con los elementos fundamentales.';
+    body = 'Mantenga actualizados sus procedimientos, equipos y programas de capacitación. Considere una auditoría periódica para detectar riesgos emergentes y sostener este nivel de cumplimiento.';
+  } else if (currentScore >= 5) {
+    level = 'lv-medio'; badge = 'Vulnerabilidades identificadas';
+    heading = 'Existen brechas que requieren atención prioritaria.';
+    body = 'Su organización tiene una base, pero las áreas señaladas pueden amplificar el impacto de un incidente real. El plan de acción a continuación prioriza las correcciones por urgencia.';
   } else {
-    banner.classList.add('level-bajo');
-    heading.textContent = 'Riesgo elevado ante incidentes y emergencias';
-    body.textContent = 'Su organización presenta un nivel de exposición significativo ante emergencias, amenazas externas o interrupciones operativas. Los resultados indican que existen múltiples brechas en protocolos, protección civil, capacitación y tecnología de seguridad. Se recomienda iniciar una evaluación integral de riesgos de manera urgente para establecer un plan de acción estructurado.';
+    level = 'lv-bajo'; badge = 'Riesgo elevado';
+    heading = 'Su organización enfrenta exposición significativa.';
+    body = 'Los resultados indican múltiples brechas en protocolos, protección civil, capacitación y tecnología. Se recomienda iniciar una evaluación integral de forma urgente para establecer un plan estructurado.';
   }
 
-  const failedBody = document.getElementById('failed-list-body');
-  failedBody.innerHTML = '';
+  scoreHero.classList.add(level);
+  document.getElementById('level-badge').textContent = badge;
+  document.getElementById('score-heading').textContent = heading;
+  document.getElementById('score-body').textContent = body;
 
-  let anyFailed = false;
-  for (let q = 1; q <= TOTAL; q++) {
-    const v = answers[q];
-    if (v === 'no' || v === 'ns') {
-      anyFailed = true;
-      const item = document.createElement('div');
-      item.className = 'failed-item';
-      const badge = v === 'no'
-        ? '<span class="failed-badge badge-no">No cumple</span>'
-        : '<span class="failed-badge badge-unsure">Por verificar</span>';
-      item.innerHTML = badge + '<span class="failed-text">' + QUESTIONS[q - 1] + '</span>';
-      failedBody.appendChild(item);
-    }
-  }
+  if (nsCount > 0) document.getElementById('ns-note').classList.add('visible');
 
-  const failedWrap = document.getElementById('failed-list-wrap');
-  failedWrap.style.display = anyFailed ? 'block' : 'none';
+  const numEl = document.getElementById('ring-num');
+  numEl.textContent = '0';
+  setTimeout(() => {
+    ring.style.strokeDashoffset = (circumference * (1 - pct)).toFixed(1);
+    animateCount(numEl, 0, currentScore, 1200);
+  }, 80);
 
-  const section = document.getElementById('results-section');
-  section.classList.add('visible');
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  buildVulnList();
 }
 
-function resetForm() {
-  for (let q = 1; q <= TOTAL; q++) {
-    delete answers[q];
-    const card = document.getElementById('qcard-' + q);
-    card.classList.remove('answered','answered-no','answered-unsure');
+function animateCount(el, from, to, duration) {
+  const start = Date.now();
+  const step = () => {
+    const t = Math.min((Date.now() - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const val = from + (to - from) * ease;
+    el.textContent = fmtScore(Math.round(val * 10) / 10);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = fmtScore(to);
+  };
+  requestAnimationFrame(step);
+}
+
+function buildVulnList() {
+  const failed = QUESTIONS.filter(q => answers[q.id] === 'no' || answers[q.id] === 'ns');
+  const container = document.getElementById('vuln-list');
+  const headEl = document.getElementById('vuln-head');
+  container.innerHTML = '';
+
+  if (failed.length === 0) {
+    headEl.textContent = 'Sin brechas críticas detectadas';
+    container.innerHTML = '<p style="font-size:.88rem;color:var(--steel)">Todas las respuestas son afirmativas. Continúe monitoreando y actualizando sus procedimientos periódicamente.</p>';
+    return;
+  }
+
+  headEl.textContent = failed.length + ' área' + (failed.length > 1 ? 's' : '') + ' con vulnerabilidad detectada' + (failed.length > 1 ? 's' : '');
+
+  failed.forEach(q => {
+    const v = answers[q.id];
+    const svc = SERVICES[q.services[0]];
+    const card = document.createElement('div');
+    card.className = 'vuln-card';
+    card.innerHTML = `
+      <div style="flex:1">
+        <div class="vuln-q">${q.short}</div>
+        <div class="vuln-risk">${q.riesgo}</div>
+      </div>
+      <div class="vuln-badge-wrap">
+        <span class="ans-badge ${v === 'no' ? 'ab-no' : 'ab-ns'}">${v === 'no' ? 'No cumple' : 'Por verificar'}</span>
+        <span class="svc-badge" style="color:${svc.tagC};background:${svc.tagBg}">${svc.short}</span>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+async function submitGate(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-gate');
+  const errEl = document.getElementById('gate-err');
+  errEl.classList.remove('visible');
+
+  const name = document.getElementById('g-name').value.trim();
+  const org  = document.getElementById('g-org').value.trim();
+  const email = document.getElementById('g-email').value.trim();
+  const tel  = document.getElementById('g-tel').value.trim();
+  const sector = document.getElementById('g-sector').value;
+  const hp   = document.querySelector('[name="hp_field"]').value;
+
+  if (!name || !org || !email) {
+    errEl.textContent = 'Por favor complete los campos obligatorios (nombre, empresa y correo).';
+    errEl.classList.add('visible'); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Ingrese un correo electrónico válido.';
+    errEl.classList.add('visible'); return;
+  }
+
+  const failedServices = [...new Set(
+    QUESTIONS.filter(q => answers[q.id] === 'no' || answers[q.id] === 'ns')
+             .flatMap(q => q.services)
+  )];
+  const servicioStr = failedServices.map(s => SERVICES[s].short).join(' · ') || 'Evaluación general';
+  const scoreTxt = fmtScore(currentScore);
+  const msgTxt = `Checklist de Riesgos — Score: ${scoreTxt}/10 | Sector: ${sector || 'No especificado'} | Servicios requeridos: ${servicioStr}`;
+
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Enviando…';
+
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/submit-lead', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({
+        name, email, organization: org,
+        role: sector, telefono: tel,
+        servicio: servicioStr,
+        message: msgTxt,
+        honeypot: hp
+      })
+    });
+
+    // TODO: Webhook n8n — descomentar cuando el pipeline esté listo
+    // fetch(N8N_WEBHOOK, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ name, email, organization: org, sector, score: currentScore, services: failedServices, message: msgTxt })
+    // }).catch(e => console.warn('n8n:', e));
+
+    if (!res.ok && res.status !== 429) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Error al enviar');
+    }
+
+    document.getElementById('gate-card').style.display = 'none';
+    buildReport(failedServices);
+    const ph3 = document.getElementById('ph3');
+    ph3.classList.add('active');
+
+    const waMsg = encodeURIComponent(`Hola, acabo de completar el diagnóstico de riesgos de STRATEC. Mi score fue ${scoreTxt}/10. Quisiera agendar una evaluación profesional.`);
+    document.getElementById('wa-cta').href = `https://wa.me/527771312049?text=${waMsg}`;
+
+    ph3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (err) {
+    errEl.textContent = err.message || 'No se pudo enviar. Por favor intente de nuevo.';
+    errEl.classList.add('visible');
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Recibir mi plan de acción';
+  }
+}
+
+function buildReport(failedServices) {
+  const container = document.getElementById('action-report');
+  container.innerHTML = '';
+
+  if (failedServices.length === 0) {
+    container.innerHTML = '<p style="font-size:.88rem;color:var(--steel);margin-bottom:1rem">No se detectaron brechas críticas. Continúe con sus programas de mantenimiento y actualización periódica.</p>';
+    return;
+  }
+
+  const urgencyOrder = ['inmediato','corto','medio'];
+  const urgencyLabel = {
+    inmediato: { text: 'Acción inmediata (24–72 h)', cls: 'ulbl-inmediato' },
+    corto:     { text: 'Corto plazo (1–4 semanas)',  cls: 'ulbl-corto' },
+    medio:     { text: 'Medio plazo (1–3 meses)',    cls: 'ulbl-medio' }
+  };
+
+  urgencyOrder.forEach(urg => {
+    const items = [];
+    failedServices.forEach(svcKey => {
+      const svc = SERVICES[svcKey];
+      svc.actions.filter(a => a.urgency === urg).forEach(a => {
+        items.push({ text: a.text, svc });
+      });
+    });
+    if (items.length === 0) return;
+
+    const block = document.createElement('div');
+    block.className = 'urgency-block';
+    const ul = urgencyLabel[urg];
+    block.innerHTML = `<div class="urgency-label ${ul.cls}">${ul.text}</div>`;
+    items.forEach(item => {
+      const ac = document.createElement('div');
+      ac.className = 'action-item-r';
+      ac.innerHTML = `
+        <div class="action-check" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleCheck(this)">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><polyline points="2 6 5 9 10 3"/></svg>
+        </div>
+        <div class="action-txt">
+          <p>${item.text}</p>
+          <a href="${item.svc.url}" target="_blank" rel="noopener noreferrer" class="action-svc" style="color:${item.svc.tagC};background:${item.svc.tagBg};text-decoration:none">${item.svc.short} &rarr;</a>
+        </div>`;
+      block.appendChild(ac);
+    });
+    container.appendChild(block);
+  });
+}
+
+function toggleCheck(el) {
+  const checked = el.classList.toggle('checked');
+  el.setAttribute('aria-checked', checked);
+  const txt = el.nextElementSibling?.querySelector('p');
+  if (txt) txt.style.textDecoration = checked ? 'line-through' : 'none';
+  if (txt) txt.style.opacity = checked ? '.45' : '1';
+}
+
+function resetAll() {
+  QUESTIONS.forEach(q => {
+    delete answers[q.id];
+    const card = document.getElementById('qcard-' + q.id);
+    if (card) card.classList.remove('ans-si','ans-no','ans-ns');
     ['si','no','ns'].forEach(v => {
-      const lbl = document.getElementById('lbl-' + q + '-' + v);
-      if (lbl) lbl.classList.remove('sel-si','sel-no','sel-unsure');
-      const inp = lbl ? lbl.querySelector('input') : null;
+      const lbl = document.getElementById('lbl-' + q.id + '-' + v);
+      if (lbl) { lbl.classList.remove('sel-si','sel-no','sel-ns'); }
+      const inp = lbl?.querySelector('input');
       if (inp) inp.checked = false;
     });
-  }
-  document.getElementById('results-section').classList.remove('visible');
-  document.getElementById('btn-ver-resultados').disabled = true;
+  });
+  document.getElementById('ph2').classList.remove('active');
+  document.getElementById('ph3').classList.remove('active');
+  document.getElementById('ns-note').classList.remove('visible');
+  document.getElementById('gate-card').style.display = '';
+  document.getElementById('btn-diagnose').disabled = true;
   document.getElementById('prog-fill').style.width = '0%';
-  document.getElementById('prog-count').textContent = '0 / 10';
-  document.getElementById('prog-label').textContent = 'Progreso';
+  document.getElementById('prog-cnt').textContent = '0 / 10';
+  document.getElementById('prog-lbl').textContent = 'Progreso';
+  document.getElementById('ring-progress').style.strokeDashoffset = '339.3';
+  const btn = document.getElementById('btn-gate');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Recibir mi plan de acción';
+  document.getElementById('gate-err').classList.remove('visible');
+  document.getElementById('gate-form').reset();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-</script>
 
+buildChecklist();
+</script>
 </body>
 </html>
