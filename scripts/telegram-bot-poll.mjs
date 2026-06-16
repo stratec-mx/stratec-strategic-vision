@@ -958,64 +958,78 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
   ]);
 }
 
-// ── Menú de temas sugeridos ───────────────────────────────────────────────────
+// ── Menú de temas ─────────────────────────────────────────────────────────────
 
-// Pool de 27 temas alineados a los 7 pilares de contenido de STRATEC.
-// Usa índice como callback_data para cumplir el límite de 64 bytes de Telegram.
-const TEMAS_POOL = [
-  // Pilar 1 — Educación técnica (40%)
-  "Vigilancia vs. seguridad institucional: diferencias clave",
-  "Qué debe contener un Programa Interno de Protección Civil",
-  "Auditoría de seguridad empresarial: proceso y alcance",
-  "Errores comunes en el control de accesos corporativo",
-  "CPTED: diseño de entornos que reduce el riesgo operativo",
-  "Brigadas de emergencia: funciones, tipos y obligaciones legales",
-  "Cómo diseñar una matriz de riesgos institucional",
-  "Videovigilancia profesional: criterios técnicos de selección",
-  // Pilar 2 — Problema → Solución (25%)
-  "Empresas industriales sin plan de protección civil vigente",
-  "Accidentes laborales sin brigada capacitada: consecuencias legales",
-  "Robo hormiga: por qué más cámaras no resuelven el problema",
-  "Nearshoring en México: riesgos de seguridad que no se evalúan",
-  "Extorsión telefónica a empresas: protocolo institucional de respuesta",
-  "Protocolos de seguridad desactualizados como factor de riesgo",
-  // Pilar 3 — Normativa y regulación (15%)
-  "NOM-035-STPS: obligaciones reales y multas por incumplimiento",
-  "Protección civil en Morelos: qué exige la normativa vigente",
-  "Verificaciones STPS: qué revisan y cómo preparar a la organización",
-  "Responsabilidad legal del empleador ante accidentes laborales",
-  // Pilar 4 — Sector específico (10%)
-  "Seguridad institucional en universidades y centros educativos",
-  "Diagnóstico de seguridad para municipios y gobierno local",
-  "Protección civil en plantas industriales y zonas de nearshoring",
-  "Seguridad perimetral en desarrollos inmobiliarios residenciales",
-  // Pilar 5 — Dato duro (5%)
-  "82% de las PyMEs en México sin protocolo de emergencia documentado",
-  "Inversión en nearshoring y evaluación de riesgo operativo previo",
-  // Pilar 6 — Capacidad tecnológica (5%)
-  "Integración de CCTV, control de accesos y alarmas en una estrategia",
-  "Monitoreo vehicular GPS: de rastreo a gestión de riesgo en flotillas",
-  // Pilar 7 — Marca y posicionamiento (rotativo)
-  "STRATEC: consultoría que transfiere capacidad, no genera dependencia",
+const SERVICIOS_MENU = [
+  {
+    btn: "🛡  Consultoría en Seguridad",
+    tema: "Consultoría en Seguridad Institucional: diagnóstico de riesgos, protocolos y gestión operativa",
+  },
+  {
+    btn: "🏛  Protección Civil",
+    tema: "Protección Civil y Gestión Integral de Riesgos: PIPC, brigadas de emergencia y cumplimiento normativo",
+  },
+  {
+    btn: "📋  Capacitación Especializada",
+    tema: "Capacitación Especializada en seguridad institucional, brigadas y gestión de emergencias",
+  },
+  {
+    btn: "📡  Integración Tecnológica",
+    tema: "Integración Tecnológica para la Seguridad: videovigilancia, control de accesos y sistemas integrados",
+  },
+  {
+    btn: "🏙  Consultoría para Gobierno",
+    tema: "Consultoría en Seguridad para Gobierno e Instituciones Públicas: mapeo delictivo y entornos seguros",
+  },
 ];
 
-async function mostrarMenuTemas(chatId) {
-  // Mezcla aleatoria: cada llamada muestra 8 temas distintos del pool
-  const shuffled = [...TEMAS_POOL]
-    .map((t, i) => ({ t, i, r: Math.random() }))
-    .sort((a, b) => a.r - b.r)
-    .slice(0, 8);
-
-  const keyboard = shuffled.map(({ t, i }) => [{
-    text: t.length > 48 ? t.slice(0, 46) + "…" : t,
-    callback_data: `tema:${i}`,
+// Llama a Claude para generar 7 temas actuales y en tendencia
+async function generarTemasTendencia() {
+  const hoy = new Date().toLocaleDateString("es-MX", {
+    timeZone: "America/Mexico_City", year: "numeric", month: "long", day: "numeric",
+  });
+  const data = await llamarClaude([{
+    role: "user",
+    content:
+      `Hoy es ${hoy}. Eres estratega de contenido para STRATEC, consultoría en seguridad institucional en México (Morelos, CDMX, Puebla, Guerrero, Jalisco).\n\n` +
+      `Servicios: Consultoría en Seguridad · Protección Civil · Capacitación · Integración Tecnológica · Consultoría para Gobierno.\n\n` +
+      `Genera 7 temas de contenido ACTUALES Y EN TENDENCIA para publicar en redes sociales esta semana. Considera:\n` +
+      `- Contexto 2025: expansión del nearshoring en México, aumento de verificaciones STPS, temporada de riesgos (calor, lluvias, sismos), normativa actualizada\n` +
+      `- Lo que está discutiendo la audiencia ahora: directores de seguridad, directivos corporativos, funcionarios de protección civil, responsables de operaciones\n` +
+      `- Mix de los 7 pilares: educación técnica, problema→solución, normativa, sector específico, dato duro, tecnología, marca\n` +
+      `- Temas concretos y específicos, no genéricos. Con ángulo de STRATEC\n` +
+      `- Máximo 55 caracteres por tema\n` +
+      `- Tono institucional, sin sensacionalismo ni alarmismo\n\n` +
+      `Responde ÚNICAMENTE con este JSON exacto:\n` +
+      `{"temas":["tema1","tema2","tema3","tema4","tema5","tema6","tema7"]}`,
   }]);
-  keyboard.push([{ text: "✏️  Escribir tema personalizado", callback_data: "tema_custom" }]);
+  return Array.isArray(data.temas) ? data.temas.slice(0, 7) : [];
+}
+
+// Limpia archivos de tendencias con más de 6 horas para no acumular basura en git
+function limpiarTendenciasExpiradas() {
+  if (!existsSync(PENDING_DIR)) return;
+  const corte = Date.now() - 6 * 3600 * 1000;
+  readdirSync(PENDING_DIR)
+    .filter(f => f.startsWith("trending-") && f.endsWith(".json"))
+    .forEach(f => {
+      try {
+        const { createdAt } = JSON.parse(readFileSync(join(PENDING_DIR, f), "utf8"));
+        if (new Date(createdAt).getTime() < corte) unlinkSync(join(PENDING_DIR, f));
+      } catch { unlinkSync(join(PENDING_DIR, f)); }
+    });
+}
+
+async function mostrarMenuTemas(chatId) {
+  const keyboard = SERVICIOS_MENU.map((s, i) => [
+    { text: s.btn, callback_data: `svc:${i}` },
+  ]);
+  keyboard.push([{ text: "🔥  Temas en tendencia (7 nuevos con IA)", callback_data: "tendencia" }]);
+  keyboard.push([{ text: "✏️  Tema personalizado",                   callback_data: "tema_custom" }]);
 
   await sendMessage(chatId,
-    "📌 <b>Elige un tema para el post de hoy:</b>\n\n" +
-    "Temas alineados a los pilares de contenido de STRATEC.\n" +
-    "Cada vez que abras este menú verás opciones diferentes.",
+    "📌 <b>¿Sobre qué publicamos hoy?</b>\n\n" +
+    "<b>Servicios STRATEC — elige uno para generar un post:</b>",
     { reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -1072,15 +1086,70 @@ async function main() {
           const [pid, ts] = data.slice(7).split(":");
           await procesarAgendarSlot(chatId, pid, ts, id);
         }
-        else if (data.startsWith("tema:")) {
-          const idx = parseInt(data.slice(5));
-          const tema = TEMAS_POOL[idx];
+        else if (data.startsWith("svc:")) {
+          const svc = SERVICIOS_MENU[parseInt(data.slice(4))];
+          if (svc) {
+            await answerCb(id, "Generando post…");
+            await procesarComando(chatId, svc.tema);
+          } else {
+            await answerCb(id, "Servicio no encontrado");
+          }
+        }
+        else if (data === "tendencia") {
+          await answerCb(id, "Analizando tendencias…");
+          await tg("sendChatAction", { chat_id: chatId, action: "typing" });
+          let temas;
+          try {
+            temas = await generarTemasTendencia();
+          } catch (e) {
+            await sendMessage(chatId, "❌ Error generando temas. Intenta de nuevo con /genera");
+            continue;
+          }
+          if (!temas.length) {
+            await sendMessage(chatId, "❌ Sin resultados. Intenta de nuevo.");
+            continue;
+          }
+          // Guardar en pending para que persistan al siguiente run del bot
+          const sid = randomUUID();
+          limpiarTendenciasExpiradas();
+          writeFileSync(
+            join(PENDING_DIR, `trending-${sid}.json`),
+            JSON.stringify({ temas, createdAt: new Date().toISOString() })
+          );
+          const kb = temas.map((t, i) => [{
+            text: t.length > 48 ? t.slice(0, 46) + "…" : t,
+            callback_data: `trnd:${sid}:${i}`,
+          }]);
+          kb.push([
+            { text: "🔄  Nuevos temas",    callback_data: "tendencia"   },
+            { text: "⬅️  Servicios",       callback_data: "menu_inicio" },
+          ]);
+          await sendMessage(chatId,
+            "🔥 <b>Temas en tendencia esta semana:</b>\n<i>Generados por IA según el contexto actual</i>",
+            { reply_markup: { inline_keyboard: kb } }
+          );
+        }
+        else if (data.startsWith("trnd:")) {
+          const parts = data.slice(5).split(":");
+          const sid = parts[0], idx = parseInt(parts[1]);
+          const tFile = join(PENDING_DIR, `trending-${sid}.json`);
+          if (!existsSync(tFile)) {
+            await answerCb(id, "Sesión expirada — genera nuevos temas");
+            await mostrarMenuTemas(chatId);
+            continue;
+          }
+          const { temas } = JSON.parse(readFileSync(tFile, "utf8"));
+          const tema = temas[idx];
           if (tema) {
             await answerCb(id, "Generando post…");
             await procesarComando(chatId, tema);
           } else {
             await answerCb(id, "Tema no encontrado");
           }
+        }
+        else if (data === "menu_inicio") {
+          await answerCb(id, "");
+          await mostrarMenuTemas(chatId);
         }
         else if (data === "tema_custom") {
           await answerCb(id, "");
