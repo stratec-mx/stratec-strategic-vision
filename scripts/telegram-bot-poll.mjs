@@ -291,37 +291,71 @@ async function descargarFotoTelegram(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ── DALL-E 3 (OpenAI) ────────────────────────────────────────────────────────
+// ── OpenAI Image Generation (gpt-image-1 → DALL-E 3 fallback) ───────────────
 
-async function _dalleGenerar(tema) {
+function _buildImagePrompt(tema) {
   const scenes = [
-    "security operations center with surveillance monitors showing real-time footage, professional staff",
-    "professional security consultant reviewing safety protocols in a modern Mexican corporate office",
-    "emergency response team in high-visibility vests conducting a safety inspection at an industrial facility",
-    "corporate boardroom meeting focused on institutional security and risk management planning",
-    "modern IP security camera installation on a commercial building exterior in Mexico City",
+    "security operations center with multiple surveillance monitors showing real-time footage of a city, two professional analysts in formal attire at workstations",
+    "professional security consultant in formal business attire presenting a risk assessment to executives in a modern glass-walled Mexican corporate boardroom",
+    "emergency response brigade in high-visibility vests and helmets conducting a safety drill inside a large industrial manufacturing facility",
+    "government building entrance with modern access control system, turnstiles, and uniformed security personnel checking credentials",
+    "aerial view of a Mexican corporate campus with perimeter security fencing, patrol vehicles, and controlled entry points",
+    "close-up of hands reviewing official security protocol documents and compliance checklists on a polished conference table",
+    "network operations center with rack servers, fiber cables, and IP camera management software on large screens",
   ];
   const scene = scenes[Math.floor(Math.random() * scenes.length)];
-  const prompt =
-    `Professional corporate photograph: ${scene}. ` +
-    `Subject matter: ${tema}. ` +
-    `Style: clean, modern, high-quality business photography, natural lighting, sharp focus. ` +
-    `Setting: Mexico. No text overlays, no watermarks, no abstract elements, no violence.`;
+  return (
+    `Photorealistic professional corporate photograph for an institutional security firm in Mexico. ` +
+    `Scene: ${scene}. ` +
+    `Topic context: ${tema}. ` +
+    `Visual style: cinematic lighting, dark professional tones, depth of field, ultra-sharp, 4K quality. ` +
+    `Color palette: deep navy blues, charcoal grays, subtle amber accents. ` +
+    `Strictly NO text, NO logos, NO watermarks, NO cartoon elements, NO violence, NO weapons. ` +
+    `The image must work as a dark-overlay background for a social media infographic.`
+  );
+}
 
-  const res = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`DALL-E: ${body.error?.message || res.status}`);
+async function _dalleGenerar(tema) {
+  const prompt = _buildImagePrompt(tema);
+
+  // Intentar gpt-image-1 primero (calidad superior, devuelve base64)
+  if (OPENAI_API_KEY) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "high" }),
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        if (data?.[0]?.b64_json) {
+          console.log("Imagen generada con gpt-image-1 ✓");
+          return Buffer.from(data[0].b64_json, "base64");
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.warn(`gpt-image-1 no disponible (${res.status}): ${err.error?.message || ""}. Usando DALL-E 3.`);
+      }
+    } catch (e) {
+      console.warn("gpt-image-1 error:", e.message, "→ DALL-E 3");
+    }
+
+    // Fallback: DALL-E 3 (devuelve URL)
+    const res2 = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "hd" }),
+    });
+    if (!res2.ok) {
+      const body = await res2.json().catch(() => ({}));
+      throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
+    }
+    const { data: data2 } = await res2.json();
+    console.log("Imagen generada con DALL-E 3 ✓");
+    return Buffer.from(await (await fetch(data2[0].url)).arrayBuffer());
   }
-  const { data } = await res.json();
-  return Buffer.from(await (await fetch(data[0].url)).arrayBuffer());
+
+  throw new Error("OPENAI_API_KEY no configurada");
 }
 
 // ── Fal.ai — Flux.1 Pro (respaldo principal si no hay OpenAI) ────────────────
