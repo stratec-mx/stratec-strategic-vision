@@ -507,8 +507,22 @@ function promptCaptions(tema, contextoExtra = "") {
     `- 2-3 emojis naturales (no decorativos)\n` +
     `- Cierra con: "Escríbenos o entra a stratecsecurity.com 🔗"\n` +
     `- 4 hashtags\n\n` +
+    `TITULAR Y SUBTITULO (texto que va sobre la imagen del post — NO usa el mismo ` +
+    `tono conversacional que LinkedIn/Facebook):\n` +
+    `- Tono institucional de firma consultora, NO mensaje personal\n` +
+    `- PROHIBIDO dirigirse al lector en segunda persona ("tú", "tu empresa", "¿sabes si...?")\n` +
+    `- PROHIBIDO preguntas retóricas casuales tipo mensaje de texto ` +
+    `("¿TU PLAN FUNCIONA O SOLO EXISTE?")\n` +
+    `- Usa afirmaciones declarativas, datos, o términos técnicos del sector ` +
+    `(NOM, PIPC, protocolo, brigada, continuidad operativa, cumplimiento normativo)\n` +
+    `- Estilo de titular de publicación especializada o reporte institucional\n` +
+    `- Ejemplos de tono correcto: "BRIGADAS DE EMERGENCIA: LA DIFERENCIA ENTRE ` +
+    `CAOS Y CONTROL" / "PROTECCIÓN CIVIL: DEL PAPEL A LA PRÁCTICA" / ` +
+    `"CUMPLIMIENTO NORMATIVO, SIN ATAJOS"\n` +
+    `- Ejemplos de tono incorrecto a evitar: "¿TU EMPRESA ESTÁ LISTA?" / ` +
+    `"¿SABÍAS QUE PUEDES PERDER TODO?"\n\n` +
     `Responde ÚNICAMENTE con JSON válido con estos 6 campos exactos:\n` +
-    `{"linkedin":"...","facebook":"...","titular":"TITULAR IMPACTANTE EN MAYÚSCULAS (máx 52 chars, pregunta o afirmación directa)","subtitulo":"una frase corta en minúsculas que complementa el titular (máx 42 chars)","puntos":["acción o beneficio concreto 1","acción o beneficio concreto 2","acción o beneficio concreto 3"],"categoria":"TIPO DE CONTENIDO (ej: PROTECCIÓN CIVIL, ANÁLISIS DE RIESGOS, CAPACITACIÓN)"}`
+    `{"linkedin":"...","facebook":"...","titular":"TITULAR INSTITUCIONAL EN MAYÚSCULAS, AFIRMACIÓN DECLARATIVA, SIN SEGUNDA PERSONA (máx 52 chars)","subtitulo":"frase corta en minúsculas, tono técnico/institucional, sin segunda persona (máx 42 chars)","puntos":["acción o beneficio concreto 1","acción o beneficio concreto 2","acción o beneficio concreto 3"],"categoria":"TIPO DE CONTENIDO (ej: PROTECCIÓN CIVIL, ANÁLISIS DE RIESGOS, CAPACITACIÓN)"}`
   );
 }
 
