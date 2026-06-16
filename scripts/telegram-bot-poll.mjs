@@ -23,7 +23,7 @@
  * Variables de entorno (GitHub Secrets):
  *   TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, FAL_API_KEY, LEONARDO_API_KEY,
  *   ANTHROPIC_API_KEY, FACEBOOK_PAGE_ACCESS_TOKEN, FACEBOOK_PAGE_ID,
- *   LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORG_ID
+ *   LINKEDIN_ACCESS_TOKEN (secret: Token_Likedin), LINKEDIN_ORG_ID
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from "fs";
@@ -480,49 +480,64 @@ async function llamarClaude(messages) {
 
 function promptCaptions(tema, contextoExtra = "") {
   return (
-    `Eres Carlos, el director de STRATEC, consultoría en seguridad institucional ` +
-    `y protección civil con sede en Morelos, México. Llevas 15 años en el sector, ` +
-    `conoces a tus clientes por su nombre y hablas con ellos de frente, sin rodeos.\n\n` +
-    (contextoExtra ? contextoExtra + "\n\n" : "") +
-    `Tema: "${tema}"\n\n` +
-    `Escribe DOS publicaciones en primera persona o voz cercana, en español mexicano natural. ` +
-    `Que suenen a una persona real hablando, no a un departamento de marketing. ` +
-    `El objetivo es que el lector sienta que alguien que sabe del tema le está hablando directo, ` +
-    `genere confianza y quiera contactarnos — pero sin sonar a vendedor desesperado.\n\n` +
-    `REGLAS de tono:\n` +
-    `- Nada de frases genéricas como "En el mundo actual" o "Es fundamental que"\n` +
-    `- Nada de listas de viñetas corporativas. Párrafos cortos, fluidos\n` +
-    `- Usa datos reales o ejemplos concretos si aplican al tema\n` +
-    `- Permite una dosis de opinión personal o experiencia de campo\n` +
-    `- El CTA debe sentirse como una invitación, no un anuncio\n\n` +
-    `LINKEDIN (180-220 palabras):\n` +
-    `- Abre con una observación real o situación que el lector reconozca\n` +
-    `- Desarrolla el insight de seguridad con autoridad pero sin arrogancia\n` +
-    `- Máximo 2 emojis, bien colocados\n` +
-    `- Cierra con: "Si quieres revisarlo en tu empresa, agendamos una plática sin costo: stratecsecurity.com"\n` +
-    `- 4-5 hashtags al final: #SeguridadInstitucional #ProteccionCivil #GestionDeRiesgos + 2 del tema\n\n` +
-    `FACEBOOK (100-130 palabras):\n` +
-    `- Abre con pregunta directa o dato que golpee\n` +
-    `- Tono más conversacional, como hablar con un conocido\n` +
-    `- 2-3 emojis naturales (no decorativos)\n` +
-    `- Cierra con: "Escríbenos o entra a stratecsecurity.com 🔗"\n` +
-    `- 4 hashtags\n\n` +
-    `TITULAR Y SUBTITULO (texto que va sobre la imagen del post — NO usa el mismo ` +
-    `tono conversacional que LinkedIn/Facebook):\n` +
-    `- Tono institucional de firma consultora, NO mensaje personal\n` +
-    `- PROHIBIDO dirigirse al lector en segunda persona ("tú", "tu empresa", "¿sabes si...?")\n` +
-    `- PROHIBIDO preguntas retóricas casuales tipo mensaje de texto ` +
-    `("¿TU PLAN FUNCIONA O SOLO EXISTE?")\n` +
-    `- Usa afirmaciones declarativas, datos, o términos técnicos del sector ` +
-    `(NOM, PIPC, protocolo, brigada, continuidad operativa, cumplimiento normativo)\n` +
-    `- Estilo de titular de publicación especializada o reporte institucional\n` +
-    `- Ejemplos de tono correcto: "BRIGADAS DE EMERGENCIA: LA DIFERENCIA ENTRE ` +
-    `CAOS Y CONTROL" / "PROTECCIÓN CIVIL: DEL PAPEL A LA PRÁCTICA" / ` +
-    `"CUMPLIMIENTO NORMATIVO, SIN ATAJOS"\n` +
-    `- Ejemplos de tono incorrecto a evitar: "¿TU EMPRESA ESTÁ LISTA?" / ` +
-    `"¿SABÍAS QUE PUEDES PERDER TODO?"\n\n` +
-    `Responde ÚNICAMENTE con JSON válido con estos 6 campos exactos:\n` +
-    `{"linkedin":"...","facebook":"...","titular":"TITULAR INSTITUCIONAL EN MAYÚSCULAS, AFIRMACIÓN DECLARATIVA, SIN SEGUNDA PERSONA (máx 52 chars)","subtitulo":"frase corta en minúsculas, tono técnico/institucional, sin segunda persona (máx 42 chars)","puntos":["acción o beneficio concreto 1","acción o beneficio concreto 2","acción o beneficio concreto 3"],"categoria":"TIPO DE CONTENIDO (ej: PROTECCIÓN CIVIL, ANÁLISIS DE RIESGOS, CAPACITACIÓN)"}`
+    `Eres el equipo de comunicación institucional de STRATEC, firma de consultoría en seguridad institucional con sede en Morelos, México.\n\n` +
+
+    `CONTEXTO DE STRATEC:\n` +
+    `- Opera desde Morelos con cobertura en CDMX, Estado de México, Puebla, Guerrero y Jalisco\n` +
+    `- Clientes: gobierno, corporativos, instituciones educativas, desarrollos inmobiliarios, infraestructura crítica, zonas industriales (CIVAC, parques de nearshoring)\n` +
+    `- Servicios: Consultoría en Seguridad · Protección Civil y Gestión Integral de Riesgos · Capacitación Especializada · Integración Tecnológica · Consultoría para Gobierno e Instituciones\n\n` +
+
+    `REGLAS INQUEBRANTABLES (incumplirlas invalida el contenido):\n` +
+    `- Tono: institucional, técnico, directo. NUNCA informal ni coloquial\n` +
+    `- No mencionar precios, tarifas ni rangos de costo\n` +
+    `- No mencionar el nombre del operador ni del equipo\n` +
+    `- No publicar opiniones políticas ni contenido partidista\n` +
+    `- No prometer resultados cuantificados ("reducimos el crimen 40%", "ahorrará X pesos")\n` +
+    `- No usar fotos de stock genéricas como referencia visual (gente señalando pantallas, guardias posando)\n` +
+    `- Máximo 1-2 emojis en total, no decorativos\n` +
+    `- Prohibido abrir con "En el mundo actual", "Es fundamental que", "Hoy más que nunca"\n` +
+    `- Prohibido capitalizar sobre noticias de crimen o inseguridad de forma reactiva\n\n` +
+
+    `PILARES DE CONTENIDO — determina cuál aplica mejor al tema y úsalo como marco:\n` +
+    `1. Educación técnica (40%): explica un concepto de seguridad que el lector aprende, sin vender directamente. El lector asocia STRATEC con conocimiento real.\n` +
+    `2. Problema → Solución (25%): presenta un problema real que el prospecto reconoce, cierra con la capacidad de STRATEC para resolverlo. No es venta directa — es demostración de competencia.\n` +
+    `3. Normativa y regulación (15%): NOM-035-STPS, protección civil municipal, verificaciones STPS, ISO 31000, obligaciones del empleador. Genera urgencia legítima sin alarmismo.\n` +
+    `4. Sector específico (10%): dirige el contenido a un sector concreto (gobierno, educación, industria/CIVAC, inmobiliario, salud). El prospecto se identifica directamente.\n` +
+    `5. Dato duro (5%): cifra impactante + contexto breve + capacidad de STRATEC para resolver. Funciona bien como texto sobre imagen.\n` +
+    `6. Capacidad tecnológica (5%): videovigilancia, control de accesos, GPS vehicular, sistemas integrados. Nunca suena a "vendemos cámaras" — suena a arquitectura estratégica.\n` +
+    `7. Marca y posicionamiento (rotativo): identidad de STRATEC como firma institucional. No vende un servicio específico — vende confianza y diferenciación.\n\n` +
+
+    (contextoExtra ? `CONTEXTO ADICIONAL:\n${contextoExtra}\n\n` : ``) +
+    `Tema del post: "${tema}"\n\n` +
+
+    `LINKEDIN — 180 a 220 palabras:\n` +
+    `- Audiencia: directores de seguridad, gerentes de operaciones, directores de RRHH, funcionarios públicos, tomadores de decisión corporativa\n` +
+    `- Objetivo: posicionar a STRATEC como referente técnico en seguridad institucional, generar confianza y leads B2B calificados\n` +
+    `- Abre con una observación real, una situación que el lector haya vivido, o un dato concreto. NO con pregunta retórica casual\n` +
+    `- Desarrolla el insight con autoridad técnica. Párrafos cortos, sin listas de viñetas corporativas vacías\n` +
+    `- Incorpora datos reales, referencias normativas (NOM, ISO, STPS) o ejemplos de campo cuando apliquen\n` +
+    `- Cierra con: "Solicitar diagnóstico sin costo: stratecsecurity.com"\n` +
+    `- 4-5 hashtags técnicos y de nicho. Combinar de: #SeguridadInstitucional #GestiónDeRiesgos #ProtecciónCivil #CumplimientoNormativo #AnálisisDeRiesgos #SeguridadCorporativa #NOM035 #Nearshoring #STRATEC más 1-2 específicos del tema\n\n` +
+
+    `FACEBOOK — 80 a 110 palabras:\n` +
+    `- Audiencia: PyMEs locales, directivos de escuelas, empresarios de Morelos y CDMX, administradores de condominios y plantas, funcionarios municipales\n` +
+    `- Objetivo: visibilidad regional, generar consultas directas por WhatsApp o Messenger\n` +
+    `- Puede abrir con pregunta directa o dato que genere reconocimiento inmediato\n` +
+    `- Tono directo y profesional — nunca informal ni coloquial\n` +
+    `- 1 emoji máximo, solo si suma; nunca decorativo\n` +
+    `- Cierra con: "→ stratecsecurity.com" o "→ stratecsecurity.com/contacto"\n` +
+    `- 3-4 hashtags: mezcla geográficos y sectoriales según el tema. Combinar de: #STRATEC #Cuernavaca #Morelos #Jiutepec #CIVAC #CDMX #Puebla #ProtecciónCivil #SeguridadEmpresarial #SeguridadIndustrial #GobiernoLocal\n\n` +
+
+    `TITULAR Y SUBTITULO (texto que va impreso sobre la infografía — tono distinto al copy de red social):\n` +
+    `- Estilo: titular de publicación técnica especializada o reporte institucional\n` +
+    `- PROHIBIDO segunda persona ("tú", "tu empresa", "¿sabes si...?", "¿estás listo?")\n` +
+    `- PROHIBIDO preguntas retóricas informales ("¿TU PLAN FUNCIONA O SOLO EXISTE?")\n` +
+    `- Usar afirmaciones declarativas, datos o términos del sector: NOM, PIPC, protocolo, brigada, continuidad operativa, cumplimiento normativo, gestión de riesgos\n` +
+    `- Correcto: "BRIGADAS DE EMERGENCIA: LA DIFERENCIA ENTRE CAOS Y CONTROL" / "PROTECCIÓN CIVIL: DEL PAPEL A LA PRÁCTICA" / "CUMPLIMIENTO NORMATIVO, SIN ATAJOS"\n` +
+    `- Incorrecto: "¿TU EMPRESA ESTÁ LISTA?" / "¿SABÍAS QUE PUEDES PERDER TODO?" / "¡ACTÚA HOY!"\n\n` +
+
+    `Responde ÚNICAMENTE con JSON válido con exactamente estos 6 campos:\n` +
+    `{"linkedin":"...","facebook":"...","titular":"TITULAR EN MAYÚSCULAS, AFIRMACIÓN DECLARATIVA O DATO, SIN SEGUNDA PERSONA (máx 52 chars)","subtitulo":"frase técnica o cifra clave, sin segunda persona (máx 42 chars)","puntos":["dato o capacidad concreta 1","dato o capacidad concreta 2","dato o capacidad concreta 3"],"categoria":"CATEGORÍA EN MAYÚSCULAS (ej: PROTECCIÓN CIVIL, ANÁLISIS DE RIESGOS, CAPACITACIÓN, NORMATIVA NOM, INTEGRACIÓN TECNOLÓGICA, CONSULTORÍA DE GOBIERNO)"}`
   );
 }
 
