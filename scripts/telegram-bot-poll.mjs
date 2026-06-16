@@ -51,6 +51,9 @@ const {
 
 const TG = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
+// mapa chatId → pendingId del preview activo (para modificación por chat)
+const activePending = new Map();
+
 // ── Estado ────────────────────────────────────────────────────────────────────
 
 function getOffset() {
@@ -103,6 +106,13 @@ function deletePending(id) {
     const f = join(PENDING_DIR, `${id}${suffix}`);
     if (existsSync(f)) unlinkSync(f);
   }
+}
+
+function updatePendingMeta(id, updates) {
+  const file = join(PENDING_DIR, `${id}.json`);
+  if (!existsSync(file)) return;
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+  writeFileSync(file, JSON.stringify({ ...meta, ...updates }));
 }
 
 // ── Telegram helpers ──────────────────────────────────────────────────────────
@@ -335,7 +345,7 @@ async function _dalleGenerar(tema) {
       const imgItem = data.output?.find(o => o.type === "image_generation_call");
       if (imgItem?.result) {
         console.log("Imagen generada con GPT-4o Responses API ✓");
-        return Buffer.from(imgItem.result, "base64");
+        return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id };
       }
     } else {
       const err = await res.json().catch(() => ({}));
@@ -356,7 +366,7 @@ async function _dalleGenerar(tema) {
       const { data } = await res.json();
       if (data?.[0]?.b64_json) {
         console.log("Imagen generada con gpt-image-1 ✓");
-        return Buffer.from(data[0].b64_json, "base64");
+        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null };
       }
     }
   } catch (e) {
@@ -375,7 +385,30 @@ async function _dalleGenerar(tema) {
   }
   const { data: data2 } = await res2.json();
   console.log("Imagen generada con DALL-E 3 hd ✓");
-  return Buffer.from(await (await fetch(data2[0].url)).arrayBuffer());
+  return { buffer: Buffer.from(await (await fetch(data2[0].url)).arrayBuffer()), responseId: null };
+}
+
+// Continúa una conversación de imagen con GPT-4o usando el responseId previo
+async function _modificarImagen(responseId, instruccion) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      previous_response_id: responseId,
+      input: instruccion,
+      tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Responses API modificación: ${err.error?.message || res.status}`);
+  }
+  const data = await res.json();
+  const imgItem = data.output?.find(o => o.type === "image_generation_call");
+  if (!imgItem?.result) throw new Error("GPT-4o no generó imagen en la respuesta de modificación");
+  return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id };
 }
 
 // ── Fal.ai — Flux.1 Pro (respaldo principal si no hay OpenAI) ────────────────
@@ -480,30 +513,32 @@ async function _leonardoGenerar(tema) {
   throw new Error("Leonardo: timeout 60s");
 }
 
+// Devuelve { buffer, responseId } — responseId puede ser null si no viene de Responses API
 async function generarImagen(tema) {
   if (OPENAI_API_KEY) {
     try {
-      console.log("Generando imagen con DALL-E 3...");
-      const buf = await _dalleGenerar(tema);
-      console.log("DALL-E 3: imagen generada OK");
-      return buf;
+      console.log("Generando imagen con GPT-4o...");
+      const result = await _dalleGenerar(tema);
+      console.log("GPT-4o: imagen generada OK");
+      return result;
     } catch (e) {
-      console.warn(`DALL-E 3 falló (${e.message}), intentando Fal.ai...`);
+      console.warn(`OpenAI falló (${e.message}), intentando Fal.ai...`);
     }
   }
   if (FAL_API_KEY) {
     try {
       console.log("Generando imagen con Fal.ai (Flux.1 Pro)...");
-      const buf = await _falGenerar(tema);
+      const buffer = await _falGenerar(tema);
       console.log("Fal.ai: imagen generada OK");
-      return buf;
+      return { buffer, responseId: null };
     } catch (e) {
       console.warn(`Fal.ai falló (${e.message}), intentando Leonardo...`);
     }
   }
   if (LEONARDO_API_KEY) {
     console.log("Generando imagen con Leonardo...");
-    return _leonardoGenerar(tema);
+    const buffer = await _leonardoGenerar(tema);
+    return { buffer, responseId: null };
   }
   throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY, FAL_API_KEY o LEONARDO_API_KEY)");
 }
@@ -903,10 +938,11 @@ async function procesarComando(chatId, tema) {
   tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
 
   try {
-    const [rawPhoto, captions] = await Promise.all([
+    const [imgResult, captions] = await Promise.all([
       generarImagen(tema),
       generarCaptions(tema),
     ]);
+    const { buffer: rawPhoto, responseId } = imgResult;
     const imageBuffer = await buildInfografia(rawPhoto, captions);
     clearInterval(actionTick);
 
@@ -921,12 +957,16 @@ async function procesarComando(chatId, tema) {
       categoria:      captions.categoria,
       tema,
       chatId,
+      responseId,
     });
+
+    activePending.set(chatId, pendingId);
 
     const preview =
       `📋 <b>Preview — ${tema}</b>\n\n` +
       `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
-      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
+      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...\n\n` +
+      `<i>💬 Escribe para modificar la imagen (ej: "hazla más oscura", "cambia el fondo")</i>`;
 
     await sendPhotoBuffer(chatId, imageBuffer, preview, [
       [
@@ -943,6 +983,72 @@ async function procesarComando(chatId, tema) {
   }
 }
 
+// ── Modificación de imagen por chat (conversación con GPT-4o) ─────────────────
+
+async function procesarModificacionImagen(chatId, pendingId, instruccion) {
+  const pending = readPending(pendingId);
+  if (!pending) {
+    activePending.delete(chatId);
+    await sendMessage(chatId, "❌ Post no encontrado. Genera uno nuevo con /genera");
+    return;
+  }
+
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
+  );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
+
+  try {
+    let rawBuffer, newResponseId;
+
+    if (pending.responseId && OPENAI_API_KEY) {
+      // Continúa la conversación: GPT-4o recuerda la imagen anterior
+      const result = await _modificarImagen(pending.responseId, instruccion);
+      rawBuffer = result.buffer;
+      newResponseId = result.responseId;
+    } else {
+      // Sin contexto previo — regenera incorporando la instrucción al tema
+      const result = await generarImagen(`${pending.tema}. Instrucción: ${instruccion}`);
+      rawBuffer = result.buffer;
+      newResponseId = result.responseId;
+    }
+
+    clearInterval(actionTick);
+
+    const captions = {
+      linkedin: pending.linkedin, facebook: pending.facebook,
+      titular: pending.titular, subtitulo: pending.subtitulo,
+      puntos: pending.puntos, categoria: pending.categoria,
+    };
+    const imageBuffer = await buildInfografia(rawBuffer, captions);
+
+    updatePendingImage(pendingId, imageBuffer);
+    writeFileSync(join(PENDING_DIR, `${pendingId}-raw.png`), rawBuffer);
+    updatePendingMeta(pendingId, { responseId: newResponseId });
+
+    const preview =
+      `✏️ <b>Imagen modificada</b>\n\n` +
+      `<b>Facebook:</b>\n${pending.facebook.substring(0, 350)}\n\n` +
+      `<b>LinkedIn (inicio):</b>\n${pending.linkedin.substring(0, 200)}...\n\n` +
+      `<i>💬 Escribe para seguir modificando</i>`;
+
+    await sendPhotoBuffer(chatId, imageBuffer, preview, [
+      [
+        { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+        { text: "📅 Programar",      callback_data: `sched:${pendingId}` },
+      ],
+      [
+        { text: "🔄 Regenerar todo", callback_data: `reg:${pendingId}` },
+      ],
+    ]);
+
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
+}
+
 // ── Callbacks inline ──────────────────────────────────────────────────────────
 
 async function procesarAprobacion(chatId, messageId, pendingId, callbackId) {
@@ -953,6 +1059,7 @@ async function procesarAprobacion(chatId, messageId, pendingId, callbackId) {
     return;
   }
 
+  activePending.delete(chatId);
   const imageBuffer = Buffer.from(pending.imageBase64, "base64");
   const [fb, li]    = await Promise.allSettled([
     publicarFacebookBuffer(imageBuffer, pending.facebook),
@@ -977,6 +1084,7 @@ async function procesarRegeneracion(chatId, pendingId, callbackId) {
   await answerCb(callbackId, "Regenerando...");
   const pending = readPending(pendingId);
   const tema    = pending?.tema || "contenido de seguridad STRATEC";
+  activePending.delete(chatId);
   deletePending(pendingId);
   await procesarComando(chatId, tema);
 }
@@ -1243,7 +1351,12 @@ async function main() {
       if (!msg.text) continue;
       const text = msg.text.trim();
 
-      if (/^\/(genera|post)\s+/i.test(text)) {
+      // Texto libre con preview activo → modificación de imagen vía GPT-4o
+      const activePid = activePending.get(chatId);
+      if (activePid && !text.startsWith("/")) {
+        await procesarModificacionImagen(chatId, activePid, text);
+
+      } else if (/^\/(genera|post)\s+/i.test(text)) {
         const tema = text.replace(/^\/(genera|post)(@\w+)?\s+/i, "").trim();
         await procesarComando(chatId, tema);
 
