@@ -934,7 +934,10 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
 
   await sendPhotoBuffer(chatId, rawBuffer, preview, [
     [
-      { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+      { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
+      { text: "📅 Programar",       callback_data: `sched:${pendingId}` },
+    ],
+    [
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
     ],
   ]);
