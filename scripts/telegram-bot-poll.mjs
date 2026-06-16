@@ -958,6 +958,68 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
   ]);
 }
 
+// ── Menú de temas sugeridos ───────────────────────────────────────────────────
+
+// Pool de 27 temas alineados a los 7 pilares de contenido de STRATEC.
+// Usa índice como callback_data para cumplir el límite de 64 bytes de Telegram.
+const TEMAS_POOL = [
+  // Pilar 1 — Educación técnica (40%)
+  "Vigilancia vs. seguridad institucional: diferencias clave",
+  "Qué debe contener un Programa Interno de Protección Civil",
+  "Auditoría de seguridad empresarial: proceso y alcance",
+  "Errores comunes en el control de accesos corporativo",
+  "CPTED: diseño de entornos que reduce el riesgo operativo",
+  "Brigadas de emergencia: funciones, tipos y obligaciones legales",
+  "Cómo diseñar una matriz de riesgos institucional",
+  "Videovigilancia profesional: criterios técnicos de selección",
+  // Pilar 2 — Problema → Solución (25%)
+  "Empresas industriales sin plan de protección civil vigente",
+  "Accidentes laborales sin brigada capacitada: consecuencias legales",
+  "Robo hormiga: por qué más cámaras no resuelven el problema",
+  "Nearshoring en México: riesgos de seguridad que no se evalúan",
+  "Extorsión telefónica a empresas: protocolo institucional de respuesta",
+  "Protocolos de seguridad desactualizados como factor de riesgo",
+  // Pilar 3 — Normativa y regulación (15%)
+  "NOM-035-STPS: obligaciones reales y multas por incumplimiento",
+  "Protección civil en Morelos: qué exige la normativa vigente",
+  "Verificaciones STPS: qué revisan y cómo preparar a la organización",
+  "Responsabilidad legal del empleador ante accidentes laborales",
+  // Pilar 4 — Sector específico (10%)
+  "Seguridad institucional en universidades y centros educativos",
+  "Diagnóstico de seguridad para municipios y gobierno local",
+  "Protección civil en plantas industriales y zonas de nearshoring",
+  "Seguridad perimetral en desarrollos inmobiliarios residenciales",
+  // Pilar 5 — Dato duro (5%)
+  "82% de las PyMEs en México sin protocolo de emergencia documentado",
+  "Inversión en nearshoring y evaluación de riesgo operativo previo",
+  // Pilar 6 — Capacidad tecnológica (5%)
+  "Integración de CCTV, control de accesos y alarmas en una estrategia",
+  "Monitoreo vehicular GPS: de rastreo a gestión de riesgo en flotillas",
+  // Pilar 7 — Marca y posicionamiento (rotativo)
+  "STRATEC: consultoría que transfiere capacidad, no genera dependencia",
+];
+
+async function mostrarMenuTemas(chatId) {
+  // Mezcla aleatoria: cada llamada muestra 8 temas distintos del pool
+  const shuffled = [...TEMAS_POOL]
+    .map((t, i) => ({ t, i, r: Math.random() }))
+    .sort((a, b) => a.r - b.r)
+    .slice(0, 8);
+
+  const keyboard = shuffled.map(({ t, i }) => [{
+    text: t.length > 48 ? t.slice(0, 46) + "…" : t,
+    callback_data: `tema:${i}`,
+  }]);
+  keyboard.push([{ text: "✏️  Escribir tema personalizado", callback_data: "tema_custom" }]);
+
+  await sendMessage(chatId,
+    "📌 <b>Elige un tema para el post de hoy:</b>\n\n" +
+    "Temas alineados a los pilares de contenido de STRATEC.\n" +
+    "Cada vez que abras este menú verás opciones diferentes.",
+    { reply_markup: { inline_keyboard: keyboard } }
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1010,6 +1072,24 @@ async function main() {
           const [pid, ts] = data.slice(7).split(":");
           await procesarAgendarSlot(chatId, pid, ts, id);
         }
+        else if (data.startsWith("tema:")) {
+          const idx = parseInt(data.slice(5));
+          const tema = TEMAS_POOL[idx];
+          if (tema) {
+            await answerCb(id, "Generando post…");
+            await procesarComando(chatId, tema);
+          } else {
+            await answerCb(id, "Tema no encontrado");
+          }
+        }
+        else if (data === "tema_custom") {
+          await answerCb(id, "");
+          await sendMessage(chatId,
+            "Escribe el tema con el comando:\n" +
+            "<code>/genera capacitación brigadas emergencia Cuernavaca</code>\n\n" +
+            "O envía una foto con el tema en el caption."
+          );
+        }
         continue;
       }
 
@@ -1041,11 +1121,7 @@ async function main() {
         await procesarComando(chatId, tema);
 
       } else if (/^\/(genera|post)(@\w+)?$/i.test(text)) {
-        await sendMessage(chatId,
-          "Escribe el tema del post. Ejemplo:\n" +
-          "<code>/genera capacitación brigadas de emergencia Cuernavaca</code>\n\n" +
-          "O envíame una foto directamente con el tema en el caption."
-        );
+        await mostrarMenuTemas(chatId);
 
       } else if (/^\/(start|ayuda|help)/i.test(text)) {
         await sendMessage(chatId,
