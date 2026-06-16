@@ -291,7 +291,7 @@ async function descargarFotoTelegram(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ── OpenAI Image Generation (gpt-image-1 → DALL-E 3 fallback) ───────────────
+// ── OpenAI Image Generation via Responses API (GPT-4o + image_generation tool) ─
 
 function _buildImagePrompt(tema) {
   const scenes = [
@@ -305,57 +305,77 @@ function _buildImagePrompt(tema) {
   ];
   const scene = scenes[Math.floor(Math.random() * scenes.length)];
   return (
-    `Photorealistic professional corporate photograph for an institutional security firm in Mexico. ` +
+    `Generate a photorealistic professional corporate photograph for STRATEC, an institutional security consulting firm in Mexico. ` +
     `Scene: ${scene}. ` +
-    `Topic context: ${tema}. ` +
-    `Visual style: cinematic lighting, dark professional tones, depth of field, ultra-sharp, 4K quality. ` +
-    `Color palette: deep navy blues, charcoal grays, subtle amber accents. ` +
-    `Strictly NO text, NO logos, NO watermarks, NO cartoon elements, NO violence, NO weapons. ` +
-    `The image must work as a dark-overlay background for a social media infographic.`
+    `Topic: ${tema}. ` +
+    `Visual style: cinematic lighting, dark professional tones (deep navy blues, charcoal grays, subtle amber accents), depth of field, ultra-sharp 4K quality. ` +
+    `The image must work as a dark background for a social media infographic with text overlay. ` +
+    `Strictly NO text, NO logos, NO watermarks, NO cartoon elements, NO violence, NO weapons.`
   );
 }
 
 async function _dalleGenerar(tema) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
+
   const prompt = _buildImagePrompt(tema);
 
-  // Intentar gpt-image-1 primero (calidad superior, devuelve base64)
-  if (OPENAI_API_KEY) {
-    try {
-      const res = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "high" }),
-      });
-      if (res.ok) {
-        const { data } = await res.json();
-        if (data?.[0]?.b64_json) {
-          console.log("Imagen generada con gpt-image-1 ✓");
-          return Buffer.from(data[0].b64_json, "base64");
-        }
-      } else {
-        const err = await res.json().catch(() => ({}));
-        console.warn(`gpt-image-1 no disponible (${res.status}): ${err.error?.message || ""}. Usando DALL-E 3.`);
-      }
-    } catch (e) {
-      console.warn("gpt-image-1 error:", e.message, "→ DALL-E 3");
-    }
-
-    // Fallback: DALL-E 3 (devuelve URL)
-    const res2 = await fetch("https://api.openai.com/v1/images/generations", {
+  // Responses API — GPT-4o con image_generation tool (mismo motor que ChatGPT)
+  try {
+    const res = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "hd" }),
+      body: JSON.stringify({
+        model: "gpt-4o",
+        input: prompt,
+        tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
+      }),
     });
-    if (!res2.ok) {
-      const body = await res2.json().catch(() => ({}));
-      throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
+    if (res.ok) {
+      const data = await res.json();
+      const imgItem = data.output?.find(o => o.type === "image_generation_call");
+      if (imgItem?.result) {
+        console.log("Imagen generada con GPT-4o Responses API ✓");
+        return Buffer.from(imgItem.result, "base64");
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.warn(`Responses API no disponible (${res.status}): ${err.error?.message || ""}. Usando gpt-image-1.`);
     }
-    const { data: data2 } = await res2.json();
-    console.log("Imagen generada con DALL-E 3 ✓");
-    return Buffer.from(await (await fetch(data2[0].url)).arrayBuffer());
+  } catch (e) {
+    console.warn("Responses API error:", e.message, "→ gpt-image-1");
   }
 
-  throw new Error("OPENAI_API_KEY no configurada");
+  // Fallback: gpt-image-1 directo
+  try {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "high" }),
+    });
+    if (res.ok) {
+      const { data } = await res.json();
+      if (data?.[0]?.b64_json) {
+        console.log("Imagen generada con gpt-image-1 ✓");
+        return Buffer.from(data[0].b64_json, "base64");
+      }
+    }
+  } catch (e) {
+    console.warn("gpt-image-1 error:", e.message, "→ DALL-E 3");
+  }
+
+  // Fallback final: DALL-E 3 hd
+  const res2 = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "hd" }),
+  });
+  if (!res2.ok) {
+    const body = await res2.json().catch(() => ({}));
+    throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
+  }
+  const { data: data2 } = await res2.json();
+  console.log("Imagen generada con DALL-E 3 hd ✓");
+  return Buffer.from(await (await fetch(data2[0].url)).arrayBuffer());
 }
 
 // ── Fal.ai — Flux.1 Pro (respaldo principal si no hay OpenAI) ────────────────
