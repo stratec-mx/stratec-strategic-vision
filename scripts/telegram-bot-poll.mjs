@@ -609,7 +609,9 @@ async function publicarFacebookBuffer(imageBuffer, caption) {
 // ── LinkedIn (Posts API 2024) ─────────────────────────────────────────────────
 
 async function publicarLinkedIn(imageBuffer, caption) {
+  // Sin credenciales → skip silencioso (se muestra ⏭️ en Telegram)
   if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_ORG_ID) return false;
+
   const orgUrn = `urn:li:organization:${LINKEDIN_ORG_ID}`;
   const headers = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
@@ -624,23 +626,25 @@ async function publicarLinkedIn(imageBuffer, caption) {
     body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }),
   });
   if (!initRes.ok) {
-    const txt = await initRes.text();
-    console.error(`LinkedIn initializeUpload ${initRes.status}:`, txt);
-    return false;
+    const txt = await initRes.text().catch(() => initRes.status);
+    throw new Error(`LinkedIn [init ${initRes.status}]: ${String(txt).slice(0, 250)}`);
   }
-  const { value } = await initRes.json();
-  const uploadUrl = value.uploadUrl;
-  const imageUrn  = value.image;
+  const initData = await initRes.json();
+  const uploadUrl = initData.value?.uploadUrl;
+  const imageUrn  = initData.value?.image;
+  if (!uploadUrl || !imageUrn) {
+    throw new Error(`LinkedIn [init]: respuesta inesperada — ${JSON.stringify(initData).slice(0, 200)}`);
+  }
 
-  // Paso 2: subir imagen
+  // Paso 2: subir imagen binaria
   const upRes = await fetch(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
     body: imageBuffer,
   });
   if (!upRes.ok) {
-    console.error(`LinkedIn image upload ${upRes.status}`);
-    return false;
+    const txt = await upRes.text().catch(() => upRes.status);
+    throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
   // Paso 3: crear publicación
@@ -663,10 +667,10 @@ async function publicarLinkedIn(imageBuffer, caption) {
     }),
   });
   if (!postRes.ok) {
-    const txt = await postRes.text();
-    console.error(`LinkedIn post ${postRes.status}:`, txt);
-    return false;
+    const txt = await postRes.text().catch(() => postRes.status);
+    throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
+  console.log("LinkedIn: publicado OK");
   return true;
 }
 
