@@ -2,25 +2,27 @@
  * STRATEC · Telegram Bot — Generador de posts con IA
  * ─────────────────────────────────────────────────────
  * Flujo /genera [tema]:
- *   → imagen (Leonardo.ai) + caption (Gemini Flash)
+ *   → imagen (DALL-E 3 → Fal.ai Flux.1 Pro → Leonardo, en cascada) + caption (Claude)
  *   → preview en Telegram con botones
- *   → ✅ Publicar → Facebook + LinkedIn
+ *   → ✅ Publicar ahora / 📅 Programar → Facebook + LinkedIn
  *   → 🔄 Regenerar → nueva imagen + caption
  *
  * Flujo foto desde teléfono:
- *   → Envía imagen como FOTO o como ARCHIVO al bot
+ *   → Envía imagen como FOTO o como ARCHIVO al bot (se publica sin modificar)
  *   → caption opcional = tema ("seguridad industrial Morelos")
- *   → Gemini Vision analiza la imagen y genera captions
- *   → ✅ Publicar → Facebook + LinkedIn
+ *   → Claude Vision analiza la imagen y genera captions
+ *   → ✅ Publicar ahora / 📅 Programar → Facebook + LinkedIn
  *   → 🔄 Nueva caption → misma imagen, texto nuevo
  *
  * Estado persistente (en el repo):
- *   public/social-posts/.telegram-offset   — último update_id procesado
- *   public/social-posts/pending/UUID.json  — posts pendientes de aprobación
+ *   public/social-posts/.telegram-offset       — último update_id procesado
+ *   public/social-posts/pending/UUID.json      — metadata + captions del post
+ *   public/social-posts/pending/UUID.png       — imagen final (no en el JSON)
+ *   public/social-posts/pending/UUID-raw.png   — imagen original sin overlay
  *
  * Variables de entorno (GitHub Secrets):
- *   TELEGRAM_BOT_TOKEN, LEONARDO_API_KEY, GEMINI_API_KEY,
- *   FACEBOOK_PAGE_ACCESS_TOKEN, FACEBOOK_PAGE_ID,
+ *   TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, FAL_API_KEY, LEONARDO_API_KEY,
+ *   ANTHROPIC_API_KEY, FACEBOOK_PAGE_ACCESS_TOKEN, FACEBOOK_PAGE_ID,
  *   LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORG_ID
  */
 
@@ -275,44 +277,6 @@ async function buildInfografia(photoBuffer, captionData) {
   return sharp(photo)
     .composite([{ input: overlay, left: 0, top: 0 }])
     .png().toBuffer();
-}
-
-// ── Watermark profesional para fotos del usuario ──────────────────────────────
-// Preserva la imagen original intacta; solo agrega un sello STRATEC en la esquina.
-
-async function aplicarLogoWatermark(imageBuffer) {
-  const meta = await sharp(imageBuffer).metadata();
-  const W = meta.width  || 1080;
-  const H = meta.height || 1080;
-
-  // Barra inferior semi-transparente con marca STRATEC
-  const barH   = Math.round(H * 0.07);
-  const fontSize = Math.round(barH * 0.38);
-  const subSize  = Math.round(barH * 0.24);
-  const pad      = Math.round(barH * 0.25);
-  const mid      = Math.round(W / 2);
-
-  const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="${H - barH}" width="${W}" height="${barH}" fill="#060d15" opacity="0.84"/>
-  <rect x="0" y="${H - barH}" width="4" height="${barH}" fill="#c9a227"/>
-  <text x="${pad}" y="${H - barH + Math.round(barH * 0.58)}"
-    font-family="Liberation Sans,Arial,sans-serif" font-size="${fontSize}"
-    fill="white" font-weight="bold">STRATEC</text>
-  <text x="${pad}" y="${H - Math.round(barH * 0.18)}"
-    font-family="Liberation Sans,Arial,sans-serif" font-size="${subSize}"
-    fill="#c9a227">CONSULTORÍA EN SEGURIDAD</text>
-  <text x="${mid + pad}" y="${H - barH + Math.round(barH * 0.58)}"
-    font-family="Liberation Sans,Arial,sans-serif" font-size="${Math.round(fontSize * 0.85)}"
-    fill="white">stratecsecurity.com</text>
-  <text x="${mid + pad}" y="${H - Math.round(barH * 0.18)}"
-    font-family="Liberation Sans,Arial,sans-serif" font-size="${subSize}"
-    fill="#c9a22799">Análisis · Estrategia · Soluciones</text>
-</svg>`;
-
-  return sharp(imageBuffer)
-    .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-    .png()
-    .toBuffer();
 }
 
 // ── Descargar foto desde Telegram ─────────────────────────────────────────────
@@ -763,11 +727,14 @@ async function publicarPendientesAgendados() {
 
   for (const file of files) {
     try {
-      const meta = JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8"));
-      if (!meta.scheduledAt) continue;
-      if (new Date(meta.scheduledAt).getTime() > now) continue;
+      // Solo chequear scheduledAt sin cargar la imagen todavía
+      const peek = JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8"));
+      if (!peek.scheduledAt) continue;
+      if (new Date(peek.scheduledAt).getTime() > now) continue;
 
       const pendingId   = file.replace(".json", "");
+      const meta         = readPending(pendingId); // reconstruye imageBase64 desde el .png separado
+      if (!meta?.imageBase64) { deletePending(pendingId); continue; }
       const imageBuffer = Buffer.from(meta.imageBase64, "base64");
       console.log(`Publicando post agendado: ${pendingId} (${meta.tema})`);
 
@@ -824,7 +791,7 @@ async function procesarFoto(chatId, fileId, temaHint) {
       `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
       `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-    await sendPhotoBuffer(chatId, conMarca, preview, [
+    await sendPhotoBuffer(chatId, rawBuffer, preview, [
       [
         { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
         { text: "📅 Programar",       callback_data: `sched:${pendingId}` },
