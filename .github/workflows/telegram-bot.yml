@@ -51,7 +51,7 @@ jobs:
           ANTHROPIC_API_KEY:           ${{ secrets.ANTHROPIC_API_KEY }}
           FACEBOOK_PAGE_ACCESS_TOKEN:  ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
           FACEBOOK_PAGE_ID:            ${{ secrets.FACEBOOK_PAGE_ID }}
-          LINKEDIN_ACCESS_TOKEN:       ${{ secrets.Token_Likedin }}
+          LINKEDIN_ACCESS_TOKEN:       ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_ORG_ID:             ${{ secrets.LINKEDIN_ORG_ID }}
         run: node scripts/telegram-bot-poll.mjs
 
