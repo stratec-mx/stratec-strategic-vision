@@ -54,6 +54,17 @@ const TG = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 // mapa chatId → pendingId del preview activo (para modificación por chat)
 const activePending = new Map();
 
+// fetch con timeout explícito — evita que cuelgue indefinidamente
+async function fetchConTimeout(url, opts, timeoutMs = 120_000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── Estado ────────────────────────────────────────────────────────────────────
 
 function getOffset() {
@@ -519,59 +530,34 @@ async function descargarFotoTelegram(fileId) {
 
 // ── OpenAI Image Generation via Responses API (GPT-4o + image_generation tool) ─
 
-// Prompt para infografía completa — GPT-4o genera el diseño con todo el contenido real
+// Prompt para infografía completa — diseño tipo ChatGPT con todo el contenido real
 function _buildInfograficaPrompt(tema, cap) {
   const categoria = String(cap.categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
   const titular   = String(cap.titular   || tema).toUpperCase();
   const subtitulo = String(cap.subtitulo || "");
   const puntos    = Array.isArray(cap.puntos) ? cap.puntos.slice(0, 3) : [];
 
+  // Prompt conciso y descriptivo — gpt-image-1 responde mejor a descripciones
+  // visuales que a especificaciones de layout técnico
+  const bulletLines = puntos.map(p => `• ${p}`).join("  ");
   return (
-    `Design a professional social media infographic (1080x1080 pixels, square format) for STRATEC, an institutional security consulting firm in Mexico.\n\n` +
+    `Professional corporate social media infographic for STRATEC, a security consulting firm in Mexico. ` +
+    `FLAT GRAPHIC DESIGN — not a photograph. Dark navy blue background (#07101d) with warm gold accents (#c9a227). ` +
+    `Left-aligned layout. ` +
 
-    `CRITICAL REQUIREMENT: This must be a FLAT GRAPHIC DESIGN — NOT a photograph. ` +
-    `Typography-first layout. Dark background with gold accents. No photos of people or scenes.\n\n` +
+    `Top: small gold category label "${categoria}" with gold left border. ` +
+    `Large ultra-bold white title "${titular}". ` +
+    `Short gold horizontal divider line. ` +
+    (subtitulo ? `Gold subtitle text "${subtitulo}". ` : ``) +
+    `Three bullet points with gold circle icons: ${bulletLines}. ` +
+    `Small gray text "Diagnóstico sin costo · stratecsecurity.com". ` +
+    `Three outlined service tag boxes in gold: [ANÁLISIS DE RIESGOS] [ESTRATEGIAS A MEDIDA] [COBERTURA NACIONAL]. ` +
 
-    `BRAND PALETTE:\n` +
-    `- Background: deep navy #07101d — dark professional, subtle faint geometric grid texture or diagonal lines in a slightly lighter navy for depth\n` +
-    `- Gold accent: #c9a227 (warm amber gold) — used for borders, dividers, labels, highlights\n` +
-    `- Title text: pure white, ultra-bold heavy weight\n` +
-    `- Body text: light gray #d0d0d0\n` +
-    `- Style: institutional, corporate, authoritative — NOT playful, NOT colorful\n\n` +
+    `Bottom: dark full-width bar with gold top border. Left: "STRATEC" bold white large + "CONSULTORÍA EN SEGURIDAD" small gold. ` +
+    `Thin vertical gold divider. Right: "stratecsecurity.com" bold white + "Análisis · Estrategia · Soluciones" small gold. ` +
 
-    `LAYOUT (top to bottom, left-aligned content):\n\n` +
-
-    `① CATEGORY BADGE (top-left, ~y=80px):\n` +
-    `   Small text "${categoria}" in gold, letter-spaced, with a 4px gold left border bar and very subtle gold-tinted background rectangle\n\n` +
-
-    `② MAIN TITLE (~y=160px):\n` +
-    `   "${titular}"\n` +
-    `   Ultra-bold white, large (≈64px), wraps naturally — takes about 35% of the image height\n\n` +
-
-    `③ GOLD DIVIDER: short horizontal gold line, left-aligned, ~100px wide, 4px thick\n\n` +
-
-    (subtitulo
-      ? `④ SUBTITLE: "${subtitulo}" — gold color #c9a227, medium weight, ~26px\n\n`
-      : ``) +
-
-    `⑤ BULLET POINTS (3 items, each with a small filled gold circle bullet ~8px):\n` +
-    puntos.map(p => `   • ${p}`).join("\n") + `\n\n` +
-
-    `⑥ CTA LINE (small, subtle gray ~14px): "Diagnóstico sin costo · stratecsecurity.com"\n\n` +
-
-    `⑦ SERVICE TAGS (3 outlined rectangles with 1px gold border, gold text, spaced horizontally ~y=780px):\n` +
-    `   [ ANÁLISIS DE RIESGOS ]  [ ESTRATEGIAS A MEDIDA ]  [ COBERTURA NACIONAL ]\n\n` +
-
-    `⑧ BOTTOM BAR (full-width, slightly darker panel, separated by 3px gold top border line):\n` +
-    `   LEFT SIDE: "STRATEC" in large bold white (~40px) + below it "CONSULTORÍA EN SEGURIDAD" in small gold letter-spaced (~13px)\n` +
-    `   CENTER: thin vertical gold divider line\n` +
-    `   RIGHT SIDE: "stratecsecurity.com" in bold white (~22px) + below "Análisis · Estrategia · Soluciones" in small gold\n\n` +
-
-    `DESIGN DETAILS:\n` +
-    `- Left edge: very subtle thin vertical gold accent stripe\n` +
-    `- Clean generous whitespace — do NOT crowd elements\n` +
-    `- Render ALL text EXACTLY as specified above — do not paraphrase, translate, or omit any text\n` +
-    `- NO watermarks, NO AI generation artifacts, NO extra logos or branding beyond what is specified`
+    `Subtle faint geometric grid pattern in background. Clean whitespace. Institutional, authoritative style. ` +
+    `NO photographs of people. Render ALL text exactly as written.`
   );
 }
 
@@ -605,70 +591,78 @@ async function _dalleGenerar(tema, captionData = null) {
     : _buildFotoFondoPrompt(tema);
 
   // Responses API — GPT-4o genera el diseño completo (mismo motor que ChatGPT)
-  try {
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        input: prompt,
-        tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const imgItem = data.output?.find(o => o.type === "image_generation_call");
-      if (imgItem?.result) {
-        const isCompleteDesign = captionData != null;
-        console.log(`Imagen generada con GPT-4o Responses API ✓ (${isCompleteDesign ? "diseño completo" : "foto de fondo"})`);
-        return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id, isCompleteDesign };
+  // Solo si captionData viene completo (tenemos el contenido real del post)
+  if (captionData) {
+    try {
+      const res = await fetchConTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          input: prompt,
+          tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
+        }),
+      }, 110_000);
+      if (res.ok) {
+        const data = await res.json();
+        const imgItem = data.output?.find(o => o.type === "image_generation_call");
+        if (imgItem?.result) {
+          console.log("Imagen generada con GPT-4o Responses API ✓ (diseño completo)");
+          return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id, isCompleteDesign: true };
+        }
+        console.warn("Responses API OK pero sin imagen en output → gpt-image-1");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.warn(`Responses API (${res.status}): ${err.error?.message || ""}. Usando gpt-image-1.`);
       }
-    } else {
-      const err = await res.json().catch(() => ({}));
-      console.warn(`Responses API no disponible (${res.status}): ${err.error?.message || ""}. Usando gpt-image-1.`);
+    } catch (e) {
+      console.warn(`Responses API error (${e.name === "AbortError" ? "timeout 110s" : e.message}) → gpt-image-1`);
     }
-  } catch (e) {
-    console.warn("Responses API error:", e.message, "→ gpt-image-1");
   }
 
-  // Fallback: gpt-image-1 con prompt de foto de fondo (no infografía completa)
-  const fallbackPrompt = _buildFotoFondoPrompt(tema);
+  // gpt-image-1 con prompt de infografía completa (buen fallback, también genera diseño)
+  const gptImgPrompt = captionData ? prompt : _buildFotoFondoPrompt(tema);
   try {
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
+    const res = await fetchConTimeout("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-image-1", prompt: fallbackPrompt, n: 1, size: "1024x1024", quality: "high" }),
-    });
+      body: JSON.stringify({ model: "gpt-image-1", prompt: gptImgPrompt, n: 1, size: "1024x1024", quality: "high" }),
+    }, 90_000);
     if (res.ok) {
       const { data } = await res.json();
       if (data?.[0]?.b64_json) {
-        console.log("Imagen generada con gpt-image-1 ✓ (foto de fondo)");
-        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null, isCompleteDesign: false };
+        const isDesign = captionData != null;
+        console.log(`Imagen generada con gpt-image-1 ✓ (${isDesign ? "diseño completo" : "foto de fondo"})`);
+        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null, isCompleteDesign: isDesign };
       }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.warn(`gpt-image-1 (${res.status}): ${err.error?.message || ""}. Usando DALL-E 3.`);
     }
   } catch (e) {
-    console.warn("gpt-image-1 error:", e.message, "→ DALL-E 3");
+    console.warn(`gpt-image-1 error (${e.name === "AbortError" ? "timeout 90s" : e.message}) → DALL-E 3`);
   }
 
-  // Fallback final: DALL-E 3 hd
-  const res2 = await fetch("https://api.openai.com/v1/images/generations", {
+  // Fallback final: DALL-E 3 hd con foto de fondo + overlay SVG
+  const fallbackPrompt = _buildFotoFondoPrompt(tema);
+  const res2 = await fetchConTimeout("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: "dall-e-3", prompt: fallbackPrompt, n: 1, size: "1024x1024", quality: "hd" }),
-  });
+  }, 60_000);
   if (!res2.ok) {
     const body = await res2.json().catch(() => ({}));
     throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
   }
   const { data: data2 } = await res2.json();
-  console.log("Imagen generada con DALL-E 3 hd ✓ (foto de fondo)");
+  console.log("Imagen generada con DALL-E 3 hd ✓ (foto de fondo + overlay SVG)");
   return { buffer: Buffer.from(await (await fetch(data2[0].url)).arrayBuffer()), responseId: null, isCompleteDesign: false };
 }
 
 // Continúa una conversación de imagen con GPT-4o usando el responseId previo
 async function _modificarImagen(responseId, instruccion) {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
-  const res = await fetch("https://api.openai.com/v1/responses", {
+  const res = await fetchConTimeout("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -677,7 +671,7 @@ async function _modificarImagen(responseId, instruccion) {
       input: instruccion,
       tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
     }),
-  });
+  }, 110_000);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(`Responses API modificación: ${err.error?.message || res.status}`);
