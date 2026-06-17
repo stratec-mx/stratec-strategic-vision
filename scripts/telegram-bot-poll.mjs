@@ -142,6 +142,22 @@ async function sendPhotoBuffer(chatId, imageBuffer, caption, keyboard) {
   return res.json();
 }
 
+async function sendMediaGroup(chatId, buffers, firstCaption) {
+  const media = buffers.map((_, i) => ({
+    type: "photo",
+    media: `attach://slide${i}`,
+    ...(i === 0 ? { caption: firstCaption, parse_mode: "HTML" } : {}),
+  }));
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("media", JSON.stringify(media));
+  buffers.forEach((buf, i) =>
+    form.append(`slide${i}`, new Blob([buf], { type: "image/png" }), `slide${i}.png`)
+  );
+  const res = await fetch(`${TG}/sendMediaGroup`, { method: "POST", body: form });
+  return res.json();
+}
+
 const editCaption = (chatId, messageId, caption) =>
   tg("editMessageCaption", {
     chat_id: chatId, message_id: messageId, caption, parse_mode: "HTML",
@@ -287,6 +303,206 @@ async function buildInfografia(photoBuffer, captionData) {
   return sharp(photo)
     .composite([{ input: overlay, left: 0, top: 0 }])
     .png().toBuffer();
+}
+
+// ── Carrusel — Helpers SVG ────────────────────────────────────────────────────
+
+function svgCenteredLines(text, maxChars, cx, startY, lh, sz, fill, weight) {
+  const words = String(text || "").split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? `${cur} ${w}` : w;
+    if (t.length <= maxChars) { cur = t; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return {
+    svg: lines.map((l, i) =>
+      `<text x="${cx}" y="${startY + i * lh}" font-family="Liberation Sans,Arial,sans-serif" ` +
+      `font-size="${sz}" fill="${fill}" font-weight="${weight || "normal"}" text-anchor="middle">${xmlEsc(l)}</text>`
+    ).join("\n"),
+    count: lines.length,
+  };
+}
+
+function _barraStratec(lp, mid, W, H, BH) {
+  return `
+<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.98"/>
+<rect x="0" y="${H - BH}" width="${W}" height="3" fill="#c9a227"/>
+<rect x="${mid}" y="${H - BH + 22}" width="1" height="${BH - 44}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 82}" font-family="Liberation Sans,Arial,sans-serif" font-size="40" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 46}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 44}" y="${H - 80}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 44}" y="${H - 48}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+}
+
+function buildSVGSlidePortada(categoria, portada, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  const catTxt = String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">1 / ${slideTotal}</text>`;
+
+  c += `
+<rect x="${lp}" y="78" width="320" height="36" rx="4" fill="#c9a22718"/>
+<rect x="${lp}" y="78" width="4" height="36" rx="2" fill="#c9a227"/>
+<text x="${lp + 18}" y="102" font-family="Liberation Sans,Arial,sans-serif" font-size="11" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(catTxt)}</text>`;
+
+  const tit = svgTextLines(portada.titular || "", 20, lp, 310, 76, 66, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = 310 + tit.count * 76 + 28;
+
+  c += `\n<rect x="${lp}" y="${y}" width="100" height="4" rx="2" fill="#c9a227"/>`;
+  y += 38;
+
+  if (portada.subtitulo) {
+    const sub = svgTextLines(portada.subtitulo, 40, lp, y, 38, 26, "#c9a227", "normal");
+    c += `\n${sub.svg}`;
+    y += sub.count * 38 + 36;
+  }
+
+  c += `\n<text x="${lp}" y="${H - BH - 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22780">→ Desliza para ver más</text>`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
+    <stop offset="0"    stop-color="#07101d" stop-opacity="0.96"/>
+    <stop offset="0.65" stop-color="#07101d" stop-opacity="0.85"/>
+    <stop offset="1"    stop-color="#07101d" stop-opacity="0.30"/>
+  </linearGradient>
+</defs>
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="url(#g)"/>
+${c}
+</svg>`;
+}
+
+function buildSVGSlidePunto(numero, titular, cuerpo, slideNum, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">${slideNum} / ${slideTotal}</text>`;
+
+  // Número grande decorativo (fondo) + primer plano
+  c += `<text x="${lp - 10}" y="260" font-family="Liberation Sans,Arial,sans-serif" font-size="220" fill="#c9a22712" font-weight="bold">${xmlEsc(numero)}</text>`;
+  c += `<text x="${lp}" y="210" font-family="Liberation Sans,Arial,sans-serif" font-size="106" fill="#c9a227" font-weight="bold">${xmlEsc(numero)}</text>`;
+
+  c += `<rect x="${lp}" y="238" width="${W - lp * 2}" height="2" fill="#c9a22730"/>`;
+
+  // Barra dorada vertical + título
+  const titY = 306;
+  c += `<rect x="${lp}" y="${titY - 12}" width="5" height="80" rx="2" fill="#c9a227"/>`;
+
+  const tit = svgTextLines(titular || "", 26, lp + 22, titY, 54, 44, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = titY + tit.count * 54 + 40;
+
+  // Cuerpo
+  const body = svgTextLines(cuerpo || "", 46, lp, y, 38, 25, "#d0d0d0", "normal");
+  c += `\n${body.svg}`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="#07101d" opacity="0.90"/>
+${c}
+</svg>`;
+}
+
+function buildSVGSlideCTA(cta, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">${slideTotal} / ${slideTotal}</text>`;
+
+  // Anillos decorativos concéntricos
+  c += `<circle cx="${mid}" cy="310" r="170" fill="none" stroke="#c9a22718" stroke-width="1"/>`;
+  c += `<circle cx="${mid}" cy="310" r="125" fill="none" stroke="#c9a22730" stroke-width="1.5"/>`;
+  c += `<circle cx="${mid}" cy="310" r="82"  fill="#c9a22710" stroke="#c9a22748" stroke-width="2"/>`;
+  c += `<text x="${mid}" y="297" font-family="Liberation Sans,Arial,sans-serif" font-size="30" fill="white" font-weight="bold" text-anchor="middle">STRATEC</text>`;
+  c += `<text x="${mid}" y="330" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" letter-spacing="2" text-anchor="middle">SEGURIDAD</text>`;
+
+  // Título CTA centrado
+  const tit = svgCenteredLines(cta.titular || "SOLICITA TU DIAGNÓSTICO", 22, mid, 490, 64, 52, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = 490 + tit.count * 64 + 28;
+
+  c += `\n<rect x="${mid - 70}" y="${y}" width="140" height="4" rx="2" fill="#c9a227"/>`;
+  y += 36;
+
+  if (cta.cuerpo) {
+    const body = svgCenteredLines(cta.cuerpo, 38, mid, y, 36, 24, "#d0d0d0", "normal");
+    c += `\n${body.svg}`;
+    y += body.count * 36 + 28;
+  }
+
+  c += `\n<text x="${mid}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="28" fill="#c9a227" font-weight="bold" text-anchor="middle">stratecsecurity.com</text>`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="#07101d" opacity="0.94"/>
+${c}
+</svg>`;
+}
+
+async function buildCarruselSlides(rawPhoto, data) {
+  const W = 1080, H = 1080, TOTAL = 5;
+
+  const photo = await sharp(rawPhoto)
+    .resize(W, H, { fit: "cover", position: "center" })
+    .modulate({ brightness: 0.42 })
+    .png().toBuffer();
+
+  const svgs = [
+    buildSVGSlidePortada(data.categoria, data.portada, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[0].numero, data.puntos[0].titular, data.puntos[0].cuerpo, 2, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[1].numero, data.puntos[1].titular, data.puntos[1].cuerpo, 3, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[2].numero, data.puntos[2].titular, data.puntos[2].cuerpo, 4, TOTAL, W, H),
+    buildSVGSlideCTA(data.cta, TOTAL, W, H),
+  ];
+
+  return Promise.all(svgs.map(svg =>
+    sharp(photo)
+      .composite([{ input: Buffer.from(svg), left: 0, top: 0 }])
+      .png().toBuffer()
+  ));
+}
+
+// ── Carrusel — Pending storage ─────────────────────────────────────────────────
+
+function saveCarruselPending(meta, slideBuffers) {
+  if (!existsSync(PENDING_DIR)) mkdirSync(PENDING_DIR, { recursive: true });
+  const id = randomUUID();
+  writeFileSync(join(PENDING_DIR, `carrusel-${id}.json`), JSON.stringify({ ...meta, slideCount: slideBuffers.length }));
+  slideBuffers.forEach((buf, i) => writeFileSync(join(PENDING_DIR, `carrusel-${id}-${i}.png`), buf));
+  return id;
+}
+
+function readCarruselPending(id) {
+  const file = join(PENDING_DIR, `carrusel-${id}.json`);
+  if (!existsSync(file)) return null;
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+  const slides = [];
+  for (let i = 0; i < meta.slideCount; i++) {
+    const f = join(PENDING_DIR, `carrusel-${id}-${i}.png`);
+    if (existsSync(f)) slides.push(readFileSync(f));
+  }
+  return { ...meta, slides };
+}
+
+function deleteCarruselPending(id) {
+  const metaFile = join(PENDING_DIR, `carrusel-${id}.json`);
+  const count = existsSync(metaFile)
+    ? (JSON.parse(readFileSync(metaFile, "utf8")).slideCount || 5)
+    : 5;
+  if (existsSync(metaFile)) unlinkSync(metaFile);
+  for (let i = 0; i < count; i++) {
+    const f = join(PENDING_DIR, `carrusel-${id}-${i}.png`);
+    if (existsSync(f)) unlinkSync(f);
+  }
 }
 
 // ── Descargar foto desde Telegram ─────────────────────────────────────────────
@@ -630,6 +846,33 @@ function promptCaptions(tema, contextoExtra = "") {
   );
 }
 
+// ── Prompt carrusel ───────────────────────────────────────────────────────────
+
+function promptCarrusel(tema) {
+  return (
+    `Eres el equipo de comunicación institucional de STRATEC, firma de consultoría en seguridad institucional en México (Morelos, CDMX, Puebla, Jalisco).\n\n` +
+    `Crea el contenido para un CARRUSEL de 5 slides sobre el tema: "${tema}"\n\n` +
+    `ESTRUCTURA:\n` +
+    `- Slide 1 PORTADA: titular impactante + subtítulo que enganche al lector para deslizar\n` +
+    `- Slides 2-4 PUNTOS CLAVE: un punto por slide, numerados 01/02/03, con título corto y cuerpo explicativo\n` +
+    `- Slide 5 CTA: cierre con llamada a la acción hacia stratecsecurity.com\n\n` +
+    `CAPTION FACEBOOK (80-110 palabras): texto que acompañe la publicación del carrusel\n\n` +
+    `REGLAS ESTRICTAS:\n` +
+    `- Tono institucional, técnico, directo — nunca informal\n` +
+    `- Titulares en MAYÚSCULAS, declarativos, sin segunda persona ("tú", "tu empresa")\n` +
+    `- Correcto: "BRIGADAS: DEL PAPEL A LA PRÁCTICA" / Incorrecto: "¿TUS BRIGADAS FUNCIONAN?"\n` +
+    `- Máx 40 chars en titulares de portada, CTA y puntos\n` +
+    `- Cuerpo de puntos: máx 130 chars, concreto, sin perogrulladas\n` +
+    `- No mencionar precios ni resultados cuantificados inventados\n\n` +
+    `Responde ÚNICAMENTE con JSON válido:\n` +
+    `{"facebook":"...","categoria":"CATEGORÍA EN MAYÚSCULAS","portada":{"titular":"TITULAR MÁX 40 CHARS","subtitulo":"frase corta máx 50 chars"},"puntos":[{"numero":"01","titular":"TÍTULO MÁX 35 CHARS","cuerpo":"texto máx 130 chars"},{"numero":"02","titular":"...","cuerpo":"..."},{"numero":"03","titular":"...","cuerpo":"..."}],"cta":{"titular":"CIERRE MÁX 40 CHARS","cuerpo":"frase de cierre máx 80 chars"}}`
+  );
+}
+
+async function generarCarruselContent(tema) {
+  return llamarClaude([{ role: "user", content: promptCarrusel(tema) }]);
+}
+
 // ── Captions por texto (tema) ─────────────────────────────────────────────────
 
 async function generarCaptions(tema) {
@@ -692,6 +935,50 @@ async function publicarFacebookBuffer(imageBuffer, caption) {
     throw new Error(`Facebook: ${data.error?.message || JSON.stringify(data)}`);
   }
   console.log(`Facebook: publicado OK, id=${data.id}`);
+  return true;
+}
+
+// ── Facebook Carrusel (multi-photo post) ─────────────────────────────────────
+
+async function publicarFacebookCarrusel(slideBuffers, caption) {
+  if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
+    console.warn("Facebook: token o page_id no configurados");
+    return false;
+  }
+  const pageToken = await obtenerPageToken();
+
+  // Paso 1: subir cada slide como foto no publicada
+  const photoIds = [];
+  for (let i = 0; i < slideBuffers.length; i++) {
+    const form = new FormData();
+    form.append("source", new Blob([slideBuffers[i]], { type: "image/png" }), `slide-${i}.png`);
+    form.append("published", "false");
+    form.append("access_token", pageToken);
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
+      { method: "POST", body: form }
+    );
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(`Facebook [slide ${i}]: ${data.error?.message || JSON.stringify(data)}`);
+    photoIds.push(data.id);
+    console.log(`Facebook carrusel: slide ${i + 1}/${slideBuffers.length} subido (id=${data.id})`);
+  }
+
+  // Paso 2: crear el post del carrusel con todas las fotos adjuntas
+  const postRes = await fetch(`https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: caption,
+      attached_media: photoIds.map(id => ({ media_fbid: id })),
+      access_token: pageToken,
+    }),
+  });
+  const postData = await postRes.json();
+  if (!postRes.ok || postData.error) {
+    throw new Error(`Facebook [feed carrusel]: ${postData.error?.message || JSON.stringify(postData)}`);
+  }
+  console.log(`Facebook carrusel publicado OK, post_id=${postData.id}`);
   return true;
 }
 
@@ -1124,6 +1411,74 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
   ]);
 }
 
+// ── Carrusel — Flujo principal ────────────────────────────────────────────────
+
+async function procesarCarrusel(chatId, tema) {
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
+  );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
+
+  try {
+    // Imagen de fondo + contenido en paralelo
+    const [imgResult, content] = await Promise.all([
+      generarImagen(tema),
+      generarCarruselContent(tema),
+    ]);
+    const slides = await buildCarruselSlides(imgResult.buffer, content);
+    clearInterval(actionTick);
+
+    const carruselId = saveCarruselPending({ tema, facebook: content.facebook, chatId }, slides);
+    activePending.delete(chatId);
+
+    const previewCaption =
+      `🎠 <b>Carrusel — ${tema}</b>\n\n` +
+      `<b>Facebook:</b>\n${content.facebook.substring(0, 300)}\n\n` +
+      `<i>5 slides listos para publicar</i>`;
+
+    await sendMediaGroup(chatId, slides, previewCaption);
+
+    // sendMediaGroup no admite inline_keyboard — botones en mensaje aparte
+    await sendMessage(chatId, "¿Publicar el carrusel en Facebook?", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "✅ Publicar en Facebook", callback_data: `carr_pub:${carruselId}` }],
+          [{ text: "🔄 Regenerar carrusel",   callback_data: `carr_reg:${carruselId}` }],
+        ],
+      },
+    });
+
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
+}
+
+async function procesarPublicarCarrusel(chatId, carruselId, callbackId) {
+  await answerCb(callbackId, "Publicando carrusel...");
+  const pending = readCarruselPending(carruselId);
+  if (!pending) {
+    await sendMessage(chatId, "❌ Carrusel no encontrado. Genera uno nuevo con /carrusel");
+    return;
+  }
+  try {
+    await publicarFacebookCarrusel(pending.slides, pending.facebook);
+    deleteCarruselPending(carruselId);
+    await sendMessage(chatId, `🚀 <b>Carrusel publicado en Facebook</b>\n\nTema: ${pending.tema}`);
+  } catch (err) {
+    await sendMessage(chatId, `❌ Error al publicar: ${err.message}`);
+  }
+}
+
+async function procesarRegenerarCarrusel(chatId, carruselId, callbackId) {
+  await answerCb(callbackId, "Regenerando carrusel...");
+  const pending = readCarruselPending(carruselId);
+  const tema = pending?.tema || "contenido de seguridad STRATEC";
+  deleteCarruselPending(carruselId);
+  await procesarCarrusel(chatId, tema);
+}
+
 // ── Menú de temas ─────────────────────────────────────────────────────────────
 
 const SERVICIOS_MENU = [
@@ -1190,8 +1545,9 @@ async function mostrarMenuTemas(chatId) {
   const keyboard = SERVICIOS_MENU.map((s, i) => [
     { text: s.btn, callback_data: `svc:${i}` },
   ]);
-  keyboard.push([{ text: "🔥  Temas en tendencia (7 nuevos con IA)", callback_data: "tendencia" }]);
-  keyboard.push([{ text: "✏️  Tema personalizado",                   callback_data: "tema_custom" }]);
+  keyboard.push([{ text: "🔥  Temas en tendencia (7 nuevos con IA)", callback_data: "tendencia"    }]);
+  keyboard.push([{ text: "🎠  Generar carrusel (5 slides)",          callback_data: "carr_menu"    }]);
+  keyboard.push([{ text: "✏️  Tema personalizado",                   callback_data: "tema_custom"  }]);
 
   await sendMessage(chatId,
     "📌 <b>¿Sobre qué publicamos hoy?</b>\n\n" +
@@ -1244,10 +1600,21 @@ async function main() {
         const { id, data, message } = update.callback_query;
         const chatId    = message.chat.id;
         const messageId = message.message_id;
-        if (data.startsWith("pub:"))        await procesarAprobacion(chatId, messageId, data.slice(4), id);
-        else if (data.startsWith("reg:"))   await procesarRegeneracion(chatId, data.slice(4), id);
-        else if (data.startsWith("recap:")) await procesarRecaptionado(chatId, data.slice(6), id);
-        else if (data.startsWith("sched:")) await procesarProgramar(chatId, data.slice(6), id);
+        if (data.startsWith("pub:"))             await procesarAprobacion(chatId, messageId, data.slice(4), id);
+        else if (data.startsWith("reg:"))         await procesarRegeneracion(chatId, data.slice(4), id);
+        else if (data.startsWith("recap:"))       await procesarRecaptionado(chatId, data.slice(6), id);
+        else if (data.startsWith("sched:"))       await procesarProgramar(chatId, data.slice(6), id);
+        else if (data.startsWith("carr_pub:"))    await procesarPublicarCarrusel(chatId, data.slice(9), id);
+        else if (data.startsWith("carr_reg:"))    await procesarRegenerarCarrusel(chatId, data.slice(9), id);
+        else if (data === "carr_menu") {
+          await answerCb(id, "");
+          await sendMessage(chatId,
+            "🎠 <b>Generar carrusel</b>\n\nEscribe el tema con el comando:\n" +
+            "<code>/carrusel protección civil empresas Morelos</code>\n\n" +
+            "O envía el tema directamente:\n" +
+            "<code>/carrusel capacitación brigadas de emergencia</code>"
+          );
+        }
         else if (data.startsWith("scheds:")) {
           const [pid, ts] = data.slice(7).split(":");
           await procesarAgendarSlot(chatId, pid, ts, id);
@@ -1355,6 +1722,16 @@ async function main() {
       const activePid = activePending.get(chatId);
       if (activePid && !text.startsWith("/")) {
         await procesarModificacionImagen(chatId, activePid, text);
+
+      } else if (/^\/(carrusel|carousel)\s+/i.test(text)) {
+        const tema = text.replace(/^\/(carrusel|carousel)(@\w+)?\s+/i, "").trim();
+        await procesarCarrusel(chatId, tema);
+
+      } else if (/^\/(carrusel|carousel)(@\w+)?$/i.test(text)) {
+        await sendMessage(chatId,
+          "🎠 Escribe el tema del carrusel:\n" +
+          "<code>/carrusel protección civil empresas Morelos</code>"
+        );
 
       } else if (/^\/(genera|post)\s+/i.test(text)) {
         const tema = text.replace(/^\/(genera|post)(@\w+)?\s+/i, "").trim();
