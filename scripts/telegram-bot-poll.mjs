@@ -1045,38 +1045,45 @@ async function publicarFacebookCarrusel(slideBuffers, caption) {
   return true;
 }
 
-// ── LinkedIn (Posts API 2024) ─────────────────────────────────────────────────
+// ── LinkedIn (UGC Posts API v2 — compatible con w_member_social) ──────────────
 
 async function publicarLinkedIn(imageBuffer, caption) {
-  // Sin credenciales → skip silencioso (se muestra ⏭️ en Telegram)
   if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_ORG_ID) return false;
 
   const orgUrn = `urn:li:organization:${LINKEDIN_ORG_ID}`;
-  const headers = {
+  const authHeaders = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
-    "LinkedIn-Version": "202501",
     "X-Restli-Protocol-Version": "2.0.0",
   };
 
-  // LinkedIn limita commentary a 3000 caracteres
   const commentary = String(caption || "").slice(0, 3000);
 
-  // Paso 1: inicializar subida de imagen
-  const initRes = await fetchConTimeout(
-    "https://api.linkedin.com/rest/images?action=initializeUpload",
-    { method: "POST", headers, body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }) },
+  // Paso 1: registrar subida de imagen (v2 Assets API)
+  const regRes = await fetchConTimeout(
+    "https://api.linkedin.com/v2/assets?action=registerUpload",
+    {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        registerUploadRequest: {
+          recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+          owner: orgUrn,
+          serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
+        },
+      }),
+    },
     30_000
   );
-  if (!initRes.ok) {
-    const txt = await initRes.text().catch(() => initRes.status);
-    throw new Error(`LinkedIn [init ${initRes.status}]: ${String(txt).slice(0, 250)}`);
+  if (!regRes.ok) {
+    const txt = await regRes.text().catch(() => regRes.status);
+    throw new Error(`LinkedIn [register ${regRes.status}]: ${String(txt).slice(0, 250)}`);
   }
-  const initData = await initRes.json();
-  const uploadUrl = initData.value?.uploadUrl;
-  const imageUrn  = initData.value?.image;
-  if (!uploadUrl || !imageUrn) {
-    throw new Error(`LinkedIn [init]: respuesta inesperada — ${JSON.stringify(initData).slice(0, 200)}`);
+  const regData = await regRes.json();
+  const uploadUrl = regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
+  const assetUrn  = regData.value?.asset;
+  if (!uploadUrl || !assetUrn) {
+    throw new Error(`LinkedIn [register]: respuesta inesperada — ${JSON.stringify(regData).slice(0, 200)}`);
   }
 
   // Paso 2: subir imagen binaria
@@ -1090,25 +1097,28 @@ async function publicarLinkedIn(imageBuffer, caption) {
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
-  // Paso 3: crear publicación
+  // Paso 3: crear publicación con UGC Posts v2
   const postRes = await fetchConTimeout(
-    "https://api.linkedin.com/rest/posts",
+    "https://api.linkedin.com/v2/ugcPosts",
     {
-      method: "POST", headers,
+      method: "POST",
+      headers: authHeaders,
       body: JSON.stringify({
         author: orgUrn,
-        commentary,
-        visibility: "PUBLIC",
-        distribution: {
-          feedDistribution: "MAIN_FEED",
-          targetEntities: [],
-          thirdPartyDistributionChannels: [],
-        },
-        content: {
-          media: { title: "STRATEC Security", id: imageUrn },
-        },
         lifecycleState: "PUBLISHED",
-        isReshareDisabledByAuthor: false,
+        specificContent: {
+          "com.linkedin.ugc.ShareContent": {
+            shareCommentary: { text: commentary },
+            shareMediaCategory: "IMAGE",
+            media: [{
+              status: "READY",
+              description: { text: "STRATEC Consultoría en Seguridad" },
+              media: assetUrn,
+              title: { text: "STRATEC" },
+            }],
+          },
+        },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
       }),
     },
     30_000
@@ -1117,7 +1127,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
-  console.log("LinkedIn: publicado OK");
+  console.log("LinkedIn: publicado OK (ugcPosts v2)");
   return true;
 }
 
