@@ -1045,12 +1045,11 @@ async function publicarFacebookCarrusel(slideBuffers, caption) {
   return true;
 }
 
-// ── LinkedIn (UGC Posts API v2 — compatible con w_member_social) ──────────────
+// ── LinkedIn (UGC Posts API v2 — perfil personal con w_member_social) ───────────
 
 async function publicarLinkedIn(imageBuffer, caption) {
-  if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_ORG_ID) return false;
+  if (!LINKEDIN_ACCESS_TOKEN) return false;
 
-  const orgUrn = `urn:li:organization:${LINKEDIN_ORG_ID}`;
   const authHeaders = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
@@ -1059,7 +1058,16 @@ async function publicarLinkedIn(imageBuffer, caption) {
 
   const commentary = String(caption || "").slice(0, 3000);
 
-  // Paso 1: registrar subida de imagen (v2 Assets API)
+  // Paso 0: obtener URN del miembro autenticado
+  const meRes = await fetchConTimeout("https://api.linkedin.com/v2/me", { headers: authHeaders }, 15_000);
+  if (!meRes.ok) {
+    const txt = await meRes.text().catch(() => meRes.status);
+    throw new Error(`LinkedIn [me ${meRes.status}]: ${String(txt).slice(0, 200)}`);
+  }
+  const meData  = await meRes.json();
+  const personUrn = `urn:li:person:${meData.id}`;
+
+  // Paso 1: registrar subida de imagen (v2 Assets API, owner = perfil personal)
   const regRes = await fetchConTimeout(
     "https://api.linkedin.com/v2/assets?action=registerUpload",
     {
@@ -1068,7 +1076,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
       body: JSON.stringify({
         registerUploadRequest: {
           recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-          owner: orgUrn,
+          owner: personUrn,
           serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
         },
       }),
@@ -1079,7 +1087,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
     const txt = await regRes.text().catch(() => regRes.status);
     throw new Error(`LinkedIn [register ${regRes.status}]: ${String(txt).slice(0, 250)}`);
   }
-  const regData = await regRes.json();
+  const regData  = await regRes.json();
   const uploadUrl = regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
   const assetUrn  = regData.value?.asset;
   if (!uploadUrl || !assetUrn) {
@@ -1097,14 +1105,14 @@ async function publicarLinkedIn(imageBuffer, caption) {
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
-  // Paso 3: crear publicación con UGC Posts v2
+  // Paso 3: publicar como perfil personal
   const postRes = await fetchConTimeout(
     "https://api.linkedin.com/v2/ugcPosts",
     {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
-        author: orgUrn,
+        author: personUrn,
         lifecycleState: "PUBLISHED",
         specificContent: {
           "com.linkedin.ugc.ShareContent": {
@@ -1127,7 +1135,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
-  console.log("LinkedIn: publicado OK (ugcPosts v2)");
+  console.log(`LinkedIn: publicado OK como ${personUrn}`);
   return true;
 }
 
