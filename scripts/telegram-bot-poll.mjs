@@ -209,86 +209,95 @@ function svgTextLines(text, maxChars, x, startY, lh, sz, fill, weight) {
 }
 
 function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
-  const lp  = 64;   // left padding
-  const BH  = 175;  // bottom bar height
-  const PW  = 660;  // solid dark panel zone width
-  let y     = 78;
-  let c     = "";
+  const lp = 68;   // left padding
+  const BH = 178;  // bottom bar height
+  let y    = 86;
+  let c    = "";
 
-  // 1. Category badge
   const catTxt = String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  const catW   = Math.min(480, catTxt.length * 9.5 + 44);
+
+  // 0. Left edge gold accent stripe (full height above bottom bar)
+  c += `\n<rect x="0" y="0" width="6" height="${H - BH}" fill="#c9a227" opacity="0.80"/>`;
+
+  // 1. Category badge — outlined pill with fill
   c += `
-<rect x="${lp}" y="${y}" width="310" height="36" rx="4" fill="#c9a22718"/>
-<rect x="${lp}" y="${y}" width="4" height="36" rx="2" fill="#c9a227"/>
-<text x="${lp + 18}" y="${y + 24}" font-family="Liberation Sans,Arial,sans-serif" font-size="11" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(catTxt)}</text>`;
-  y += 68;
+<rect x="${lp}" y="${y}" width="${catW}" height="38" rx="5" fill="#c9a22718" stroke="#c9a22770" stroke-width="1.5"/>
+<text x="${lp + 16}" y="${y + 25}" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" font-weight="bold" letter-spacing="2.5">${xmlEsc(catTxt)}</text>`;
+  y += 70;
 
-  // 2. Headline — 62px, wrap at 18 chars
-  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 18, lp, y, 74, 62, "white", "bold");
+  // 2. Headline — 66px bold, wrap at 17 chars
+  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 17, lp, y, 78, 66, "white", "bold");
   c += `\n${tit.svg}`;
-  y += tit.count * 74 + 28;
+  y += tit.count * 78 + 20;
 
-  // 3. Gold divider
-  c += `\n<rect x="${lp}" y="${y}" width="80" height="4" rx="2" fill="#c9a227"/>`;
+  // 3. Gold accent divider — wider
+  c += `\n<rect x="${lp}" y="${y}" width="120" height="4" rx="2" fill="#c9a227"/>`;
   y += 38;
 
-  // 4. Subtitle — 26px, wrap at 36 chars
+  // 4. Subtitle — 24px gold, wrap at 40 chars
   if (subtitulo) {
-    const sub = svgTextLines(subtitulo, 36, lp, y, 36, 26, "#c9a227", "normal");
+    const sub = svgTextLines(subtitulo, 40, lp, y, 34, 24, "#c9a227", "normal");
     c += `\n${sub.svg}`;
-    y += sub.count * 36 + 44;
+    y += sub.count * 34 + 36;
   } else {
-    y += 28;
+    y += 18;
   }
 
-  // 5. Bullet points — círculo dorado, 3 max
-  const pts = Array.isArray(puntos) ? puntos.slice(0, 3) : [];
-  for (const p of pts) {
+  // 5. Numbered bullet boxes — 01/02/03 gold squares with white text
+  const pts     = Array.isArray(puntos) ? puntos.slice(0, 3) : [];
+  const boxSize = 48;
+  const textX   = lp + boxSize + 22;
+  for (let i = 0; i < pts.length; i++) {
+    const num  = String(i + 1).padStart(2, "0");
+    const boxY = y;
     c += `
-<circle cx="${lp + 7}" cy="${y - 8}" r="5" fill="#c9a227"/>
-<text x="${lp + 24}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="21" fill="white">${xmlEsc(String(p))}</text>`;
-    y += 56;
+<rect x="${lp}" y="${boxY}" width="${boxSize}" height="${boxSize}" rx="6" fill="#c9a227"/>
+<text x="${lp + boxSize / 2}" y="${boxY + 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="20" fill="#060d15" font-weight="bold" text-anchor="middle">${num}</text>`;
+    const bLines = svgTextLines(String(pts[i]), 36, textX, boxY + 20, 26, 20, "white", "normal");
+    c += `\n${bLines.svg}`;
+    y += Math.max(boxSize, bLines.count * 26) + 18;
   }
 
-  // 6. CTA line
-  y += 24;
-  c += `\n<rect x="${lp}" y="${y}" width="460" height="1" fill="#c9a22740"/>`;
+  // 6. CTA separator + text
+  y += 18;
+  c += `\n<rect x="${lp}" y="${y}" width="520" height="1" fill="#c9a22755"/>`;
   y += 26;
-  c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22799">Diagnóstico sin costo · stratecsecurity.com</text>`;
+  c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22795" letter-spacing="0.5">Diagnóstico sin costo · stratecsecurity.com</text>`;
 
-  // 7. Etiquetas de servicio (llenan el espacio vacío antes de la barra inferior)
-  const tagY   = H - BH - 80;
+  // 7. Service tags — richer with fill + border
+  const tagY   = H - BH - 90;
   const tagW   = 285;
-  const tagH   = 46;
-  const tagGap = 16;
+  const tagH   = 50;
+  const tagGap = 14;
   const tags   = ["ANÁLISIS DE RIESGOS", "ESTRATEGIAS A MEDIDA", "COBERTURA NACIONAL"];
   for (let i = 0; i < 3; i++) {
     const tx = lp + i * (tagW + tagGap);
-    if (tx + tagW > PW + 80) break;
+    if (tx + tagW > W - 30) break;
     c += `
-<rect x="${tx}" y="${tagY}" width="${tagW}" height="${tagH}" rx="4" fill="#c9a22712" stroke="#c9a22760" stroke-width="1"/>
-<text x="${tx + tagW / 2}" y="${tagY + 30}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold" text-anchor="middle" letter-spacing="1">${tags[i]}</text>`;
+<rect x="${tx}" y="${tagY}" width="${tagW}" height="${tagH}" rx="6" fill="#c9a22720" stroke="#c9a22785" stroke-width="1.5"/>
+<text x="${tx + tagW / 2}" y="${tagY + 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold" text-anchor="middle" letter-spacing="1.5">${tags[i]}</text>`;
   }
 
-  // 8. Barra inferior STRATEC
+  // 8. Bottom STRATEC bar
   const mid = Math.round(W / 2);
   c += `
 <rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.97"/>
-<rect x="0" y="${H - BH}" width="${W}" height="3" fill="#c9a227"/>
-<rect x="${mid}" y="${H - BH + 26}" width="1" height="${BH - 52}" fill="#c9a22750"/>
-<text x="${lp}" y="${H - 90}" font-family="Liberation Sans,Arial,sans-serif" font-size="38" fill="white" font-weight="bold">STRATEC</text>
-<text x="${lp}" y="${H - 54}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
-<text x="${mid + 44}" y="${H - 88}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
-<text x="${mid + 44}" y="${H - 56}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+<rect x="0" y="${H - BH}" width="${W}" height="4" fill="#c9a227"/>
+<rect x="${mid}" y="${H - BH + 24}" width="1" height="${BH - 48}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 88}" font-family="Liberation Sans,Arial,sans-serif" font-size="40" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 50}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 44}" y="${H - 86}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 44}" y="${H - 50}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
 
-  // Gradiente: oscuro en izquierda (texto legible), se abre hacia la derecha (foto visible)
+  // Gradient: dense dark on left (text zone), opens right (geometric texture visible)
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <linearGradient id="panelFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
-    <stop offset="0"                    stop-color="#07101d" stop-opacity="0.97"/>
-    <stop offset="${PW / W}"            stop-color="#07101d" stop-opacity="0.93"/>
-    <stop offset="${(PW + 180) / W}"    stop-color="#07101d" stop-opacity="0.28"/>
-    <stop offset="1"                    stop-color="#07101d" stop-opacity="0.05"/>
+    <stop offset="0"    stop-color="#07101d" stop-opacity="0.97"/>
+    <stop offset="0.62" stop-color="#07101d" stop-opacity="0.93"/>
+    <stop offset="0.80" stop-color="#07101d" stop-opacity="0.30"/>
+    <stop offset="1"    stop-color="#07101d" stop-opacity="0.04"/>
   </linearGradient>
 </defs>
 <rect x="0" y="0" width="${W}" height="${H - BH}" fill="url(#panelFade)"/>
@@ -299,10 +308,10 @@ ${c}
 async function buildInfografia(photoBuffer, captionData) {
   const W = 1080, H = 1080;
 
-  // Foto como fondo completo — el gradiente SVG oscurece la zona del texto
+  // Fondo geométrico — el gradiente SVG oscurece la zona del texto
   const photo = await sharp(photoBuffer)
     .resize(W, H, { fit: "cover", position: "center" })
-    .modulate({ brightness: 0.55 })
+    .modulate({ brightness: 0.62 })
     .png().toBuffer();
 
   const overlay = Buffer.from(buildSVGOverlay(
@@ -561,23 +570,22 @@ function _buildInfograficaPrompt(tema, cap) {
   );
 }
 
-// Prompt de fallback (foto de fondo) para cuando Responses API no está disponible
-function _buildFotoFondoPrompt(tema) {
-  const scenes = [
-    "security operations center with multiple surveillance monitors showing real-time footage of a city, two professional analysts in formal attire at workstations",
-    "professional security consultant in formal business attire presenting a risk assessment to executives in a modern glass-walled Mexican corporate boardroom",
-    "emergency response brigade in high-visibility vests and helmets conducting a safety drill inside a large industrial manufacturing facility",
-    "government building entrance with modern access control system, turnstiles, and uniformed security personnel checking credentials",
-    "aerial view of a Mexican corporate campus with perimeter security fencing, patrol vehicles, and controlled entry points",
-    "close-up of hands reviewing official security protocol documents and compliance checklists on a polished conference table",
-    "network operations center with rack servers, fiber cables, and IP camera management software on large screens",
+// Prompt de fallback — fondo geométrico abstracto oscuro (mejor base para overlay SVG)
+function _buildFotoFondoPrompt(_tema) {
+  const patterns = [
+    "dark hexagonal mesh, faint gold circuit-board traces on deep navy, subtle glowing node points",
+    "diagonal geometric stripes in dark charcoal and navy, abstract angular shield shapes in muted gold",
+    "large faint overlapping hexagons and triangles on near-black background, faint warm gold outlines",
+    "abstract concentric polygon rings on very dark navy blue, fine dot grid, metallic gold highlights",
+    "dark navy background with subtle isometric grid, faint diagonal light rays, deep charcoal tones",
   ];
-  const scene = scenes[Math.floor(Math.random() * scenes.length)];
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
   return (
-    `Photorealistic professional corporate photograph for an institutional security firm in Mexico. ` +
-    `Scene: ${scene}. Topic: ${tema}. ` +
-    `Cinematic lighting, dark professional tones, depth of field, ultra-sharp 4K. ` +
-    `NO text, NO logos, NO watermarks.`
+    `Abstract geometric corporate background for a professional infographic. ` +
+    `${pattern}. ` +
+    `Color palette: very dark navy (#07101d), deep charcoal (#0c1624), faint warm gold (#c9a22715) accents. ` +
+    `Fully abstract — NO people, NO faces, NO text, NO logos, NO recognizable objects, NO photography. ` +
+    `Dark, minimalist, institutional. Ultra-sharp 4K.`
   );
 }
 
