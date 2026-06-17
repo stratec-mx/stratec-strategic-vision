@@ -519,7 +519,64 @@ async function descargarFotoTelegram(fileId) {
 
 // ── OpenAI Image Generation via Responses API (GPT-4o + image_generation tool) ─
 
-function _buildImagePrompt(tema) {
+// Prompt para infografía completa — GPT-4o genera el diseño con todo el contenido real
+function _buildInfograficaPrompt(tema, cap) {
+  const categoria = String(cap.categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  const titular   = String(cap.titular   || tema).toUpperCase();
+  const subtitulo = String(cap.subtitulo || "");
+  const puntos    = Array.isArray(cap.puntos) ? cap.puntos.slice(0, 3) : [];
+
+  return (
+    `Design a professional social media infographic (1080x1080 pixels, square format) for STRATEC, an institutional security consulting firm in Mexico.\n\n` +
+
+    `CRITICAL REQUIREMENT: This must be a FLAT GRAPHIC DESIGN — NOT a photograph. ` +
+    `Typography-first layout. Dark background with gold accents. No photos of people or scenes.\n\n` +
+
+    `BRAND PALETTE:\n` +
+    `- Background: deep navy #07101d — dark professional, subtle faint geometric grid texture or diagonal lines in a slightly lighter navy for depth\n` +
+    `- Gold accent: #c9a227 (warm amber gold) — used for borders, dividers, labels, highlights\n` +
+    `- Title text: pure white, ultra-bold heavy weight\n` +
+    `- Body text: light gray #d0d0d0\n` +
+    `- Style: institutional, corporate, authoritative — NOT playful, NOT colorful\n\n` +
+
+    `LAYOUT (top to bottom, left-aligned content):\n\n` +
+
+    `① CATEGORY BADGE (top-left, ~y=80px):\n` +
+    `   Small text "${categoria}" in gold, letter-spaced, with a 4px gold left border bar and very subtle gold-tinted background rectangle\n\n` +
+
+    `② MAIN TITLE (~y=160px):\n` +
+    `   "${titular}"\n` +
+    `   Ultra-bold white, large (≈64px), wraps naturally — takes about 35% of the image height\n\n` +
+
+    `③ GOLD DIVIDER: short horizontal gold line, left-aligned, ~100px wide, 4px thick\n\n` +
+
+    (subtitulo
+      ? `④ SUBTITLE: "${subtitulo}" — gold color #c9a227, medium weight, ~26px\n\n`
+      : ``) +
+
+    `⑤ BULLET POINTS (3 items, each with a small filled gold circle bullet ~8px):\n` +
+    puntos.map(p => `   • ${p}`).join("\n") + `\n\n` +
+
+    `⑥ CTA LINE (small, subtle gray ~14px): "Diagnóstico sin costo · stratecsecurity.com"\n\n` +
+
+    `⑦ SERVICE TAGS (3 outlined rectangles with 1px gold border, gold text, spaced horizontally ~y=780px):\n` +
+    `   [ ANÁLISIS DE RIESGOS ]  [ ESTRATEGIAS A MEDIDA ]  [ COBERTURA NACIONAL ]\n\n` +
+
+    `⑧ BOTTOM BAR (full-width, slightly darker panel, separated by 3px gold top border line):\n` +
+    `   LEFT SIDE: "STRATEC" in large bold white (~40px) + below it "CONSULTORÍA EN SEGURIDAD" in small gold letter-spaced (~13px)\n` +
+    `   CENTER: thin vertical gold divider line\n` +
+    `   RIGHT SIDE: "stratecsecurity.com" in bold white (~22px) + below "Análisis · Estrategia · Soluciones" in small gold\n\n` +
+
+    `DESIGN DETAILS:\n` +
+    `- Left edge: very subtle thin vertical gold accent stripe\n` +
+    `- Clean generous whitespace — do NOT crowd elements\n` +
+    `- Render ALL text EXACTLY as specified above — do not paraphrase, translate, or omit any text\n` +
+    `- NO watermarks, NO AI generation artifacts, NO extra logos or branding beyond what is specified`
+  );
+}
+
+// Prompt de fallback (foto de fondo) para cuando Responses API no está disponible
+function _buildFotoFondoPrompt(tema) {
   const scenes = [
     "security operations center with multiple surveillance monitors showing real-time footage of a city, two professional analysts in formal attire at workstations",
     "professional security consultant in formal business attire presenting a risk assessment to executives in a modern glass-walled Mexican corporate boardroom",
@@ -531,21 +588,23 @@ function _buildImagePrompt(tema) {
   ];
   const scene = scenes[Math.floor(Math.random() * scenes.length)];
   return (
-    `Generate a photorealistic professional corporate photograph for STRATEC, an institutional security consulting firm in Mexico. ` +
-    `Scene: ${scene}. ` +
-    `Topic: ${tema}. ` +
-    `Visual style: cinematic lighting, dark professional tones (deep navy blues, charcoal grays, subtle amber accents), depth of field, ultra-sharp 4K quality. ` +
-    `The image must work as a dark background for a social media infographic with text overlay. ` +
-    `Strictly NO text, NO logos, NO watermarks, NO cartoon elements, NO violence, NO weapons.`
+    `Photorealistic professional corporate photograph for an institutional security firm in Mexico. ` +
+    `Scene: ${scene}. Topic: ${tema}. ` +
+    `Cinematic lighting, dark professional tones, depth of field, ultra-sharp 4K. ` +
+    `NO text, NO logos, NO watermarks.`
   );
 }
 
-async function _dalleGenerar(tema) {
+// captionData: si se pasa, GPT-4o genera el diseño completo (no necesita overlay SVG)
+async function _dalleGenerar(tema, captionData = null) {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
 
-  const prompt = _buildImagePrompt(tema);
+  // Con captionData → prompt de infografía completa; sin él → prompt de foto de fondo
+  const prompt = captionData
+    ? _buildInfograficaPrompt(tema, captionData)
+    : _buildFotoFondoPrompt(tema);
 
-  // Responses API — GPT-4o con image_generation tool (mismo motor que ChatGPT)
+  // Responses API — GPT-4o genera el diseño completo (mismo motor que ChatGPT)
   try {
     const res = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -560,8 +619,9 @@ async function _dalleGenerar(tema) {
       const data = await res.json();
       const imgItem = data.output?.find(o => o.type === "image_generation_call");
       if (imgItem?.result) {
-        console.log("Imagen generada con GPT-4o Responses API ✓");
-        return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id };
+        const isCompleteDesign = captionData != null;
+        console.log(`Imagen generada con GPT-4o Responses API ✓ (${isCompleteDesign ? "diseño completo" : "foto de fondo"})`);
+        return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id, isCompleteDesign };
       }
     } else {
       const err = await res.json().catch(() => ({}));
@@ -571,18 +631,19 @@ async function _dalleGenerar(tema) {
     console.warn("Responses API error:", e.message, "→ gpt-image-1");
   }
 
-  // Fallback: gpt-image-1 directo
+  // Fallback: gpt-image-1 con prompt de foto de fondo (no infografía completa)
+  const fallbackPrompt = _buildFotoFondoPrompt(tema);
   try {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "high" }),
+      body: JSON.stringify({ model: "gpt-image-1", prompt: fallbackPrompt, n: 1, size: "1024x1024", quality: "high" }),
     });
     if (res.ok) {
       const { data } = await res.json();
       if (data?.[0]?.b64_json) {
-        console.log("Imagen generada con gpt-image-1 ✓");
-        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null };
+        console.log("Imagen generada con gpt-image-1 ✓ (foto de fondo)");
+        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null, isCompleteDesign: false };
       }
     }
   } catch (e) {
@@ -593,15 +654,15 @@ async function _dalleGenerar(tema) {
   const res2 = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "hd" }),
+    body: JSON.stringify({ model: "dall-e-3", prompt: fallbackPrompt, n: 1, size: "1024x1024", quality: "hd" }),
   });
   if (!res2.ok) {
     const body = await res2.json().catch(() => ({}));
     throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
   }
   const { data: data2 } = await res2.json();
-  console.log("Imagen generada con DALL-E 3 hd ✓");
-  return { buffer: Buffer.from(await (await fetch(data2[0].url)).arrayBuffer()), responseId: null };
+  console.log("Imagen generada con DALL-E 3 hd ✓ (foto de fondo)");
+  return { buffer: Buffer.from(await (await fetch(data2[0].url)).arrayBuffer()), responseId: null, isCompleteDesign: false };
 }
 
 // Continúa una conversación de imagen con GPT-4o usando el responseId previo
@@ -729,12 +790,12 @@ async function _leonardoGenerar(tema) {
   throw new Error("Leonardo: timeout 60s");
 }
 
-// Devuelve { buffer, responseId } — responseId puede ser null si no viene de Responses API
-async function generarImagen(tema) {
+// captionData: si se pasa, GPT-4o genera el diseño completo (isCompleteDesign=true → no overlay SVG)
+async function generarImagen(tema, captionData = null) {
   if (OPENAI_API_KEY) {
     try {
       console.log("Generando imagen con GPT-4o...");
-      const result = await _dalleGenerar(tema);
+      const result = await _dalleGenerar(tema, captionData);
       console.log("GPT-4o: imagen generada OK");
       return result;
     } catch (e) {
@@ -746,7 +807,7 @@ async function generarImagen(tema) {
       console.log("Generando imagen con Fal.ai (Flux.1 Pro)...");
       const buffer = await _falGenerar(tema);
       console.log("Fal.ai: imagen generada OK");
-      return { buffer, responseId: null };
+      return { buffer, responseId: null, isCompleteDesign: false };
     } catch (e) {
       console.warn(`Fal.ai falló (${e.message}), intentando Leonardo...`);
     }
@@ -754,7 +815,7 @@ async function generarImagen(tema) {
   if (LEONARDO_API_KEY) {
     console.log("Generando imagen con Leonardo...");
     const buffer = await _leonardoGenerar(tema);
-    return { buffer, responseId: null };
+    return { buffer, responseId: null, isCompleteDesign: false };
   }
   throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY, FAL_API_KEY o LEONARDO_API_KEY)");
 }
@@ -1225,12 +1286,15 @@ async function procesarComando(chatId, tema) {
   tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
 
   try {
-    const [imgResult, captions] = await Promise.all([
-      generarImagen(tema),
-      generarCaptions(tema),
-    ]);
-    const { buffer: rawPhoto, responseId } = imgResult;
-    const imageBuffer = await buildInfografia(rawPhoto, captions);
+    // Secuencial: primero captions para pasar el contenido real al generador de imagen
+    const captions = await generarCaptions(tema);
+    const imgResult = await generarImagen(tema, captions);
+    const { buffer: rawPhoto, responseId, isCompleteDesign } = imgResult;
+
+    // Si GPT-4o generó el diseño completo, usarlo directo; si no, aplicar overlay SVG
+    const imageBuffer = isCompleteDesign
+      ? rawPhoto
+      : await buildInfografia(rawPhoto, captions);
     clearInterval(actionTick);
 
     const pendingId = savePending({
@@ -1289,26 +1353,37 @@ async function procesarModificacionImagen(chatId, pendingId, instruccion) {
   try {
     let rawBuffer, newResponseId;
 
+    let isCompleteDesign = false;
+
     if (pending.responseId && OPENAI_API_KEY) {
       // Continúa la conversación: GPT-4o recuerda la imagen anterior
       const result = await _modificarImagen(pending.responseId, instruccion);
       rawBuffer = result.buffer;
       newResponseId = result.responseId;
+      isCompleteDesign = true; // la modificación conserva el diseño completo
     } else {
-      // Sin contexto previo — regenera incorporando la instrucción al tema
-      const result = await generarImagen(`${pending.tema}. Instrucción: ${instruccion}`);
+      // Sin contexto previo — regenera con el contenido completo del post
+      const capts = {
+        titular: pending.titular, subtitulo: pending.subtitulo,
+        puntos: pending.puntos, categoria: pending.categoria,
+      };
+      const result = await generarImagen(`${pending.tema}. ${instruccion}`, capts);
       rawBuffer = result.buffer;
       newResponseId = result.responseId;
+      isCompleteDesign = result.isCompleteDesign;
     }
 
     clearInterval(actionTick);
 
+    // Si la imagen ya es un diseño completo, usarla directo; si no, aplicar overlay SVG
     const captions = {
       linkedin: pending.linkedin, facebook: pending.facebook,
       titular: pending.titular, subtitulo: pending.subtitulo,
       puntos: pending.puntos, categoria: pending.categoria,
     };
-    const imageBuffer = await buildInfografia(rawBuffer, captions);
+    const imageBuffer = isCompleteDesign
+      ? rawBuffer
+      : await buildInfografia(rawBuffer, captions);
 
     updatePendingImage(pendingId, imageBuffer);
     writeFileSync(join(PENDING_DIR, `${pendingId}-raw.png`), rawBuffer);
