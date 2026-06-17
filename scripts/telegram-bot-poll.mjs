@@ -1055,15 +1055,19 @@ async function publicarLinkedIn(imageBuffer, caption) {
   const headers = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
-    "LinkedIn-Version": "202406",
+    "LinkedIn-Version": "202501",
     "X-Restli-Protocol-Version": "2.0.0",
   };
 
+  // LinkedIn limita commentary a 3000 caracteres
+  const commentary = String(caption || "").slice(0, 3000);
+
   // Paso 1: inicializar subida de imagen
-  const initRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
-    method: "POST", headers,
-    body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }),
-  });
+  const initRes = await fetchConTimeout(
+    "https://api.linkedin.com/rest/images?action=initializeUpload",
+    { method: "POST", headers, body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }) },
+    30_000
+  );
   if (!initRes.ok) {
     const txt = await initRes.text().catch(() => initRes.status);
     throw new Error(`LinkedIn [init ${initRes.status}]: ${String(txt).slice(0, 250)}`);
@@ -1076,35 +1080,39 @@ async function publicarLinkedIn(imageBuffer, caption) {
   }
 
   // Paso 2: subir imagen binaria
-  const upRes = await fetch(uploadUrl, {
+  const upRes = await fetchConTimeout(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
     body: imageBuffer,
-  });
+  }, 60_000);
   if (!upRes.ok) {
     const txt = await upRes.text().catch(() => upRes.status);
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
   // Paso 3: crear publicación
-  const postRes = await fetch("https://api.linkedin.com/rest/posts", {
-    method: "POST", headers,
-    body: JSON.stringify({
-      author: orgUrn,
-      commentary: caption,
-      visibility: "PUBLIC",
-      distribution: {
-        feedDistribution: "MAIN_FEED",
-        targetEntities: [],
-        thirdPartyDistributionChannels: [],
-      },
-      content: {
-        media: { title: "STRATEC Security", id: imageUrn },
-      },
-      lifecycleState: "PUBLISHED",
-      isReshareDisabledByAuthor: false,
-    }),
-  });
+  const postRes = await fetchConTimeout(
+    "https://api.linkedin.com/rest/posts",
+    {
+      method: "POST", headers,
+      body: JSON.stringify({
+        author: orgUrn,
+        commentary,
+        visibility: "PUBLIC",
+        distribution: {
+          feedDistribution: "MAIN_FEED",
+          targetEntities: [],
+          thirdPartyDistributionChannels: [],
+        },
+        content: {
+          media: { title: "STRATEC Security", id: imageUrn },
+        },
+        lifecycleState: "PUBLISHED",
+        isReshareDisabledByAuthor: false,
+      }),
+    },
+    30_000
+  );
   if (!postRes.ok) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
@@ -1221,7 +1229,7 @@ async function publicarPendientesAgendados() {
       else redes.push(`Facebook ❌`);
       if (li.status === "fulfilled" && li.value) redes.push("LinkedIn ✅");
       else if (!LINKEDIN_ACCESS_TOKEN) redes.push("LinkedIn ⏭️");
-      else redes.push(`LinkedIn ❌`);
+      else redes.push(`LinkedIn ❌ ${li.reason?.message || ""}`);
 
       // Notificar al chat original si hay chatId guardado
       if (meta.chatId) {
