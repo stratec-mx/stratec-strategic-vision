@@ -51,6 +51,20 @@ const {
 
 const TG = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
+// mapa chatId → pendingId del preview activo (para modificación por chat)
+const activePending = new Map();
+
+// fetch con timeout explícito — evita que cuelgue indefinidamente
+async function fetchConTimeout(url, opts, timeoutMs = 120_000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── Estado ────────────────────────────────────────────────────────────────────
 
 function getOffset() {
@@ -105,6 +119,13 @@ function deletePending(id) {
   }
 }
 
+function updatePendingMeta(id, updates) {
+  const file = join(PENDING_DIR, `${id}.json`);
+  if (!existsSync(file)) return;
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+  writeFileSync(file, JSON.stringify({ ...meta, ...updates }));
+}
+
 // ── Telegram helpers ──────────────────────────────────────────────────────────
 
 async function tg(method, body = {}) {
@@ -129,6 +150,22 @@ async function sendPhotoBuffer(chatId, imageBuffer, caption, keyboard) {
   form.append("reply_markup", JSON.stringify({ inline_keyboard: keyboard }));
   form.append("photo", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
   const res = await fetch(`${TG}/sendPhoto`, { method: "POST", body: form });
+  return res.json();
+}
+
+async function sendMediaGroup(chatId, buffers, firstCaption) {
+  const media = buffers.map((_, i) => ({
+    type: "photo",
+    media: `attach://slide${i}`,
+    ...(i === 0 ? { caption: firstCaption, parse_mode: "HTML" } : {}),
+  }));
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("media", JSON.stringify(media));
+  buffers.forEach((buf, i) =>
+    form.append(`slide${i}`, new Blob([buf], { type: "image/png" }), `slide${i}.png`)
+  );
+  const res = await fetch(`${TG}/sendMediaGroup`, { method: "POST", body: form });
   return res.json();
 }
 
@@ -172,86 +209,95 @@ function svgTextLines(text, maxChars, x, startY, lh, sz, fill, weight) {
 }
 
 function buildSVGOverlay(categoria, titular, subtitulo, puntos, W, H) {
-  const lp  = 64;   // left padding
-  const BH  = 175;  // bottom bar height
-  const PW  = 660;  // solid dark panel zone width
-  let y     = 78;
-  let c     = "";
+  const lp = 68;   // left padding
+  const BH = 178;  // bottom bar height
+  let y    = 86;
+  let c    = "";
 
-  // 1. Category badge
   const catTxt = String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  const catW   = Math.min(480, catTxt.length * 9.5 + 44);
+
+  // 0. Left edge gold accent stripe (full height above bottom bar)
+  c += `\n<rect x="0" y="0" width="6" height="${H - BH}" fill="#c9a227" opacity="0.80"/>`;
+
+  // 1. Category badge — outlined pill with fill
   c += `
-<rect x="${lp}" y="${y}" width="310" height="36" rx="4" fill="#c9a22718"/>
-<rect x="${lp}" y="${y}" width="4" height="36" rx="2" fill="#c9a227"/>
-<text x="${lp + 18}" y="${y + 24}" font-family="Liberation Sans,Arial,sans-serif" font-size="11" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(catTxt)}</text>`;
-  y += 68;
+<rect x="${lp}" y="${y}" width="${catW}" height="38" rx="5" fill="#c9a22718" stroke="#c9a22770" stroke-width="1.5"/>
+<text x="${lp + 16}" y="${y + 25}" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" font-weight="bold" letter-spacing="2.5">${xmlEsc(catTxt)}</text>`;
+  y += 70;
 
-  // 2. Headline — 62px, wrap at 18 chars
-  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 18, lp, y, 74, 62, "white", "bold");
+  // 2. Headline — 66px bold, wrap at 17 chars
+  const tit = svgTextLines(titular || "SEGURIDAD QUE FUNCIONA", 17, lp, y, 78, 66, "white", "bold");
   c += `\n${tit.svg}`;
-  y += tit.count * 74 + 28;
+  y += tit.count * 78 + 20;
 
-  // 3. Gold divider
-  c += `\n<rect x="${lp}" y="${y}" width="80" height="4" rx="2" fill="#c9a227"/>`;
+  // 3. Gold accent divider — wider
+  c += `\n<rect x="${lp}" y="${y}" width="120" height="4" rx="2" fill="#c9a227"/>`;
   y += 38;
 
-  // 4. Subtitle — 26px, wrap at 36 chars
+  // 4. Subtitle — 24px gold, wrap at 40 chars
   if (subtitulo) {
-    const sub = svgTextLines(subtitulo, 36, lp, y, 36, 26, "#c9a227", "normal");
+    const sub = svgTextLines(subtitulo, 40, lp, y, 34, 24, "#c9a227", "normal");
     c += `\n${sub.svg}`;
-    y += sub.count * 36 + 44;
+    y += sub.count * 34 + 36;
   } else {
-    y += 28;
+    y += 18;
   }
 
-  // 5. Bullet points — círculo dorado, 3 max
-  const pts = Array.isArray(puntos) ? puntos.slice(0, 3) : [];
-  for (const p of pts) {
+  // 5. Numbered bullet boxes — 01/02/03 gold squares with white text
+  const pts     = Array.isArray(puntos) ? puntos.slice(0, 3) : [];
+  const boxSize = 48;
+  const textX   = lp + boxSize + 22;
+  for (let i = 0; i < pts.length; i++) {
+    const num  = String(i + 1).padStart(2, "0");
+    const boxY = y;
     c += `
-<circle cx="${lp + 7}" cy="${y - 8}" r="5" fill="#c9a227"/>
-<text x="${lp + 24}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="21" fill="white">${xmlEsc(String(p))}</text>`;
-    y += 56;
+<rect x="${lp}" y="${boxY}" width="${boxSize}" height="${boxSize}" rx="6" fill="#c9a227"/>
+<text x="${lp + boxSize / 2}" y="${boxY + 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="20" fill="#060d15" font-weight="bold" text-anchor="middle">${num}</text>`;
+    const bLines = svgTextLines(String(pts[i]), 36, textX, boxY + 20, 26, 20, "white", "normal");
+    c += `\n${bLines.svg}`;
+    y += Math.max(boxSize, bLines.count * 26) + 18;
   }
 
-  // 6. CTA line
-  y += 24;
-  c += `\n<rect x="${lp}" y="${y}" width="460" height="1" fill="#c9a22740"/>`;
+  // 6. CTA separator + text
+  y += 18;
+  c += `\n<rect x="${lp}" y="${y}" width="520" height="1" fill="#c9a22755"/>`;
   y += 26;
-  c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22799">Diagnóstico sin costo · stratecsecurity.com</text>`;
+  c += `\n<text x="${lp}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22795" letter-spacing="0.5">Diagnóstico sin costo · stratecsecurity.com</text>`;
 
-  // 7. Etiquetas de servicio (llenan el espacio vacío antes de la barra inferior)
-  const tagY   = H - BH - 80;
+  // 7. Service tags — richer with fill + border
+  const tagY   = H - BH - 90;
   const tagW   = 285;
-  const tagH   = 46;
-  const tagGap = 16;
+  const tagH   = 50;
+  const tagGap = 14;
   const tags   = ["ANÁLISIS DE RIESGOS", "ESTRATEGIAS A MEDIDA", "COBERTURA NACIONAL"];
   for (let i = 0; i < 3; i++) {
     const tx = lp + i * (tagW + tagGap);
-    if (tx + tagW > PW + 80) break;
+    if (tx + tagW > W - 30) break;
     c += `
-<rect x="${tx}" y="${tagY}" width="${tagW}" height="${tagH}" rx="4" fill="#c9a22712" stroke="#c9a22760" stroke-width="1"/>
-<text x="${tx + tagW / 2}" y="${tagY + 30}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold" text-anchor="middle" letter-spacing="1">${tags[i]}</text>`;
+<rect x="${tx}" y="${tagY}" width="${tagW}" height="${tagH}" rx="6" fill="#c9a22720" stroke="#c9a22785" stroke-width="1.5"/>
+<text x="${tx + tagW / 2}" y="${tagY + 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" font-weight="bold" text-anchor="middle" letter-spacing="1.5">${tags[i]}</text>`;
   }
 
-  // 8. Barra inferior STRATEC
+  // 8. Bottom STRATEC bar
   const mid = Math.round(W / 2);
   c += `
 <rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.97"/>
-<rect x="0" y="${H - BH}" width="${W}" height="3" fill="#c9a227"/>
-<rect x="${mid}" y="${H - BH + 26}" width="1" height="${BH - 52}" fill="#c9a22750"/>
-<text x="${lp}" y="${H - 90}" font-family="Liberation Sans,Arial,sans-serif" font-size="38" fill="white" font-weight="bold">STRATEC</text>
-<text x="${lp}" y="${H - 54}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
-<text x="${mid + 44}" y="${H - 88}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
-<text x="${mid + 44}" y="${H - 56}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+<rect x="0" y="${H - BH}" width="${W}" height="4" fill="#c9a227"/>
+<rect x="${mid}" y="${H - BH + 24}" width="1" height="${BH - 48}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 88}" font-family="Liberation Sans,Arial,sans-serif" font-size="40" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 50}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 44}" y="${H - 86}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 44}" y="${H - 50}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
 
-  // Gradiente: oscuro en izquierda (texto legible), se abre hacia la derecha (foto visible)
+  // Gradient: dense dark on left (text zone), opens right (geometric texture visible)
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <linearGradient id="panelFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
-    <stop offset="0"                    stop-color="#07101d" stop-opacity="0.97"/>
-    <stop offset="${PW / W}"            stop-color="#07101d" stop-opacity="0.93"/>
-    <stop offset="${(PW + 180) / W}"    stop-color="#07101d" stop-opacity="0.28"/>
-    <stop offset="1"                    stop-color="#07101d" stop-opacity="0.05"/>
+    <stop offset="0"    stop-color="#07101d" stop-opacity="0.97"/>
+    <stop offset="0.62" stop-color="#07101d" stop-opacity="0.93"/>
+    <stop offset="0.80" stop-color="#07101d" stop-opacity="0.30"/>
+    <stop offset="1"    stop-color="#07101d" stop-opacity="0.04"/>
   </linearGradient>
 </defs>
 <rect x="0" y="0" width="${W}" height="${H - BH}" fill="url(#panelFade)"/>
@@ -262,10 +308,10 @@ ${c}
 async function buildInfografia(photoBuffer, captionData) {
   const W = 1080, H = 1080;
 
-  // Foto como fondo completo — el gradiente SVG oscurece la zona del texto
+  // Fondo geométrico — el gradiente SVG oscurece la zona del texto
   const photo = await sharp(photoBuffer)
     .resize(W, H, { fit: "cover", position: "center" })
-    .modulate({ brightness: 0.55 })
+    .modulate({ brightness: 0.62 })
     .png().toBuffer();
 
   const overlay = Buffer.from(buildSVGOverlay(
@@ -277,6 +323,206 @@ async function buildInfografia(photoBuffer, captionData) {
   return sharp(photo)
     .composite([{ input: overlay, left: 0, top: 0 }])
     .png().toBuffer();
+}
+
+// ── Carrusel — Helpers SVG ────────────────────────────────────────────────────
+
+function svgCenteredLines(text, maxChars, cx, startY, lh, sz, fill, weight) {
+  const words = String(text || "").split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? `${cur} ${w}` : w;
+    if (t.length <= maxChars) { cur = t; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return {
+    svg: lines.map((l, i) =>
+      `<text x="${cx}" y="${startY + i * lh}" font-family="Liberation Sans,Arial,sans-serif" ` +
+      `font-size="${sz}" fill="${fill}" font-weight="${weight || "normal"}" text-anchor="middle">${xmlEsc(l)}</text>`
+    ).join("\n"),
+    count: lines.length,
+  };
+}
+
+function _barraStratec(lp, mid, W, H, BH) {
+  return `
+<rect x="0" y="${H - BH}" width="${W}" height="${BH}" fill="#060d15" opacity="0.98"/>
+<rect x="0" y="${H - BH}" width="${W}" height="3" fill="#c9a227"/>
+<rect x="${mid}" y="${H - BH + 22}" width="1" height="${BH - 44}" fill="#c9a22750"/>
+<text x="${lp}" y="${H - 82}" font-family="Liberation Sans,Arial,sans-serif" font-size="40" fill="white" font-weight="bold">STRATEC</text>
+<text x="${lp}" y="${H - 46}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a227" letter-spacing="3">CONSULTORÍA EN SEGURIDAD</text>
+<text x="${mid + 44}" y="${H - 80}" font-family="Liberation Sans,Arial,sans-serif" font-size="22" fill="white" font-weight="bold">stratecsecurity.com</text>
+<text x="${mid + 44}" y="${H - 48}" font-family="Liberation Sans,Arial,sans-serif" font-size="13" fill="#c9a22799">Análisis · Estrategia · Soluciones</text>`;
+}
+
+function buildSVGSlidePortada(categoria, portada, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  const catTxt = String(categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">1 / ${slideTotal}</text>`;
+
+  c += `
+<rect x="${lp}" y="78" width="320" height="36" rx="4" fill="#c9a22718"/>
+<rect x="${lp}" y="78" width="4" height="36" rx="2" fill="#c9a227"/>
+<text x="${lp + 18}" y="102" font-family="Liberation Sans,Arial,sans-serif" font-size="11" fill="#c9a227" font-weight="bold" letter-spacing="2">${xmlEsc(catTxt)}</text>`;
+
+  const tit = svgTextLines(portada.titular || "", 20, lp, 310, 76, 66, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = 310 + tit.count * 76 + 28;
+
+  c += `\n<rect x="${lp}" y="${y}" width="100" height="4" rx="2" fill="#c9a227"/>`;
+  y += 38;
+
+  if (portada.subtitulo) {
+    const sub = svgTextLines(portada.subtitulo, 40, lp, y, 38, 26, "#c9a227", "normal");
+    c += `\n${sub.svg}`;
+    y += sub.count * 38 + 36;
+  }
+
+  c += `\n<text x="${lp}" y="${H - BH - 32}" font-family="Liberation Sans,Arial,sans-serif" font-size="14" fill="#c9a22780">→ Desliza para ver más</text>`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
+    <stop offset="0"    stop-color="#07101d" stop-opacity="0.96"/>
+    <stop offset="0.65" stop-color="#07101d" stop-opacity="0.85"/>
+    <stop offset="1"    stop-color="#07101d" stop-opacity="0.30"/>
+  </linearGradient>
+</defs>
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="url(#g)"/>
+${c}
+</svg>`;
+}
+
+function buildSVGSlidePunto(numero, titular, cuerpo, slideNum, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">${slideNum} / ${slideTotal}</text>`;
+
+  // Número grande decorativo (fondo) + primer plano
+  c += `<text x="${lp - 10}" y="260" font-family="Liberation Sans,Arial,sans-serif" font-size="220" fill="#c9a22712" font-weight="bold">${xmlEsc(numero)}</text>`;
+  c += `<text x="${lp}" y="210" font-family="Liberation Sans,Arial,sans-serif" font-size="106" fill="#c9a227" font-weight="bold">${xmlEsc(numero)}</text>`;
+
+  c += `<rect x="${lp}" y="238" width="${W - lp * 2}" height="2" fill="#c9a22730"/>`;
+
+  // Barra dorada vertical + título
+  const titY = 306;
+  c += `<rect x="${lp}" y="${titY - 12}" width="5" height="80" rx="2" fill="#c9a227"/>`;
+
+  const tit = svgTextLines(titular || "", 26, lp + 22, titY, 54, 44, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = titY + tit.count * 54 + 40;
+
+  // Cuerpo
+  const body = svgTextLines(cuerpo || "", 46, lp, y, 38, 25, "#d0d0d0", "normal");
+  c += `\n${body.svg}`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="#07101d" opacity="0.90"/>
+${c}
+</svg>`;
+}
+
+function buildSVGSlideCTA(cta, slideTotal, W, H) {
+  const BH = 160, lp = 70, mid = Math.round(W / 2);
+  let c = "";
+
+  c += `<text x="${W - 48}" y="52" font-family="Liberation Sans,Arial,sans-serif" font-size="16" fill="#c9a22799" text-anchor="end">${slideTotal} / ${slideTotal}</text>`;
+
+  // Anillos decorativos concéntricos
+  c += `<circle cx="${mid}" cy="310" r="170" fill="none" stroke="#c9a22718" stroke-width="1"/>`;
+  c += `<circle cx="${mid}" cy="310" r="125" fill="none" stroke="#c9a22730" stroke-width="1.5"/>`;
+  c += `<circle cx="${mid}" cy="310" r="82"  fill="#c9a22710" stroke="#c9a22748" stroke-width="2"/>`;
+  c += `<text x="${mid}" y="297" font-family="Liberation Sans,Arial,sans-serif" font-size="30" fill="white" font-weight="bold" text-anchor="middle">STRATEC</text>`;
+  c += `<text x="${mid}" y="330" font-family="Liberation Sans,Arial,sans-serif" font-size="12" fill="#c9a227" letter-spacing="2" text-anchor="middle">SEGURIDAD</text>`;
+
+  // Título CTA centrado
+  const tit = svgCenteredLines(cta.titular || "SOLICITA TU DIAGNÓSTICO", 22, mid, 490, 64, 52, "white", "bold");
+  c += `\n${tit.svg}`;
+  let y = 490 + tit.count * 64 + 28;
+
+  c += `\n<rect x="${mid - 70}" y="${y}" width="140" height="4" rx="2" fill="#c9a227"/>`;
+  y += 36;
+
+  if (cta.cuerpo) {
+    const body = svgCenteredLines(cta.cuerpo, 38, mid, y, 36, 24, "#d0d0d0", "normal");
+    c += `\n${body.svg}`;
+    y += body.count * 36 + 28;
+  }
+
+  c += `\n<text x="${mid}" y="${y}" font-family="Liberation Sans,Arial,sans-serif" font-size="28" fill="#c9a227" font-weight="bold" text-anchor="middle">stratecsecurity.com</text>`;
+
+  c += _barraStratec(lp, mid, W, H, BH);
+
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${W}" height="${H - BH}" fill="#07101d" opacity="0.94"/>
+${c}
+</svg>`;
+}
+
+async function buildCarruselSlides(rawPhoto, data) {
+  const W = 1080, H = 1080, TOTAL = 5;
+
+  const photo = await sharp(rawPhoto)
+    .resize(W, H, { fit: "cover", position: "center" })
+    .modulate({ brightness: 0.42 })
+    .png().toBuffer();
+
+  const svgs = [
+    buildSVGSlidePortada(data.categoria, data.portada, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[0].numero, data.puntos[0].titular, data.puntos[0].cuerpo, 2, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[1].numero, data.puntos[1].titular, data.puntos[1].cuerpo, 3, TOTAL, W, H),
+    buildSVGSlidePunto(data.puntos[2].numero, data.puntos[2].titular, data.puntos[2].cuerpo, 4, TOTAL, W, H),
+    buildSVGSlideCTA(data.cta, TOTAL, W, H),
+  ];
+
+  return Promise.all(svgs.map(svg =>
+    sharp(photo)
+      .composite([{ input: Buffer.from(svg), left: 0, top: 0 }])
+      .png().toBuffer()
+  ));
+}
+
+// ── Carrusel — Pending storage ─────────────────────────────────────────────────
+
+function saveCarruselPending(meta, slideBuffers) {
+  if (!existsSync(PENDING_DIR)) mkdirSync(PENDING_DIR, { recursive: true });
+  const id = randomUUID();
+  writeFileSync(join(PENDING_DIR, `carrusel-${id}.json`), JSON.stringify({ ...meta, slideCount: slideBuffers.length }));
+  slideBuffers.forEach((buf, i) => writeFileSync(join(PENDING_DIR, `carrusel-${id}-${i}.png`), buf));
+  return id;
+}
+
+function readCarruselPending(id) {
+  const file = join(PENDING_DIR, `carrusel-${id}.json`);
+  if (!existsSync(file)) return null;
+  const meta = JSON.parse(readFileSync(file, "utf8"));
+  const slides = [];
+  for (let i = 0; i < meta.slideCount; i++) {
+    const f = join(PENDING_DIR, `carrusel-${id}-${i}.png`);
+    if (existsSync(f)) slides.push(readFileSync(f));
+  }
+  return { ...meta, slides };
+}
+
+function deleteCarruselPending(id) {
+  const metaFile = join(PENDING_DIR, `carrusel-${id}.json`);
+  const count = existsSync(metaFile)
+    ? (JSON.parse(readFileSync(metaFile, "utf8")).slideCount || 5)
+    : 5;
+  if (existsSync(metaFile)) unlinkSync(metaFile);
+  for (let i = 0; i < count; i++) {
+    const f = join(PENDING_DIR, `carrusel-${id}-${i}.png`);
+    if (existsSync(f)) unlinkSync(f);
+  }
 }
 
 // ── Descargar foto desde Telegram ─────────────────────────────────────────────
@@ -291,71 +537,157 @@ async function descargarFotoTelegram(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ── OpenAI Image Generation (gpt-image-1 → DALL-E 3 fallback) ───────────────
+// ── OpenAI Image Generation via Responses API (GPT-4o + image_generation tool) ─
 
-function _buildImagePrompt(tema) {
-  const scenes = [
-    "security operations center with multiple surveillance monitors showing real-time footage of a city, two professional analysts in formal attire at workstations",
-    "professional security consultant in formal business attire presenting a risk assessment to executives in a modern glass-walled Mexican corporate boardroom",
-    "emergency response brigade in high-visibility vests and helmets conducting a safety drill inside a large industrial manufacturing facility",
-    "government building entrance with modern access control system, turnstiles, and uniformed security personnel checking credentials",
-    "aerial view of a Mexican corporate campus with perimeter security fencing, patrol vehicles, and controlled entry points",
-    "close-up of hands reviewing official security protocol documents and compliance checklists on a polished conference table",
-    "network operations center with rack servers, fiber cables, and IP camera management software on large screens",
-  ];
-  const scene = scenes[Math.floor(Math.random() * scenes.length)];
+// Prompt para infografía completa — diseño tipo ChatGPT con todo el contenido real
+function _buildInfograficaPrompt(tema, cap) {
+  const categoria = String(cap.categoria || "SEGURIDAD INSTITUCIONAL").toUpperCase();
+  const titular   = String(cap.titular   || tema).toUpperCase();
+  const subtitulo = String(cap.subtitulo || "");
+  const puntos    = Array.isArray(cap.puntos) ? cap.puntos.slice(0, 3) : [];
+
+  // Prompt conciso y descriptivo — gpt-image-1 responde mejor a descripciones
+  // visuales que a especificaciones de layout técnico
+  const bulletLines = puntos.map(p => `• ${p}`).join("  ");
   return (
-    `Photorealistic professional corporate photograph for an institutional security firm in Mexico. ` +
-    `Scene: ${scene}. ` +
-    `Topic context: ${tema}. ` +
-    `Visual style: cinematic lighting, dark professional tones, depth of field, ultra-sharp, 4K quality. ` +
-    `Color palette: deep navy blues, charcoal grays, subtle amber accents. ` +
-    `Strictly NO text, NO logos, NO watermarks, NO cartoon elements, NO violence, NO weapons. ` +
-    `The image must work as a dark-overlay background for a social media infographic.`
+    `Professional corporate social media infographic for STRATEC, a security consulting firm in Mexico. ` +
+    `FLAT GRAPHIC DESIGN — not a photograph. Dark navy blue background (#07101d) with warm gold accents (#c9a227). ` +
+    `Left-aligned layout. ` +
+
+    `Top: small gold category label "${categoria}" with gold left border. ` +
+    `Large ultra-bold white title "${titular}". ` +
+    `Short gold horizontal divider line. ` +
+    (subtitulo ? `Gold subtitle text "${subtitulo}". ` : ``) +
+    `Three bullet points with gold circle icons: ${bulletLines}. ` +
+    `Small gray text "Diagnóstico sin costo · stratecsecurity.com". ` +
+    `Three outlined service tag boxes in gold: [ANÁLISIS DE RIESGOS] [ESTRATEGIAS A MEDIDA] [COBERTURA NACIONAL]. ` +
+
+    `Bottom: dark full-width bar with gold top border. Left: "STRATEC" bold white large + "CONSULTORÍA EN SEGURIDAD" small gold. ` +
+    `Thin vertical gold divider. Right: "stratecsecurity.com" bold white + "Análisis · Estrategia · Soluciones" small gold. ` +
+
+    `Subtle faint geometric grid pattern in background. Clean whitespace. Institutional, authoritative style. ` +
+    `NO photographs of people. Render ALL text exactly as written.`
   );
 }
 
-async function _dalleGenerar(tema) {
-  const prompt = _buildImagePrompt(tema);
+// Prompt de fallback — fondo geométrico abstracto oscuro (mejor base para overlay SVG)
+function _buildFotoFondoPrompt(_tema) {
+  const patterns = [
+    "dark hexagonal mesh, faint gold circuit-board traces on deep navy, subtle glowing node points",
+    "diagonal geometric stripes in dark charcoal and navy, abstract angular shield shapes in muted gold",
+    "large faint overlapping hexagons and triangles on near-black background, faint warm gold outlines",
+    "abstract concentric polygon rings on very dark navy blue, fine dot grid, metallic gold highlights",
+    "dark navy background with subtle isometric grid, faint diagonal light rays, deep charcoal tones",
+  ];
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+  return (
+    `Abstract geometric corporate background for a professional infographic. ` +
+    `${pattern}. ` +
+    `Color palette: very dark navy (#07101d), deep charcoal (#0c1624), faint warm gold (#c9a22715) accents. ` +
+    `Fully abstract — NO people, NO faces, NO text, NO logos, NO recognizable objects, NO photography. ` +
+    `Dark, minimalist, institutional. Ultra-sharp 4K.`
+  );
+}
 
-  // Intentar gpt-image-1 primero (calidad superior, devuelve base64)
-  if (OPENAI_API_KEY) {
+// captionData: si se pasa, GPT-4o genera el diseño completo (no necesita overlay SVG)
+async function _dalleGenerar(tema, captionData = null) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
+
+  // Con captionData → prompt de infografía completa; sin él → prompt de foto de fondo
+  const prompt = captionData
+    ? _buildInfograficaPrompt(tema, captionData)
+    : _buildFotoFondoPrompt(tema);
+
+  // Responses API — GPT-4o genera el diseño completo (mismo motor que ChatGPT)
+  // Solo si captionData viene completo (tenemos el contenido real del post)
+  if (captionData) {
     try {
-      const res = await fetch("https://api.openai.com/v1/images/generations", {
+      const res = await fetchConTimeout("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "high" }),
-      });
+        body: JSON.stringify({
+          model: "gpt-4o",
+          input: prompt,
+          tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
+        }),
+      }, 110_000);
       if (res.ok) {
-        const { data } = await res.json();
-        if (data?.[0]?.b64_json) {
-          console.log("Imagen generada con gpt-image-1 ✓");
-          return Buffer.from(data[0].b64_json, "base64");
+        const data = await res.json();
+        const imgItem = data.output?.find(o => o.type === "image_generation_call");
+        if (imgItem?.result) {
+          console.log("Imagen generada con GPT-4o Responses API ✓ (diseño completo)");
+          return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id, isCompleteDesign: true };
         }
+        console.warn("Responses API OK pero sin imagen en output → gpt-image-1");
       } else {
         const err = await res.json().catch(() => ({}));
-        console.warn(`gpt-image-1 no disponible (${res.status}): ${err.error?.message || ""}. Usando DALL-E 3.`);
+        console.warn(`Responses API (${res.status}): ${err.error?.message || ""}. Usando gpt-image-1.`);
       }
     } catch (e) {
-      console.warn("gpt-image-1 error:", e.message, "→ DALL-E 3");
+      console.warn(`Responses API error (${e.name === "AbortError" ? "timeout 110s" : e.message}) → gpt-image-1`);
     }
-
-    // Fallback: DALL-E 3 (devuelve URL)
-    const res2 = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "hd" }),
-    });
-    if (!res2.ok) {
-      const body = await res2.json().catch(() => ({}));
-      throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
-    }
-    const { data: data2 } = await res2.json();
-    console.log("Imagen generada con DALL-E 3 ✓");
-    return Buffer.from(await (await fetch(data2[0].url)).arrayBuffer());
   }
 
-  throw new Error("OPENAI_API_KEY no configurada");
+  // gpt-image-1 con prompt de infografía completa (buen fallback, también genera diseño)
+  const gptImgPrompt = captionData ? prompt : _buildFotoFondoPrompt(tema);
+  try {
+    const res = await fetchConTimeout("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-image-1", prompt: gptImgPrompt, n: 1, size: "1024x1024", quality: "high" }),
+    }, 90_000);
+    if (res.ok) {
+      const { data } = await res.json();
+      if (data?.[0]?.b64_json) {
+        const isDesign = captionData != null;
+        console.log(`Imagen generada con gpt-image-1 ✓ (${isDesign ? "diseño completo" : "foto de fondo"})`);
+        return { buffer: Buffer.from(data[0].b64_json, "base64"), responseId: null, isCompleteDesign: isDesign };
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.warn(`gpt-image-1 (${res.status}): ${err.error?.message || ""}. Usando DALL-E 3.`);
+    }
+  } catch (e) {
+    console.warn(`gpt-image-1 error (${e.name === "AbortError" ? "timeout 90s" : e.message}) → DALL-E 3`);
+  }
+
+  // Fallback final: DALL-E 3 hd con foto de fondo + overlay SVG
+  const fallbackPrompt = _buildFotoFondoPrompt(tema);
+  const res2 = await fetchConTimeout("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "dall-e-3", prompt: fallbackPrompt, n: 1, size: "1024x1024", quality: "hd" }),
+  }, 60_000);
+  if (!res2.ok) {
+    const body = await res2.json().catch(() => ({}));
+    throw new Error(`DALL-E: ${body.error?.message || res2.status}`);
+  }
+  const { data: data2 } = await res2.json();
+  console.log("Imagen generada con DALL-E 3 hd ✓ (foto de fondo + overlay SVG)");
+  return { buffer: Buffer.from(await (await fetch(data2[0].url)).arrayBuffer()), responseId: null, isCompleteDesign: false };
+}
+
+// Continúa una conversación de imagen con GPT-4o usando el responseId previo
+async function _modificarImagen(responseId, instruccion) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY no configurada");
+  const res = await fetchConTimeout("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      previous_response_id: responseId,
+      input: instruccion,
+      tools: [{ type: "image_generation", quality: "high", size: "1024x1024", output_format: "png" }],
+    }),
+  }, 110_000);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Responses API modificación: ${err.error?.message || res.status}`);
+  }
+  const data = await res.json();
+  const imgItem = data.output?.find(o => o.type === "image_generation_call");
+  if (!imgItem?.result) throw new Error("GPT-4o no generó imagen en la respuesta de modificación");
+  return { buffer: Buffer.from(imgItem.result, "base64"), responseId: data.id };
 }
 
 // ── Fal.ai — Flux.1 Pro (respaldo principal si no hay OpenAI) ────────────────
@@ -460,30 +792,32 @@ async function _leonardoGenerar(tema) {
   throw new Error("Leonardo: timeout 60s");
 }
 
-async function generarImagen(tema) {
+// captionData: si se pasa, GPT-4o genera el diseño completo (isCompleteDesign=true → no overlay SVG)
+async function generarImagen(tema, captionData = null) {
   if (OPENAI_API_KEY) {
     try {
-      console.log("Generando imagen con DALL-E 3...");
-      const buf = await _dalleGenerar(tema);
-      console.log("DALL-E 3: imagen generada OK");
-      return buf;
+      console.log("Generando imagen con GPT-4o...");
+      const result = await _dalleGenerar(tema, captionData);
+      console.log("GPT-4o: imagen generada OK");
+      return result;
     } catch (e) {
-      console.warn(`DALL-E 3 falló (${e.message}), intentando Fal.ai...`);
+      console.warn(`OpenAI falló (${e.message}), intentando Fal.ai...`);
     }
   }
   if (FAL_API_KEY) {
     try {
       console.log("Generando imagen con Fal.ai (Flux.1 Pro)...");
-      const buf = await _falGenerar(tema);
+      const buffer = await _falGenerar(tema);
       console.log("Fal.ai: imagen generada OK");
-      return buf;
+      return { buffer, responseId: null, isCompleteDesign: false };
     } catch (e) {
       console.warn(`Fal.ai falló (${e.message}), intentando Leonardo...`);
     }
   }
   if (LEONARDO_API_KEY) {
     console.log("Generando imagen con Leonardo...");
-    return _leonardoGenerar(tema);
+    const buffer = await _leonardoGenerar(tema);
+    return { buffer, responseId: null, isCompleteDesign: false };
   }
   throw new Error("Sin API de imágenes configurada (OPENAI_API_KEY, FAL_API_KEY o LEONARDO_API_KEY)");
 }
@@ -575,6 +909,33 @@ function promptCaptions(tema, contextoExtra = "") {
   );
 }
 
+// ── Prompt carrusel ───────────────────────────────────────────────────────────
+
+function promptCarrusel(tema) {
+  return (
+    `Eres el equipo de comunicación institucional de STRATEC, firma de consultoría en seguridad institucional en México (Morelos, CDMX, Puebla, Jalisco).\n\n` +
+    `Crea el contenido para un CARRUSEL de 5 slides sobre el tema: "${tema}"\n\n` +
+    `ESTRUCTURA:\n` +
+    `- Slide 1 PORTADA: titular impactante + subtítulo que enganche al lector para deslizar\n` +
+    `- Slides 2-4 PUNTOS CLAVE: un punto por slide, numerados 01/02/03, con título corto y cuerpo explicativo\n` +
+    `- Slide 5 CTA: cierre con llamada a la acción hacia stratecsecurity.com\n\n` +
+    `CAPTION FACEBOOK (80-110 palabras): texto que acompañe la publicación del carrusel\n\n` +
+    `REGLAS ESTRICTAS:\n` +
+    `- Tono institucional, técnico, directo — nunca informal\n` +
+    `- Titulares en MAYÚSCULAS, declarativos, sin segunda persona ("tú", "tu empresa")\n` +
+    `- Correcto: "BRIGADAS: DEL PAPEL A LA PRÁCTICA" / Incorrecto: "¿TUS BRIGADAS FUNCIONAN?"\n` +
+    `- Máx 40 chars en titulares de portada, CTA y puntos\n` +
+    `- Cuerpo de puntos: máx 130 chars, concreto, sin perogrulladas\n` +
+    `- No mencionar precios ni resultados cuantificados inventados\n\n` +
+    `Responde ÚNICAMENTE con JSON válido:\n` +
+    `{"facebook":"...","categoria":"CATEGORÍA EN MAYÚSCULAS","portada":{"titular":"TITULAR MÁX 40 CHARS","subtitulo":"frase corta máx 50 chars"},"puntos":[{"numero":"01","titular":"TÍTULO MÁX 35 CHARS","cuerpo":"texto máx 130 chars"},{"numero":"02","titular":"...","cuerpo":"..."},{"numero":"03","titular":"...","cuerpo":"..."}],"cta":{"titular":"CIERRE MÁX 40 CHARS","cuerpo":"frase de cierre máx 80 chars"}}`
+  );
+}
+
+async function generarCarruselContent(tema) {
+  return llamarClaude([{ role: "user", content: promptCarrusel(tema) }]);
+}
+
 // ── Captions por texto (tema) ─────────────────────────────────────────────────
 
 async function generarCaptions(tema) {
@@ -640,6 +1001,50 @@ async function publicarFacebookBuffer(imageBuffer, caption) {
   return true;
 }
 
+// ── Facebook Carrusel (multi-photo post) ─────────────────────────────────────
+
+async function publicarFacebookCarrusel(slideBuffers, caption) {
+  if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
+    console.warn("Facebook: token o page_id no configurados");
+    return false;
+  }
+  const pageToken = await obtenerPageToken();
+
+  // Paso 1: subir cada slide como foto no publicada
+  const photoIds = [];
+  for (let i = 0; i < slideBuffers.length; i++) {
+    const form = new FormData();
+    form.append("source", new Blob([slideBuffers[i]], { type: "image/png" }), `slide-${i}.png`);
+    form.append("published", "false");
+    form.append("access_token", pageToken);
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
+      { method: "POST", body: form }
+    );
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(`Facebook [slide ${i}]: ${data.error?.message || JSON.stringify(data)}`);
+    photoIds.push(data.id);
+    console.log(`Facebook carrusel: slide ${i + 1}/${slideBuffers.length} subido (id=${data.id})`);
+  }
+
+  // Paso 2: crear el post del carrusel con todas las fotos adjuntas
+  const postRes = await fetch(`https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: caption,
+      attached_media: photoIds.map(id => ({ media_fbid: id })),
+      access_token: pageToken,
+    }),
+  });
+  const postData = await postRes.json();
+  if (!postRes.ok || postData.error) {
+    throw new Error(`Facebook [feed carrusel]: ${postData.error?.message || JSON.stringify(postData)}`);
+  }
+  console.log(`Facebook carrusel publicado OK, post_id=${postData.id}`);
+  return true;
+}
+
 // ── LinkedIn (Posts API 2024) ─────────────────────────────────────────────────
 
 async function publicarLinkedIn(imageBuffer, caption) {
@@ -650,15 +1055,19 @@ async function publicarLinkedIn(imageBuffer, caption) {
   const headers = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
-    "LinkedIn-Version": "202406",
+    "LinkedIn-Version": "202501",
     "X-Restli-Protocol-Version": "2.0.0",
   };
 
+  // LinkedIn limita commentary a 3000 caracteres
+  const commentary = String(caption || "").slice(0, 3000);
+
   // Paso 1: inicializar subida de imagen
-  const initRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
-    method: "POST", headers,
-    body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }),
-  });
+  const initRes = await fetchConTimeout(
+    "https://api.linkedin.com/rest/images?action=initializeUpload",
+    { method: "POST", headers, body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }) },
+    30_000
+  );
   if (!initRes.ok) {
     const txt = await initRes.text().catch(() => initRes.status);
     throw new Error(`LinkedIn [init ${initRes.status}]: ${String(txt).slice(0, 250)}`);
@@ -671,35 +1080,39 @@ async function publicarLinkedIn(imageBuffer, caption) {
   }
 
   // Paso 2: subir imagen binaria
-  const upRes = await fetch(uploadUrl, {
+  const upRes = await fetchConTimeout(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
     body: imageBuffer,
-  });
+  }, 60_000);
   if (!upRes.ok) {
     const txt = await upRes.text().catch(() => upRes.status);
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
   // Paso 3: crear publicación
-  const postRes = await fetch("https://api.linkedin.com/rest/posts", {
-    method: "POST", headers,
-    body: JSON.stringify({
-      author: orgUrn,
-      commentary: caption,
-      visibility: "PUBLIC",
-      distribution: {
-        feedDistribution: "MAIN_FEED",
-        targetEntities: [],
-        thirdPartyDistributionChannels: [],
-      },
-      content: {
-        media: { title: "STRATEC Security", id: imageUrn },
-      },
-      lifecycleState: "PUBLISHED",
-      isReshareDisabledByAuthor: false,
-    }),
-  });
+  const postRes = await fetchConTimeout(
+    "https://api.linkedin.com/rest/posts",
+    {
+      method: "POST", headers,
+      body: JSON.stringify({
+        author: orgUrn,
+        commentary,
+        visibility: "PUBLIC",
+        distribution: {
+          feedDistribution: "MAIN_FEED",
+          targetEntities: [],
+          thirdPartyDistributionChannels: [],
+        },
+        content: {
+          media: { title: "STRATEC Security", id: imageUrn },
+        },
+        lifecycleState: "PUBLISHED",
+        isReshareDisabledByAuthor: false,
+      }),
+    },
+    30_000
+  );
   if (!postRes.ok) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
@@ -816,7 +1229,7 @@ async function publicarPendientesAgendados() {
       else redes.push(`Facebook ❌`);
       if (li.status === "fulfilled" && li.value) redes.push("LinkedIn ✅");
       else if (!LINKEDIN_ACCESS_TOKEN) redes.push("LinkedIn ⏭️");
-      else redes.push(`LinkedIn ❌`);
+      else redes.push(`LinkedIn ❌ ${li.reason?.message || ""}`);
 
       // Notificar al chat original si hay chatId guardado
       if (meta.chatId) {
@@ -883,11 +1296,15 @@ async function procesarComando(chatId, tema) {
   tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
 
   try {
-    const [rawPhoto, captions] = await Promise.all([
-      generarImagen(tema),
-      generarCaptions(tema),
-    ]);
-    const imageBuffer = await buildInfografia(rawPhoto, captions);
+    // Secuencial: primero captions para pasar el contenido real al generador de imagen
+    const captions = await generarCaptions(tema);
+    const imgResult = await generarImagen(tema, captions);
+    const { buffer: rawPhoto, responseId, isCompleteDesign } = imgResult;
+
+    // Si GPT-4o generó el diseño completo, usarlo directo; si no, aplicar overlay SVG
+    const imageBuffer = isCompleteDesign
+      ? rawPhoto
+      : await buildInfografia(rawPhoto, captions);
     clearInterval(actionTick);
 
     const pendingId = savePending({
@@ -901,12 +1318,16 @@ async function procesarComando(chatId, tema) {
       categoria:      captions.categoria,
       tema,
       chatId,
+      responseId,
     });
+
+    activePending.set(chatId, pendingId);
 
     const preview =
       `📋 <b>Preview — ${tema}</b>\n\n` +
       `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
-      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
+      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...\n\n` +
+      `<i>💬 Escribe para modificar la imagen (ej: "hazla más oscura", "cambia el fondo")</i>`;
 
     await sendPhotoBuffer(chatId, imageBuffer, preview, [
       [
@@ -923,6 +1344,83 @@ async function procesarComando(chatId, tema) {
   }
 }
 
+// ── Modificación de imagen por chat (conversación con GPT-4o) ─────────────────
+
+async function procesarModificacionImagen(chatId, pendingId, instruccion) {
+  const pending = readPending(pendingId);
+  if (!pending) {
+    activePending.delete(chatId);
+    await sendMessage(chatId, "❌ Post no encontrado. Genera uno nuevo con /genera");
+    return;
+  }
+
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
+  );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
+
+  try {
+    let rawBuffer, newResponseId;
+
+    let isCompleteDesign = false;
+
+    if (pending.responseId && OPENAI_API_KEY) {
+      // Continúa la conversación: GPT-4o recuerda la imagen anterior
+      const result = await _modificarImagen(pending.responseId, instruccion);
+      rawBuffer = result.buffer;
+      newResponseId = result.responseId;
+      isCompleteDesign = true; // la modificación conserva el diseño completo
+    } else {
+      // Sin contexto previo — regenera con el contenido completo del post
+      const capts = {
+        titular: pending.titular, subtitulo: pending.subtitulo,
+        puntos: pending.puntos, categoria: pending.categoria,
+      };
+      const result = await generarImagen(`${pending.tema}. ${instruccion}`, capts);
+      rawBuffer = result.buffer;
+      newResponseId = result.responseId;
+      isCompleteDesign = result.isCompleteDesign;
+    }
+
+    clearInterval(actionTick);
+
+    // Si la imagen ya es un diseño completo, usarla directo; si no, aplicar overlay SVG
+    const captions = {
+      linkedin: pending.linkedin, facebook: pending.facebook,
+      titular: pending.titular, subtitulo: pending.subtitulo,
+      puntos: pending.puntos, categoria: pending.categoria,
+    };
+    const imageBuffer = isCompleteDesign
+      ? rawBuffer
+      : await buildInfografia(rawBuffer, captions);
+
+    updatePendingImage(pendingId, imageBuffer);
+    writeFileSync(join(PENDING_DIR, `${pendingId}-raw.png`), rawBuffer);
+    updatePendingMeta(pendingId, { responseId: newResponseId });
+
+    const preview =
+      `✏️ <b>Imagen modificada</b>\n\n` +
+      `<b>Facebook:</b>\n${pending.facebook.substring(0, 350)}\n\n` +
+      `<b>LinkedIn (inicio):</b>\n${pending.linkedin.substring(0, 200)}...\n\n` +
+      `<i>💬 Escribe para seguir modificando</i>`;
+
+    await sendPhotoBuffer(chatId, imageBuffer, preview, [
+      [
+        { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+        { text: "📅 Programar",      callback_data: `sched:${pendingId}` },
+      ],
+      [
+        { text: "🔄 Regenerar todo", callback_data: `reg:${pendingId}` },
+      ],
+    ]);
+
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
+}
+
 // ── Callbacks inline ──────────────────────────────────────────────────────────
 
 async function procesarAprobacion(chatId, messageId, pendingId, callbackId) {
@@ -933,6 +1431,7 @@ async function procesarAprobacion(chatId, messageId, pendingId, callbackId) {
     return;
   }
 
+  activePending.delete(chatId);
   const imageBuffer = Buffer.from(pending.imageBase64, "base64");
   const [fb, li]    = await Promise.allSettled([
     publicarFacebookBuffer(imageBuffer, pending.facebook),
@@ -957,6 +1456,7 @@ async function procesarRegeneracion(chatId, pendingId, callbackId) {
   await answerCb(callbackId, "Regenerando...");
   const pending = readPending(pendingId);
   const tema    = pending?.tema || "contenido de seguridad STRATEC";
+  activePending.delete(chatId);
   deletePending(pendingId);
   await procesarComando(chatId, tema);
 }
@@ -994,6 +1494,74 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
       { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
     ],
   ]);
+}
+
+// ── Carrusel — Flujo principal ────────────────────────────────────────────────
+
+async function procesarCarrusel(chatId, tema) {
+  const actionTick = setInterval(
+    () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
+    4000
+  );
+  tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {});
+
+  try {
+    // Imagen de fondo + contenido en paralelo
+    const [imgResult, content] = await Promise.all([
+      generarImagen(tema),
+      generarCarruselContent(tema),
+    ]);
+    const slides = await buildCarruselSlides(imgResult.buffer, content);
+    clearInterval(actionTick);
+
+    const carruselId = saveCarruselPending({ tema, facebook: content.facebook, chatId }, slides);
+    activePending.delete(chatId);
+
+    const previewCaption =
+      `🎠 <b>Carrusel — ${tema}</b>\n\n` +
+      `<b>Facebook:</b>\n${content.facebook.substring(0, 300)}\n\n` +
+      `<i>5 slides listos para publicar</i>`;
+
+    await sendMediaGroup(chatId, slides, previewCaption);
+
+    // sendMediaGroup no admite inline_keyboard — botones en mensaje aparte
+    await sendMessage(chatId, "¿Publicar el carrusel en Facebook?", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "✅ Publicar en Facebook", callback_data: `carr_pub:${carruselId}` }],
+          [{ text: "🔄 Regenerar carrusel",   callback_data: `carr_reg:${carruselId}` }],
+        ],
+      },
+    });
+
+  } catch (err) {
+    clearInterval(actionTick);
+    throw err;
+  }
+}
+
+async function procesarPublicarCarrusel(chatId, carruselId, callbackId) {
+  await answerCb(callbackId, "Publicando carrusel...");
+  const pending = readCarruselPending(carruselId);
+  if (!pending) {
+    await sendMessage(chatId, "❌ Carrusel no encontrado. Genera uno nuevo con /carrusel");
+    return;
+  }
+  try {
+    await publicarFacebookCarrusel(pending.slides, pending.facebook);
+    deleteCarruselPending(carruselId);
+    await sendMessage(chatId, `🚀 <b>Carrusel publicado en Facebook</b>\n\nTema: ${pending.tema}`);
+  } catch (err) {
+    await sendMessage(chatId, `❌ Error al publicar: ${err.message}`);
+  }
+}
+
+async function procesarRegenerarCarrusel(chatId, carruselId, callbackId) {
+  await answerCb(callbackId, "Regenerando carrusel...");
+  const pending = readCarruselPending(carruselId);
+  const tema = pending?.tema || "contenido de seguridad STRATEC";
+  deleteCarruselPending(carruselId);
+  await procesarCarrusel(chatId, tema);
 }
 
 // ── Menú de temas ─────────────────────────────────────────────────────────────
@@ -1062,8 +1630,9 @@ async function mostrarMenuTemas(chatId) {
   const keyboard = SERVICIOS_MENU.map((s, i) => [
     { text: s.btn, callback_data: `svc:${i}` },
   ]);
-  keyboard.push([{ text: "🔥  Temas en tendencia (7 nuevos con IA)", callback_data: "tendencia" }]);
-  keyboard.push([{ text: "✏️  Tema personalizado",                   callback_data: "tema_custom" }]);
+  keyboard.push([{ text: "🔥  Temas en tendencia (7 nuevos con IA)", callback_data: "tendencia"    }]);
+  keyboard.push([{ text: "🎠  Generar carrusel (5 slides)",          callback_data: "carr_menu"    }]);
+  keyboard.push([{ text: "✏️  Tema personalizado",                   callback_data: "tema_custom"  }]);
 
   await sendMessage(chatId,
     "📌 <b>¿Sobre qué publicamos hoy?</b>\n\n" +
@@ -1116,10 +1685,21 @@ async function main() {
         const { id, data, message } = update.callback_query;
         const chatId    = message.chat.id;
         const messageId = message.message_id;
-        if (data.startsWith("pub:"))        await procesarAprobacion(chatId, messageId, data.slice(4), id);
-        else if (data.startsWith("reg:"))   await procesarRegeneracion(chatId, data.slice(4), id);
-        else if (data.startsWith("recap:")) await procesarRecaptionado(chatId, data.slice(6), id);
-        else if (data.startsWith("sched:")) await procesarProgramar(chatId, data.slice(6), id);
+        if (data.startsWith("pub:"))             await procesarAprobacion(chatId, messageId, data.slice(4), id);
+        else if (data.startsWith("reg:"))         await procesarRegeneracion(chatId, data.slice(4), id);
+        else if (data.startsWith("recap:"))       await procesarRecaptionado(chatId, data.slice(6), id);
+        else if (data.startsWith("sched:"))       await procesarProgramar(chatId, data.slice(6), id);
+        else if (data.startsWith("carr_pub:"))    await procesarPublicarCarrusel(chatId, data.slice(9), id);
+        else if (data.startsWith("carr_reg:"))    await procesarRegenerarCarrusel(chatId, data.slice(9), id);
+        else if (data === "carr_menu") {
+          await answerCb(id, "");
+          await sendMessage(chatId,
+            "🎠 <b>Generar carrusel</b>\n\nEscribe el tema con el comando:\n" +
+            "<code>/carrusel protección civil empresas Morelos</code>\n\n" +
+            "O envía el tema directamente:\n" +
+            "<code>/carrusel capacitación brigadas de emergencia</code>"
+          );
+        }
         else if (data.startsWith("scheds:")) {
           const [pid, ts] = data.slice(7).split(":");
           await procesarAgendarSlot(chatId, pid, ts, id);
@@ -1223,7 +1803,22 @@ async function main() {
       if (!msg.text) continue;
       const text = msg.text.trim();
 
-      if (/^\/(genera|post)\s+/i.test(text)) {
+      // Texto libre con preview activo → modificación de imagen vía GPT-4o
+      const activePid = activePending.get(chatId);
+      if (activePid && !text.startsWith("/")) {
+        await procesarModificacionImagen(chatId, activePid, text);
+
+      } else if (/^\/(carrusel|carousel)\s+/i.test(text)) {
+        const tema = text.replace(/^\/(carrusel|carousel)(@\w+)?\s+/i, "").trim();
+        await procesarCarrusel(chatId, tema);
+
+      } else if (/^\/(carrusel|carousel)(@\w+)?$/i.test(text)) {
+        await sendMessage(chatId,
+          "🎠 Escribe el tema del carrusel:\n" +
+          "<code>/carrusel protección civil empresas Morelos</code>"
+        );
+
+      } else if (/^\/(genera|post)\s+/i.test(text)) {
         const tema = text.replace(/^\/(genera|post)(@\w+)?\s+/i, "").trim();
         await procesarComando(chatId, tema);
 
