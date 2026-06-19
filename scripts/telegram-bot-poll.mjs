@@ -47,6 +47,7 @@ const {
   FACEBOOK_PAGE_ID,
   LINKEDIN_ACCESS_TOKEN,
   LINKEDIN_ORG_ID,
+  LINKEDIN_PERSON_URN,
 } = process.env;
 
 const TG = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
@@ -1057,14 +1058,44 @@ async function publicarLinkedIn(imageBuffer, caption) {
   };
   const commentary = String(caption || "").slice(0, 3000);
 
-  // Paso 0: obtener URN del miembro autenticado
-  const meRes = await fetchConTimeout("https://api.linkedin.com/v2/me", { headers: authHeaders }, 15_000);
-  if (!meRes.ok) {
-    const txt = await meRes.text().catch(() => meRes.status);
-    throw new Error(`LinkedIn [me ${meRes.status}]: ${String(txt).slice(0, 200)}`);
+  // Paso 0: obtener person URN — 3 métodos en orden
+  let personUrn = LINKEDIN_PERSON_URN || null; // env var directo (más confiable)
+
+  if (!personUrn) {
+    // Método A: /v2/userinfo (OpenID Connect — scope: openid+profile)
+    const uiRes = await fetchConTimeout(
+      "https://api.linkedin.com/v2/userinfo",
+      { headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}` } },
+      15_000
+    ).catch(() => null);
+    if (uiRes?.ok) {
+      const ui = await uiRes.json().catch(() => ({}));
+      if (ui.sub) personUrn = `urn:li:person:${ui.sub}`;
+    }
   }
-  const meData    = await meRes.json();
-  const personUrn = `urn:li:person:${meData.id}`;
+
+  if (!personUrn) {
+    // Método B: /v2/me con LinkedIn-Version header (scope: r_liteprofile)
+    const meRes = await fetchConTimeout(
+      "https://api.linkedin.com/v2/me",
+      { headers: { ...authHeaders, "LinkedIn-Version": "202501" } },
+      15_000
+    ).catch(() => null);
+    if (meRes?.ok) {
+      const me = await meRes.json().catch(() => ({}));
+      if (me.id) personUrn = `urn:li:person:${me.id}`;
+    }
+  }
+
+  if (!personUrn) {
+    throw new Error(
+      "LinkedIn: no se pudo obtener el URN de persona. " +
+      "Agrega el secret LINKEDIN_PERSON_URN en GitHub con tu URN " +
+      "(formato: urn:li:person:XXXXXXXX). " +
+      "Encuéntralo en: https://www.linkedin.com/developers/tools/oauth/token-inspector"
+    );
+  }
+
   const authorUrn = LINKEDIN_ORG_ID ? `urn:li:organization:${LINKEDIN_ORG_ID}` : personUrn;
 
   // Paso 1: registrar subida (Assets API v2, owner = quien publicará)
