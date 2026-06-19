@@ -1047,25 +1047,29 @@ async function publicarFacebookCarrusel(slideBuffers, caption) {
 
 // ── LinkedIn (Posts API 2024) ─────────────────────────────────────────────────
 
-async function publicarLinkedIn(imageBuffer, caption) {
-  // Sin credenciales → skip silencioso (se muestra ⏭️ en Telegram)
-  if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_ORG_ID) return false;
+const _liHeaders = () => ({
+  Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+  "Content-Type": "application/json",
+  "LinkedIn-Version": "202501",
+  "X-Restli-Protocol-Version": "2.0.0",
+});
 
-  const orgUrn = `urn:li:organization:${LINKEDIN_ORG_ID}`;
-  const headers = {
-    Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-    "Content-Type": "application/json",
-    "LinkedIn-Version": "202501",
-    "X-Restli-Protocol-Version": "2.0.0",
-  };
+async function _liPersonUrn() {
+  const res = await fetchConTimeout(
+    "https://api.linkedin.com/v2/userinfo",
+    { headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "LinkedIn-Version": "202501" } },
+    15_000
+  );
+  if (!res.ok) throw new Error(`LinkedIn [userinfo ${res.status}]`);
+  const data = await res.json();
+  if (!data.sub) throw new Error("LinkedIn [userinfo]: sin campo sub");
+  return `urn:li:person:${data.sub}`;
+}
 
-  // LinkedIn limita commentary a 3000 caracteres
-  const commentary = String(caption || "").slice(0, 3000);
-
-  // Paso 1: inicializar subida de imagen
+async function _liUploadImage(imageBuffer, ownerUrn) {
   const initRes = await fetchConTimeout(
     "https://api.linkedin.com/rest/images?action=initializeUpload",
-    { method: "POST", headers, body: JSON.stringify({ initializeUploadRequest: { owner: orgUrn } }) },
+    { method: "POST", headers: _liHeaders(), body: JSON.stringify({ initializeUploadRequest: { owner: ownerUrn } }) },
     30_000
   );
   if (!initRes.ok) {
@@ -1075,11 +1079,9 @@ async function publicarLinkedIn(imageBuffer, caption) {
   const initData = await initRes.json();
   const uploadUrl = initData.value?.uploadUrl;
   const imageUrn  = initData.value?.image;
-  if (!uploadUrl || !imageUrn) {
+  if (!uploadUrl || !imageUrn)
     throw new Error(`LinkedIn [init]: respuesta inesperada — ${JSON.stringify(initData).slice(0, 200)}`);
-  }
 
-  // Paso 2: subir imagen binaria
   const upRes = await fetchConTimeout(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
@@ -1089,35 +1091,56 @@ async function publicarLinkedIn(imageBuffer, caption) {
     const txt = await upRes.text().catch(() => upRes.status);
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
+  return imageUrn;
+}
 
-  // Paso 3: crear publicación
-  const postRes = await fetchConTimeout(
+async function _liPost(authorUrn, commentary, imageUrn) {
+  return fetchConTimeout(
     "https://api.linkedin.com/rest/posts",
     {
-      method: "POST", headers,
+      method: "POST", headers: _liHeaders(),
       body: JSON.stringify({
-        author: orgUrn,
-        commentary,
-        visibility: "PUBLIC",
-        distribution: {
-          feedDistribution: "MAIN_FEED",
-          targetEntities: [],
-          thirdPartyDistributionChannels: [],
-        },
-        content: {
-          media: { title: "STRATEC Security", id: imageUrn },
-        },
-        lifecycleState: "PUBLISHED",
-        isReshareDisabledByAuthor: false,
+        author: authorUrn, commentary, visibility: "PUBLIC",
+        distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+        content: { media: { title: "STRATEC Security", id: imageUrn } },
+        lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false,
       }),
     },
     30_000
   );
+}
+
+async function publicarLinkedIn(imageBuffer, caption) {
+  if (!LINKEDIN_ACCESS_TOKEN) return false;
+
+  const commentary = String(caption || "").slice(0, 3000);
+  const orgUrn = LINKEDIN_ORG_ID ? `urn:li:organization:${LINKEDIN_ORG_ID}` : null;
+
+  // Paso 1-2: subir imagen (como org si hay ID, si no como persona)
+  let ownerUrn = orgUrn ?? await _liPersonUrn();
+  let imageUrn = await _liUploadImage(imageBuffer, ownerUrn);
+
+  // Paso 3: publicar
+  let postRes = await _liPost(ownerUrn, commentary, imageUrn);
+
+  // Si falla 403 en /author → el token no tiene scope org → reintentar como persona
+  if (!postRes.ok && postRes.status === 403 && orgUrn) {
+    const errTxt = await postRes.text().catch(() => "");
+    if (errTxt.includes("/author")) {
+      console.warn("LinkedIn: sin permiso org (falta w_organization_social), reintentando como persona...");
+      ownerUrn = await _liPersonUrn();
+      imageUrn = await _liUploadImage(imageBuffer, ownerUrn);
+      postRes  = await _liPost(ownerUrn, commentary, imageUrn);
+    } else {
+      throw new Error(`LinkedIn [post 403]: ${errTxt.slice(0, 300)}`);
+    }
+  }
+
   if (!postRes.ok) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
-  console.log("LinkedIn: publicado OK");
+  console.log(`LinkedIn: publicado OK como ${ownerUrn.includes("organization") ? "organización" : "perfil personal"}`);
   return true;
 }
 
