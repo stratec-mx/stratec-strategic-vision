@@ -980,6 +980,37 @@ async function obtenerPageToken() {
   return FACEBOOK_PAGE_ACCESS_TOKEN;
 }
 
+// Errores transitorios de Facebook que ameritan reintento
+// (code 1 "Please reduce the amount of data", code 2 servicio temporal, code 4/17/32/613 rate limit)
+function _fbEsTransitorio(err) {
+  if (!err) return false;
+  const code = err.code;
+  const msg  = String(err.message || "").toLowerCase();
+  return [1, 2, 4, 17, 32, 341, 368, 613].includes(code) ||
+         msg.includes("reduce the amount of data") ||
+         msg.includes("temporarily") ||
+         msg.includes("try again");
+}
+
+// POST a Graph API con reintento ante errores transitorios. Devuelve el JSON.
+async function _fbPostConRetry(url, opts, etiqueta, maxIntentos = 3) {
+  let ultimoError = null;
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+    const res  = await fetchConTimeout(url, opts, 60_000);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && !data.error) return data;
+    ultimoError = data.error || { message: `HTTP ${res.status}` };
+    if (intento < maxIntentos && _fbEsTransitorio(ultimoError)) {
+      const espera = 3000 * intento;
+      console.warn(`Facebook ${etiqueta}: transitorio (${ultimoError.message}), reintento ${intento + 1}/${maxIntentos} en ${espera / 1000}s`);
+      await new Promise(r => setTimeout(r, espera));
+      continue;
+    }
+    break;
+  }
+  throw new Error(`Facebook ${etiqueta}: ${ultimoError?.message || "fallo desconocido"}`);
+}
+
 async function publicarFacebookBuffer(imageBuffer, caption) {
   if (!FACEBOOK_PAGE_ACCESS_TOKEN || !FACEBOOK_PAGE_ID) {
     console.warn("Facebook: token o page_id no configurados");
@@ -990,14 +1021,11 @@ async function publicarFacebookBuffer(imageBuffer, caption) {
   form.append("source", new Blob([imageBuffer], { type: "image/png" }), "stratec-post.png");
   form.append("message", caption);
   form.append("access_token", pageToken);
-  const res = await fetch(
+  const data = await _fbPostConRetry(
     `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
-    { method: "POST", body: form }
+    { method: "POST", body: form },
+    "[foto]"
   );
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    throw new Error(`Facebook: ${data.error?.message || JSON.stringify(data)}`);
-  }
   console.log(`Facebook: publicado OK, id=${data.id}`);
   return true;
 }
@@ -1018,110 +1046,137 @@ async function publicarFacebookCarrusel(slideBuffers, caption) {
     form.append("source", new Blob([slideBuffers[i]], { type: "image/png" }), `slide-${i}.png`);
     form.append("published", "false");
     form.append("access_token", pageToken);
-    const res = await fetch(
+    const data = await _fbPostConRetry(
       `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/photos`,
-      { method: "POST", body: form }
+      { method: "POST", body: form },
+      `[slide ${i}]`
     );
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(`Facebook [slide ${i}]: ${data.error?.message || JSON.stringify(data)}`);
     photoIds.push(data.id);
     console.log(`Facebook carrusel: slide ${i + 1}/${slideBuffers.length} subido (id=${data.id})`);
   }
 
   // Paso 2: crear el post del carrusel con todas las fotos adjuntas
-  const postRes = await fetch(`https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: caption,
-      attached_media: photoIds.map(id => ({ media_fbid: id })),
-      access_token: pageToken,
-    }),
-  });
-  const postData = await postRes.json();
-  if (!postRes.ok || postData.error) {
-    throw new Error(`Facebook [feed carrusel]: ${postData.error?.message || JSON.stringify(postData)}`);
-  }
+  const postData = await _fbPostConRetry(
+    `https://graph.facebook.com/v21.0/${FACEBOOK_PAGE_ID}/feed`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: caption,
+        attached_media: photoIds.map(id => ({ media_fbid: id })),
+        access_token: pageToken,
+      }),
+    },
+    "[feed carrusel]"
+  );
   console.log(`Facebook carrusel publicado OK, post_id=${postData.id}`);
   return true;
 }
 
-// ── LinkedIn (UGC Posts API v2 — compatible con w_member_social) ──────────────
+// ── LinkedIn (REST Posts API versionada — compatible con OpenID sub) ──────────
+//
+// IMPORTANTE: el `sub` de OpenID Connect (/userinfo) es un ID codificado que la
+// API LEGACY (/v2/assets, /v2/ugcPosts) RECHAZA con "Invalid owner field".
+// Solo la API REST versionada (/rest/images, /rest/posts) lo acepta.
+
+// Lista de versiones candidatas (YYYYMM), de más nueva a más antigua.
+// Si hay override por secret, va primero. LinkedIn mantiene ~12 meses activos;
+// auto-derivar del mes actual evita que el bot se rompa al rotar versiones.
+function _linkedinVersionesCandidatas() {
+  const versiones = [];
+  if (process.env.LINKEDIN_API_VERSION) versiones.push(process.env.LINKEDIN_API_VERSION);
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1); // mes anterior: garantiza que ya esté publicada
+  for (let i = 0; i < 14; i++) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const v = `${y}${m}`;
+    if (!versiones.includes(v)) versiones.push(v);
+    d.setMonth(d.getMonth() - 1);
+  }
+  return versiones;
+}
+
+const LINKEDIN_VERSIONES = _linkedinVersionesCandidatas();
+
+// ¿El error indica versión no soportada? (para reintentar con otra)
+function _esErrorDeVersion(status, txt) {
+  const t = String(txt).toLowerCase();
+  return status === 426 || t.includes("version") && (t.includes("not supported") || t.includes("invalid") || t.includes("deprecated"));
+}
+
+async function _linkedinPersonUrn(authToken) {
+  // 1) Override explícito por secret (lo más confiable si el token no tiene openid)
+  if (LINKEDIN_PERSON_URN) {
+    return LINKEDIN_PERSON_URN.startsWith("urn:li:person:")
+      ? LINKEDIN_PERSON_URN
+      : `urn:li:person:${LINKEDIN_PERSON_URN}`;
+  }
+  // 2) OpenID Connect /userinfo (requiere scope openid+profile en el token)
+  const uiRes = await fetchConTimeout(
+    "https://api.linkedin.com/v2/userinfo",
+    { headers: { Authorization: `Bearer ${authToken}` } },
+    15_000
+  ).catch(() => null);
+  if (uiRes?.ok) {
+    const ui = await uiRes.json().catch(() => ({}));
+    if (ui.sub) return `urn:li:person:${ui.sub}`;
+  }
+  throw new Error(
+    "LinkedIn: no se pudo obtener el URN de persona. " +
+    "Agrega el secret LINKEDIN_PERSON_URN en GitHub (formato: urn:li:person:XXXX), " +
+    "o regenera el token incluyendo los scopes 'openid' y 'profile'."
+  );
+}
 
 async function publicarLinkedIn(imageBuffer, caption) {
   if (!LINKEDIN_ACCESS_TOKEN) return false;
 
-  const authHeaders = {
+  const commentary = String(caption || "").slice(0, 3000);
+  const personUrn  = await _linkedinPersonUrn(LINKEDIN_ACCESS_TOKEN);
+
+  // initializeUpload: probar versiones candidatas hasta que una sea aceptada.
+  // Una vez que init funciona, esa misma versión se reutiliza para el post.
+  let version = null, uploadUrl = null, imageUrn = null, ultimoErr = "";
+  for (const v of LINKEDIN_VERSIONES) {
+    const initRes = await fetchConTimeout(
+      "https://api.linkedin.com/rest/images?action=initializeUpload",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+          "X-Restli-Protocol-Version": "2.0.0",
+          "LinkedIn-Version": v,
+        },
+        body: JSON.stringify({ initializeUploadRequest: { owner: personUrn } }),
+      },
+      30_000
+    );
+    if (initRes.ok) {
+      const initData = await initRes.json();
+      uploadUrl = initData.value?.uploadUrl;
+      imageUrn  = initData.value?.image;
+      if (!uploadUrl || !imageUrn)
+        throw new Error(`LinkedIn [init]: respuesta inesperada — ${JSON.stringify(initData).slice(0, 200)}`);
+      version = v;
+      break;
+    }
+    const txt = await initRes.text().catch(() => initRes.status);
+    ultimoErr = `[${initRes.status}] ${String(txt).slice(0, 200)}`;
+    if (_esErrorDeVersion(initRes.status, txt)) continue; // probar versión anterior
+    throw new Error(`LinkedIn [init] ${ultimoErr}`); // error real, no de versión
+  }
+  if (!version) throw new Error(`LinkedIn [init]: ninguna versión aceptada — ${ultimoErr}`);
+
+  const headers = {
     Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
     "Content-Type": "application/json",
     "X-Restli-Protocol-Version": "2.0.0",
+    "LinkedIn-Version": version,
   };
-  const commentary = String(caption || "").slice(0, 3000);
 
-  // Paso 0: obtener person URN — 3 métodos en orden
-  let personUrn = LINKEDIN_PERSON_URN || null; // env var directo (más confiable)
-
-  if (!personUrn) {
-    // Método A: /v2/userinfo (OpenID Connect — scope: openid+profile)
-    const uiRes = await fetchConTimeout(
-      "https://api.linkedin.com/v2/userinfo",
-      { headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}` } },
-      15_000
-    ).catch(() => null);
-    if (uiRes?.ok) {
-      const ui = await uiRes.json().catch(() => ({}));
-      if (ui.sub) personUrn = `urn:li:person:${ui.sub}`;
-    }
-  }
-
-  if (!personUrn) {
-    // Método B: /v2/me con LinkedIn-Version header (scope: r_liteprofile)
-    const meRes = await fetchConTimeout(
-      "https://api.linkedin.com/v2/me",
-      { headers: { ...authHeaders, "LinkedIn-Version": "202501" } },
-      15_000
-    ).catch(() => null);
-    if (meRes?.ok) {
-      const me = await meRes.json().catch(() => ({}));
-      if (me.id) personUrn = `urn:li:person:${me.id}`;
-    }
-  }
-
-  if (!personUrn) {
-    throw new Error(
-      "LinkedIn: no se pudo obtener el URN de persona. " +
-      "Agrega el secret LINKEDIN_PERSON_URN en GitHub con tu URN " +
-      "(formato: urn:li:person:XXXXXXXX). " +
-      "Encuéntralo en: https://www.linkedin.com/developers/tools/oauth/token-inspector"
-    );
-  }
-
-  // Paso 1: registrar imagen bajo el perfil personal (owner = personUrn siempre)
-  const regRes = await fetchConTimeout(
-    "https://api.linkedin.com/v2/assets?action=registerUpload",
-    {
-      method: "POST", headers: authHeaders,
-      body: JSON.stringify({
-        registerUploadRequest: {
-          recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-          owner: personUrn,
-          serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
-        },
-      }),
-    },
-    30_000
-  );
-  if (!regRes.ok) {
-    const txt = await regRes.text().catch(() => regRes.status);
-    throw new Error(`LinkedIn [register ${regRes.status}]: ${String(txt).slice(0, 250)}`);
-  }
-  const regData   = await regRes.json();
-  const uploadUrl = regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
-  const assetUrn  = regData.value?.asset;
-  if (!uploadUrl || !assetUrn)
-    throw new Error(`LinkedIn [register]: respuesta inesperada — ${JSON.stringify(regData).slice(0, 200)}`);
-
-  // Paso 2: subir imagen binaria
+  // Paso 2: subir imagen binaria (PUT al uploadUrl)
   const upRes = await fetchConTimeout(uploadUrl, {
     method: "PUT",
     headers: { Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`, "Content-Type": "image/png" },
@@ -1132,27 +1187,19 @@ async function publicarLinkedIn(imageBuffer, caption) {
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
-  // Paso 3: publicar como perfil personal (w_member_social no permite org como author)
+  // Paso 3: crear publicación (REST Posts API, misma versión que funcionó)
   const postRes = await fetchConTimeout(
-    "https://api.linkedin.com/v2/ugcPosts",
+    "https://api.linkedin.com/rest/posts",
     {
-      method: "POST", headers: authHeaders,
+      method: "POST", headers,
       body: JSON.stringify({
         author: personUrn,
+        commentary,
+        visibility: "PUBLIC",
+        distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+        content: { media: { title: "STRATEC — Consultoría en Seguridad", id: imageUrn } },
         lifecycleState: "PUBLISHED",
-        specificContent: {
-          "com.linkedin.ugc.ShareContent": {
-            shareCommentary: { text: commentary },
-            shareMediaCategory: "IMAGE",
-            media: [{
-              status: "READY",
-              description: { text: "STRATEC Consultoría en Seguridad" },
-              media: assetUrn,
-              title: { text: "STRATEC" },
-            }],
-          },
-        },
-        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+        isReshareDisabledByAuthor: false,
       }),
     },
     30_000
@@ -1161,7 +1208,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
-  console.log(`LinkedIn: publicado OK como perfil personal (${personUrn})`);
+  console.log(`LinkedIn: publicado OK como perfil personal (${personUrn}, v${version})`);
   return true;
 }
 
