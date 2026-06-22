@@ -1096,9 +1096,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
     );
   }
 
-  const authorUrn = LINKEDIN_ORG_ID ? `urn:li:organization:${LINKEDIN_ORG_ID}` : personUrn;
-
-  // Paso 1: registrar subida (Assets API v2, owner = quien publicará)
+  // Paso 1: registrar imagen bajo el perfil personal (owner = personUrn siempre)
   const regRes = await fetchConTimeout(
     "https://api.linkedin.com/v2/assets?action=registerUpload",
     {
@@ -1106,7 +1104,7 @@ async function publicarLinkedIn(imageBuffer, caption) {
       body: JSON.stringify({
         registerUploadRequest: {
           recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-          owner: authorUrn,
+          owner: personUrn,
           serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
         },
       }),
@@ -1134,13 +1132,13 @@ async function publicarLinkedIn(imageBuffer, caption) {
     throw new Error(`LinkedIn [upload ${upRes.status}]: ${String(txt).slice(0, 250)}`);
   }
 
-  // Paso 3: publicar con UGC Posts API (soporta tanto persona como org)
-  const _ugcPost = (author) => fetchConTimeout(
+  // Paso 3: publicar como perfil personal (w_member_social no permite org como author)
+  const postRes = await fetchConTimeout(
     "https://api.linkedin.com/v2/ugcPosts",
     {
       method: "POST", headers: authHeaders,
       body: JSON.stringify({
-        author,
+        author: personUrn,
         lifecycleState: "PUBLISHED",
         specificContent: {
           "com.linkedin.ugc.ShareContent": {
@@ -1159,26 +1157,11 @@ async function publicarLinkedIn(imageBuffer, caption) {
     },
     30_000
   );
-
-  let postRes = await _ugcPost(authorUrn);
-
-  // Si falla 403 en /author (sin permiso org) → reintentar como perfil personal
-  if (!postRes.ok && postRes.status === 403 && LINKEDIN_ORG_ID) {
-    const errTxt = await postRes.text().catch(() => "");
-    if (errTxt.includes("/author") || errTxt.includes("ACCESS_DENIED")) {
-      console.warn("LinkedIn: sin permiso para publicar como organización, reintentando como perfil personal...");
-      postRes = await _ugcPost(personUrn);
-    } else {
-      throw new Error(`LinkedIn [post 403]: ${errTxt.slice(0, 300)}`);
-    }
-  }
-
   if (!postRes.ok) {
     const txt = await postRes.text().catch(() => postRes.status);
     throw new Error(`LinkedIn [post ${postRes.status}]: ${String(txt).slice(0, 300)}`);
   }
-  const tipo = authorUrn.includes("organization") ? "organización" : "perfil personal";
-  console.log(`LinkedIn: publicado OK como ${tipo}`);
+  console.log(`LinkedIn: publicado OK como perfil personal (${personUrn})`);
   return true;
 }
 
