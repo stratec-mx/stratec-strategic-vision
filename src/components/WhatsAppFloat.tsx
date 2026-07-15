@@ -1,9 +1,9 @@
 // Botón flotante de WhatsApp
-// Número: +52 564 67 50 15
+// Número: +52 5564 67 50 15
 
 import { track } from "@/lib/analytics";
 
-const WA_NUMBER = "52564675015";
+const WA_NUMBER = "525564675015";
 const WA_MESSAGE = encodeURIComponent(
   "Hola, me interesa conocer más sobre los servicios de consultoría de STRATEC Security."
 );
