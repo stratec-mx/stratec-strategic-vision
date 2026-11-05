@@ -285,7 +285,7 @@ export default function Diagnostico() {
               <p className="text-sm text-steel/80 max-w-lg mx-auto mb-8">
                 Recibirás el reporte completo en tu correo. Si quieres avanzar de inmediato, agenda tu evaluación por WhatsApp.
               </p>
-              <a href={`https://wa.me/527771312049?text=${waText}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer"
                  className="inline-flex items-center gap-2 bg-navy hover:bg-navy-deep text-smoke px-8 py-4 uppercase tracking-wider text-sm transition-colors">
                 Agendar evaluación por WhatsApp <ArrowRight className="h-4 w-4" />
               </a>
