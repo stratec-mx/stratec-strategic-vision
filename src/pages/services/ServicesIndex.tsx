@@ -101,7 +101,7 @@ export default function ServicesIndex() {
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85, delay: 0.08 }}
-              className="font-serif font-light text-5xl md:text-6xl lg:text-7xl text-smoke leading-[1.05] tracking-[0.02em] mb-7 max-w-3xl"
+              className="font-display font-light text-5xl md:text-6xl lg:text-7xl text-smoke leading-[1.05] tracking-[0.02em] mb-7 max-w-3xl"
             >
               Servicios
             </motion.h1>
@@ -150,7 +150,7 @@ export default function ServicesIndex() {
                   Áreas de especialización
                 </span>
               </div>
-              <h2 className="font-serif font-light text-3xl md:text-4xl text-smoke leading-tight max-w-xl">
+              <h2 className="font-display font-light text-3xl md:text-4xl text-smoke leading-tight max-w-xl">
                 Cinco áreas para fortalecer la seguridad institucional
               </h2>
             </motion.div>
@@ -198,7 +198,7 @@ export default function ServicesIndex() {
                       Formatos de intervención
                     </span>
                   </div>
-                  <h2 className="font-serif font-light text-3xl md:text-4xl lg:text-5xl text-smoke leading-tight">
+                  <h2 className="font-display font-light text-3xl md:text-4xl lg:text-5xl text-smoke leading-tight">
                     Tres enfoques adaptados<br />a tu etapa institucional
                   </h2>
                 </motion.div>
@@ -231,7 +231,7 @@ export default function ServicesIndex() {
                 >
                   <div className="p-8 flex flex-col h-full">
                     <div className="mb-6">
-                      <h3 className="font-serif font-light text-2xl text-smoke mb-2">
+                      <h3 className="font-display font-light text-2xl text-smoke mb-2">
                         {format.title}
                       </h3>
                       <p className="font-condensed text-[0.72rem] uppercase tracking-[0.2em] text-[#C4A04A]/70">
@@ -285,7 +285,7 @@ export default function ServicesIndex() {
               transition={{ duration: 0.6, delay: 0.35 }}
               className="mt-12 border border-[rgba(196,160,74,0.15)] bg-[#1A1A24]/60 p-8 md:p-10"
             >
-              <h3 className="font-serif font-light text-xl text-smoke mb-4">
+              <h3 className="font-display font-light text-xl text-smoke mb-4">
                 Metodología transversal en todos los formatos
               </h3>
               <p className="font-condensed font-light text-smoke/60 leading-relaxed text-[0.95rem]">
@@ -365,14 +365,14 @@ function ServiceCard({
           className="w-full text-left p-8 md:p-10 group"
         >
           <div
-            className="font-serif font-light text-[4rem] leading-none text-[#C4A04A] mb-6 select-none"
+            className="font-display font-light text-[4rem] leading-none text-[#C4A04A] mb-6 select-none"
             style={{ opacity: 0.18 }}
           >
             {item.numero}
           </div>
 
           <h2
-            className={`font-serif font-light text-[1.45rem] leading-snug mb-3 transition-colors duration-300
+            className={`font-display font-light text-[1.45rem] leading-snug mb-3 transition-colors duration-300
               ${open ? "text-[#C4A04A]/90" : "text-smoke group-hover:text-[#C4A04A]/80"}`}
           >
             {item.titulo}

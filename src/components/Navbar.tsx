@@ -56,7 +56,10 @@ export const Navbar = () => {
   };
 
   const transparent = hasDarkHero && !scrolled;
-  const logoVariant = transparent ? "light" : "dark";
+  // El header siempre es oscuro (transparente sobre hero oscuro, o barra casi
+  // negra al hacer scroll) → el logo debe ir siempre en variante clara, si no
+  // se pierde sobre el fondo negro al bajar.
+  const logoVariant = "light";
   const linkColor = transparent ? "text-smoke/70 hover:text-smoke" : "text-smoke/60 hover:text-smoke";
   const menuColor = transparent ? "text-smoke" : "text-smoke";
 

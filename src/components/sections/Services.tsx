@@ -35,7 +35,7 @@ function HomeServiceCard({
           className="w-full text-left flex items-start gap-5 p-6 group"
         >
           <span
-            className="font-serif font-light text-3xl leading-none text-[#C4A04A] shrink-0 mt-0.5 select-none"
+            className="font-display font-light text-3xl leading-none text-[#C4A04A] shrink-0 mt-0.5 select-none"
             style={{ opacity: 0.25 }}
           >
             {s.numero}
@@ -43,7 +43,7 @@ function HomeServiceCard({
 
           <div className="min-w-0 flex-1">
             <p
-              className={`font-serif font-light text-[1.1rem] leading-snug mb-1.5 transition-colors duration-300
+              className={`font-display font-light text-[1.1rem] leading-snug mb-1.5 transition-colors duration-300
                 ${open ? "text-[#C4A04A]/85" : "text-smoke group-hover:text-[#C4A04A]/75"}`}
             >
               {s.titulo}
@@ -125,7 +125,7 @@ export const Services = () => {
                   Capacidades institucionales
                 </span>
               </div>
-              <h2 className="font-serif font-light text-4xl md:text-5xl lg:text-6xl text-smoke leading-tight">
+              <h2 className="font-display font-light text-4xl md:text-5xl lg:text-6xl text-smoke leading-tight">
                 Áreas de especialización
               </h2>
             </motion.div>
@@ -162,7 +162,7 @@ export const Services = () => {
                      gap-6 border border-[rgba(196,160,74,0.15)] bg-[#1A1A24]/60 p-8 md:p-10"
         >
           <div>
-            <p className="font-serif font-light text-xl text-smoke mb-1">
+            <p className="font-display font-light text-xl text-smoke mb-1">
               Cada propuesta se diseña a medida
             </p>
             <p className="font-condensed font-light text-sm text-smoke/50">

@@ -183,12 +183,12 @@ export const NetworkBackground = ({
     return generate(size.w, size.h, count);
   }, [size.w, size.h, density]);
 
-  // Slow, continuous ambient particles along single edges.
+  // Continuous ambient particles along single edges.
   const particleEdges = useMemo(() => {
     if (!edges.length) return [];
-    const step = Math.max(2, Math.floor(edges.length / 10));
+    const step = Math.max(1, Math.floor(edges.length / 16));
     const picks: Edge[] = [];
-    for (let i = 0; i < edges.length && picks.length < 6; i += step) picks.push(edges[i]);
+    for (let i = 0; i < edges.length && picks.length < 11; i += step) picks.push(edges[i]);
     return picks;
   }, [edges]);
 
@@ -303,8 +303,8 @@ export const NetworkBackground = ({
           {!reducedMotion && particleEdges.map((e, i) => {
             const a = nodes[e.from], b = nodes[e.to];
             if (!a || !b) return null;
-            const dur = 2.6 + (i % 4) * 0.7;
-            const begin = 2.4 + i * 0.45;
+            const dur = 1.7 + (i % 4) * 0.45;
+            const begin = 0.9 + i * 0.28;
             return (
               <circle key={`p-${i}`} r={1.8} fill={accent} opacity="0">
                 <animate attributeName="cx" from={a.x} to={b.x}
