@@ -1106,13 +1106,8 @@ function _esErrorDeVersion(status, txt) {
 }
 
 async function _linkedinPersonUrn(authToken) {
-  // 1) Override explícito por secret (lo más confiable si el token no tiene openid)
-  if (LINKEDIN_PERSON_URN) {
-    return LINKEDIN_PERSON_URN.startsWith("urn:li:person:")
-      ? LINKEDIN_PERSON_URN
-      : `urn:li:person:${LINKEDIN_PERSON_URN}`;
-  }
-  // 2) OpenID Connect /userinfo (requiere scope openid+profile en el token)
+  // 1) FUENTE AUTORITATIVA: /userinfo del token mismo (scopes openid+profile).
+  //    Garantiza que el URN coincide con el dueño del token → evita 403.
   const uiRes = await fetchConTimeout(
     "https://api.linkedin.com/v2/userinfo",
     { headers: { Authorization: `Bearer ${authToken}` } },
@@ -1120,12 +1115,28 @@ async function _linkedinPersonUrn(authToken) {
   ).catch(() => null);
   if (uiRes?.ok) {
     const ui = await uiRes.json().catch(() => ({}));
-    if (ui.sub) return `urn:li:person:${ui.sub}`;
+    if (ui.sub) {
+      console.log(`LinkedIn: identidad resuelta vía /userinfo (sub=${ui.sub})`);
+      return `urn:li:person:${ui.sub}`;
+    }
+  } else if (uiRes) {
+    const d = await uiRes.text().catch(() => "");
+    console.warn(`LinkedIn /userinfo falló [${uiRes.status}]: ${d.slice(0, 120)} — el token probablemente NO tiene scopes openid+profile.`);
   }
+
+  // 2) Fallback: secret LINKEDIN_PERSON_URN (solo si el token no tiene openid).
+  //    OJO: si el valor no coincide con el dueño del token, init dará 403.
+  if (LINKEDIN_PERSON_URN) {
+    console.warn("LinkedIn: usando LINKEDIN_PERSON_URN del secret (fallback, no verificado contra el token)");
+    return LINKEDIN_PERSON_URN.startsWith("urn:li:person:")
+      ? LINKEDIN_PERSON_URN
+      : `urn:li:person:${LINKEDIN_PERSON_URN}`;
+  }
+
   throw new Error(
     "LinkedIn: no se pudo obtener el URN de persona. " +
-    "Agrega el secret LINKEDIN_PERSON_URN en GitHub (formato: urn:li:person:XXXX), " +
-    "o regenera el token incluyendo los scopes 'openid' y 'profile'."
+    "Regenera el token incluyendo los scopes 'openid' y 'profile' " +
+    "(producto 'Sign In with LinkedIn using OpenID Connect')."
   );
 }
 
@@ -1163,8 +1174,22 @@ async function publicarLinkedIn(imageBuffer, caption) {
       break;
     }
     const txt = await initRes.text().catch(() => initRes.status);
-    ultimoErr = `[${initRes.status}] ${String(txt).slice(0, 200)}`;
+    // LinkedIn esconde el motivo real del 403 en headers, no en el body
+    const hdr = [
+      initRes.headers.get("www-authenticate"),
+      initRes.headers.get("x-li-error-response"),
+      initRes.headers.get("x-linkedin-error-response"),
+    ].filter(Boolean).join(" | ");
+    ultimoErr = `[${initRes.status}] ${String(txt).slice(0, 150)}${hdr ? ` || ${hdr.slice(0, 200)}` : ""}`;
     if (_esErrorDeVersion(initRes.status, txt)) continue; // probar versión anterior
+    // 403 con scope insuficiente → mensaje accionable
+    if (initRes.status === 403) {
+      throw new Error(
+        `LinkedIn [init 403]: permiso denegado para owner=${personUrn}. ` +
+        `Causa probable: el token no tiene scope w_member_social, o el URN no es el dueño del token. ` +
+        `Regenera el token con scopes openid+profile+w_member_social. ${hdr ? `Detalle: ${hdr.slice(0, 150)}` : ""}`
+      );
+    }
     throw new Error(`LinkedIn [init] ${ultimoErr}`); // error real, no de versión
   }
   if (!version) throw new Error(`LinkedIn [init]: ninguna versión aceptada — ${ultimoErr}`);
