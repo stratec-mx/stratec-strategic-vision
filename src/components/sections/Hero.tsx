@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import hero from "@/assets/hero-stratec.jpg";
 import { NetworkBackground } from "@/components/NetworkBackground";
 import { track } from "@/lib/analytics";
@@ -64,8 +65,11 @@ export const Hero = () => {
                 </motion.div>
               </a>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-none border-smoke/30 bg-transparent text-smoke hover:bg-smoke/10 hover:text-smoke hover:border-smoke/60 tracking-wider text-xs uppercase h-14 px-8 transition-all duration-300 hover:shadow-lg hover:shadow-smoke/10 group">
-              <motion.a href="#services" onClick={() => track.ctaClick("hero_services")} whileHover={{ scale: 1.05 }} className="inline-block">Conocer capacidades</motion.a>
+            <Button asChild variant="outline" size="lg" className="rounded-none border-[#C4A04A]/50 bg-transparent text-[#C4A04A] hover:bg-[#C4A04A]/10 hover:text-[#C4A04A] hover:border-[#C4A04A] tracking-wider text-xs uppercase h-14 px-8 transition-all duration-300 group">
+              <Link to="/diagnostico" onClick={() => track.ctaClick("hero_diagnostico_gratis")} className="inline-flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                Identifica qué tan vulnerable eres
+              </Link>
             </Button>
           </motion.div>
 

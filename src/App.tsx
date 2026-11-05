@@ -15,6 +15,7 @@ import Terminos from "./pages/Terminos.tsx";
 import Confidentiality from "./pages/Confidentiality.tsx";
 import Auth from "./pages/Auth.tsx";
 import MapaDemo from "./pages/MapaDemo.tsx";
+import Diagnostico from "./pages/Diagnostico.tsx";
 import CoverageIndex from "./pages/coverage/CoverageIndex.tsx";
 import CoverageLocality from "./pages/coverage/CoverageLocality.tsx";
 import ServicesIndex from "./pages/services/ServicesIndex.tsx";
@@ -57,6 +58,7 @@ const AppRoutes = () => {
         <Route path="/confidentiality" element={<Confidentiality />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/mapa-demo" element={<MapaDemo />} />
+        <Route path="/diagnostico" element={<Diagnostico />} />
 
         {/* Coverage routes */}
         <Route path="/cobertura" element={<CoverageIndex />} />
