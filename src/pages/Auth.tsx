@@ -47,12 +47,27 @@ const Auth = () => {
       if (error) throw error;
       navigate("/app", { replace: true });
     } catch (err: any) {
-      console.error("[Auth]", err?.code ?? "error");
-      toast({
-        title: "Acceso restringido",
-        description: "Credenciales no válidas. Contacte al administrador del sistema.",
-        variant: "destructive",
-      });
+      const code = err?.code ?? "";
+      const msg  = String(err?.message ?? "").toLowerCase();
+      console.error("[Auth]", code || msg || "error");
+
+      let titulo = "Acceso restringido";
+      let detalle = "Credenciales no válidas. Verifique correo y contraseña.";
+
+      if (code === "email_not_confirmed" || msg.includes("not confirmed")) {
+        titulo = "Correo sin confirmar";
+        detalle = "Confirme su correo desde el enlace que le envió el sistema, o pida al administrador que lo confirme en Supabase.";
+      } else if (code === "invalid_credentials" || msg.includes("invalid login")) {
+        detalle = "Correo o contraseña incorrectos, o la cuenta no existe. Contacte al administrador para crear sus credenciales.";
+      } else if (msg.includes("failed to fetch") || msg.includes("networkerror") || msg.includes("load failed")) {
+        titulo = "Sin conexión con el servidor";
+        detalle = "No se pudo contactar el servidor de autenticación. Revise su conexión o la configuración del sistema.";
+      } else if (code === "over_request_rate_limit" || msg.includes("rate limit")) {
+        titulo = "Demasiados intentos";
+        detalle = "Espere unos minutos antes de volver a intentar.";
+      }
+
+      toast({ title: titulo, description: detalle, variant: "destructive" });
     } finally {
       setBusy(false);
     }
