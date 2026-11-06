@@ -167,7 +167,8 @@ const CREAM: [number, number, number] = [248, 245, 237];
 
 // ─── Generación ─────────────────────────────────────────────────────────────
 
-export async function downloadQuotePdf(data: QuotePdfData): Promise<string> {
+/** Construye el documento jsPDF de la propuesta (sin descargarlo). */
+async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: string }> {
   const jsPDF = await loadJsPdf();
   const mark = await loadImageDataUrl("/brand/stratec-mark-white.png");
 
@@ -550,6 +551,31 @@ export async function downloadQuotePdf(data: QuotePdfData): Promise<string> {
     author: "STRATEC Security",
     creator: "STRATEC Dashboard",
   });
+  return { doc, fileName };
+}
+
+/** Descarga la propuesta como archivo PDF. Devuelve el nombre de archivo. */
+export async function downloadQuotePdf(data: QuotePdfData): Promise<string> {
+  const { doc, fileName } = await buildQuotePdf(data);
   doc.save(fileName);
   return fileName;
+}
+
+/** Genera la propuesta y devuelve una URL temporal (blob) para previsualizarla. */
+export async function previewQuotePdf(data: QuotePdfData): Promise<{ url: string; fileName: string; blob: Blob }> {
+  const { doc, fileName } = await buildQuotePdf(data);
+  const blob: Blob = doc.output("blob");
+  return { url: URL.createObjectURL(blob), fileName, blob };
+}
+
+/** Descarga un PDF ya generado (desde la vista previa) sin volver a construirlo. */
+export function saveBlob(blob: Blob, fileName: string) {
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }

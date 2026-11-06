@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, FileText, FileDown, Loader2 } from "lucide-react";
+import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
-import { downloadQuotePdf, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
+import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 
 const itemSchema = z.object({
   code: z.string().trim().min(1, "Selecciona un servicio en cada concepto").max(20),
@@ -60,6 +61,23 @@ const normalizeItems = (raw: unknown): Item[] =>
     unit_price: Number(r?.unit_price) || 0,
   }));
 
+const DRAFT_KEY = "stratec.quoteDraft.v1";
+type Draft = {
+  form: { number: string; currency: string; notes: string; valid_until: string };
+  clientId: string;
+  newClient: { name: string; contact_name: string; contact_email: string };
+  items: Item[];
+  taxRate: number;
+};
+const readDraft = (): Draft | null => {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Draft) : null;
+  } catch {
+    return null;
+  }
+};
+
 const Quotes = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -69,11 +87,28 @@ const Quotes = () => {
   const [saving, setSaving] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
-  const [clientId, setClientId] = useState<string>("");
-  const [newClient, setNewClient] = useState({ name: "", contact_name: "", contact_email: "" });
-  const [items, setItems] = useState<Item[]>([emptyItem()]);
-  const [taxRate, setTaxRate] = useState(16);
+  const [preview, setPreview] = useState<{ url: string; fileName: string; blob: Blob } | null>(null);
+
+  // El borrador se conserva aunque se cierre el panel o se recargue la página
+  const draft = useMemo(readDraft, []);
+  const [form, setForm] = useState(draft?.form ?? { number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
+  const [clientId, setClientId] = useState<string>(draft?.clientId ?? "");
+  const [newClient, setNewClient] = useState(draft?.newClient ?? { name: "", contact_name: "", contact_email: "" });
+  const [items, setItems] = useState<Item[]>(draft?.items?.length ? draft.items : [emptyItem()]);
+  const [taxRate, setTaxRate] = useState(draft?.taxRate ?? 16);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, clientId, newClient, items, taxRate } satisfies Draft));
+    } catch {
+      /* almacenamiento lleno o bloqueado: el borrador solo vive en memoria */
+    }
+  }, [form, clientId, newClient, items, taxRate]);
+
+  const closePreview = () => {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  };
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.unit_price, 0);
   const tax = subtotal * (taxRate / 100);
@@ -102,6 +137,7 @@ const Quotes = () => {
   }, [list]);
 
   const resetForm = () => {
+    localStorage.removeItem(DRAFT_KEY);
     setForm({ number: suggestedNumber, currency: "MXN", notes: "", valid_until: isoInDays(30) });
     setClientId("");
     setNewClient({ name: "", contact_name: "", contact_email: "" });
@@ -165,8 +201,8 @@ const Quotes = () => {
   const makePdf = async (data: QuotePdfData, key: string) => {
     setPdfBusy(key);
     try {
-      const name = await downloadQuotePdf(data);
-      toast({ title: "PDF generado", description: name });
+      if (preview) URL.revokeObjectURL(preview.url);
+      setPreview(await previewQuotePdf(data));
     } catch (e: any) {
       console.error("[Quotes.pdf]", e);
       toast({ title: "No se pudo generar el PDF", description: e?.message ?? "Intenta de nuevo.", variant: "destructive" });
@@ -268,6 +304,7 @@ const Quotes = () => {
 
   // Se ejecuta tras recargar la lista para que el folio sugerido avance
   const resetFormAfterSave = () => {
+    localStorage.removeItem(DRAFT_KEY);
     setClientId("");
     setNewClient({ name: "", contact_name: "", contact_email: "" });
     setItems([emptyItem()]);
@@ -306,6 +343,25 @@ const Quotes = () => {
   const parents = SERVICE_CATALOG.filter((s) => !s.parentCode);
   const childrenOf = (code: string) => SERVICE_CATALOG.filter((s) => s.parentCode === code);
 
+  // Se monta dentro del panel cuando está abierto (para que no lo cierre) y fuera cuando no
+  const previewDialog = (
+    <Dialog open={!!preview} onOpenChange={(v) => !v && closePreview()}>
+      <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 gap-0 flex flex-col rounded-none">
+        <DialogHeader className="px-5 py-3 border-b border-border flex-row items-center justify-between space-y-0">
+          <DialogTitle className="font-display text-navy text-base truncate pr-4">{preview?.fileName}</DialogTitle>
+          <Button
+            size="sm"
+            onClick={() => preview && saveBlob(preview.blob, preview.fileName)}
+            className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-9 mr-8 shrink-0"
+          >
+            <FileDown className="h-4 w-4 mr-2" /> Descargar
+          </Button>
+        </DialogHeader>
+        {preview && <iframe title="Vista previa de la propuesta" src={preview.url} className="flex-1 w-full bg-secondary" />}
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div>
       <PageHeader
@@ -315,7 +371,7 @@ const Quotes = () => {
         actions={
           <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetTrigger asChild>
-              <Button onClick={() => !open && resetForm()} className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
+              <Button className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
                 <Plus className="h-4 w-4 mr-2" /> Nueva cotización
               </Button>
             </SheetTrigger>
@@ -452,21 +508,37 @@ const Quotes = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button type="button" variant="outline" onClick={previewPdf} disabled={saving || pdfBusy === "form"} className="rounded-none uppercase tracking-wider text-xs h-12 border-navy text-navy">
-                    {pdfBusy === "form" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                    {pdfBusy === "form" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
                     Vista previa PDF
                   </Button>
                   <Button onClick={() => submit(true)} disabled={saving} className="rounded-none bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-xs h-12">
-                    {saving ? "Guardando…" : "Guardar y descargar PDF"}
+                    {saving ? "Guardando…" : "Guardar y ver PDF"}
                   </Button>
                 </div>
-                <Button type="button" variant="ghost" onClick={() => submit(false)} disabled={saving} className="w-full rounded-none uppercase tracking-wider text-xs h-10 text-steel">
-                  Solo guardar
-                </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button type="button" variant="ghost" onClick={() => submit(false)} disabled={saving} className="rounded-none uppercase tracking-wider text-xs h-10 text-steel">
+                    Solo guardar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={saving}
+                    onClick={() => { if (window.confirm("¿Borrar todos los datos de esta cotización en preparación?")) resetForm(); }}
+                    className="rounded-none uppercase tracking-wider text-xs h-10 text-steel"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-2" /> Limpiar formulario
+                  </Button>
+                </div>
+                <p className="text-[11px] text-steel text-center">El borrador se guarda automáticamente en este navegador hasta que lo guardes o lo limpies.</p>
+
+                {open && previewDialog}
               </div>
             </SheetContent>
           </Sheet>
         }
       />
+
+      {!open && previewDialog}
 
       <div className="border border-border bg-card">
         {list.length === 0 ? (
@@ -505,8 +577,8 @@ const Quotes = () => {
                   </TableCell>
                   <TableCell className="text-steel text-sm">{new Date(q.created_at).toLocaleDateString("es")}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => downloadSaved(q)} disabled={pdfBusy === q.id} aria-label={`Descargar PDF de ${q.number}`}>
-                      {pdfBusy === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                    <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => downloadSaved(q)} disabled={pdfBusy === q.id} aria-label={`Ver PDF de ${q.number}`}>
+                      {pdfBusy === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </TableCell>
                 </TableRow>
