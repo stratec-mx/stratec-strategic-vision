@@ -38,6 +38,8 @@ export interface ServiceData {
   descripcionCorta: string;
   href: string;
   heroImage: string;
+  /** Emblema o ilustración que reemplaza la foto del hero (se muestra completo, sin recortar). */
+  heroEmblem?: string;
   breadcrumb: string;
   parentBreadcrumb?: string;
   parentHref?: string;
@@ -64,7 +66,7 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
-    heroImage: "https://images.unsplash.com/photo-1771931322109-180bb1b35bf8?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1920&q=80",
     gancho:
       "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
   },
@@ -116,7 +118,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     titulo: "Consultoría en Seguridad",
     descripcionCorta: "Diagnósticos, auditorías y estrategias de protección institucional.",
     href: "/servicios/consultoria-seguridad",
-    heroImage: "https://images.unsplash.com/photo-1771931322109-180bb1b35bf8?auto=format&fit=crop&w=1920&q=80",
+    heroImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1920&q=80",
     breadcrumb: "Consultoría en Seguridad",
     h1: "Consultoría en Seguridad",
     lead: "Toda organización enfrenta riesgos. La diferencia radica en conocerlos antes de que se conviertan en pérdidas, interrupciones operativas o afectaciones patrimoniales. STRATEC desarrolla diagnósticos, auditorías y estrategias de protección que permiten a empresas, instituciones y organizaciones fortalecer sus capacidades de seguridad mediante soluciones objetivas, medibles y alineadas a su operación.",
@@ -171,6 +173,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   // ── 02 · Protección Civil y Gestión Integral de Riesgos ──────────────────
   "proteccion-civil": {
     slug: "proteccion-civil",
+    heroEmblem: "/images/emblema-proteccion-civil.svg",
     numero: "02",
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",

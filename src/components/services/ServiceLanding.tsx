@@ -16,7 +16,7 @@ interface ServiceLandingProps {
 
 export default function ServiceLanding({ data }: ServiceLandingProps) {
   const {
-    heroImage, breadcrumb, parentBreadcrumb, parentHref,
+    heroImage, heroEmblem, breadcrumb, parentBreadcrumb, parentHref,
     h1, lead, intro, blocks, modalidades, nota, cta, seo, href,
     ragSnippet, deliverables, deliverablesListTitle, deliverablesList,
   } = data;
@@ -72,14 +72,26 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
 
           {/* Capa de fondo */}
           <div className="absolute inset-0">
-            <img
-              src={heroImage}
-              alt={h1}
-              className="w-full h-full object-cover"
-              style={{ opacity: 0.35 }}
-              loading="eager"
-              decoding="async"
-            />
+            {heroEmblem ? (
+              <img
+                src={heroEmblem}
+                alt=""
+                aria-hidden="true"
+                className="absolute top-1/2 -translate-y-1/2 -right-[12vw] md:-right-[6vw] h-[108%] max-h-[1000px] w-auto max-w-none select-none pointer-events-none"
+                style={{ opacity: 0.35 }}
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <img
+                src={heroImage}
+                alt={h1}
+                className="w-full h-full object-cover"
+                style={{ opacity: 0.35 }}
+                loading="eager"
+                decoding="async"
+              />
+            )}
             {/* Gradiente de izquierda a derecha (igual que Hero principal) */}
             <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/88 to-[#0A0A0F]/50" />
             {/* Gradiente vertical inferior para mezclar con el contenido */}

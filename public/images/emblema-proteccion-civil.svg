@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="Emblema de Protección Civil">
+  <!-- Distintivo de Protección Civil: triángulo equilátero azul sobre círculo naranja (sin leyendas) -->
+  <circle cx="500" cy="500" r="490" fill="#FF8200"/>
+  <polygon points="500,82 862,709 138,709" fill="#003DA5"/>
+</svg>
