@@ -1,1 +1,7 @@
-project_id = "ivscwwcxasamaxzqmjwd"
+# Proyecto de Supabase en producción (el que usa el sitio vía VITE_SUPABASE_URL)
+project_id = "xtfsqdwkbsghkzszpisz"
+
+# submit-lead la llaman formularios públicos del sitio solo con el header apikey;
+# tiene su propio límite por IP, así que no exige JWT de usuario.
+[functions.submit-lead]
+verify_jwt = false

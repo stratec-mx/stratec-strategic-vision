@@ -39,9 +39,9 @@ const MigrationNotice = () => (
     <div className="text-sm text-navy space-y-2">
       <div className="font-medium">Falta crear la tabla de documentos en la base de datos.</div>
       <p className="text-steel">
-        Abre Supabase → SQL Editor, pega el contenido del archivo
-        <code className="mx-1 px-1 bg-white border border-border">supabase/migrations/20261106210000_create_documents.sql</code>
-        y presiona <b>Run</b>. Después recarga esta página.
+        Abre Supabase → SQL Editor y ejecuta los scripts de
+        <code className="mx-1 px-1 bg-white border border-border">supabase/setup/</code> (ver README de esa carpeta)
+        . Después recarga esta página.
       </p>
     </div>
   </div>
