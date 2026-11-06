@@ -12,6 +12,10 @@ interface AuthCtx {
   hasAccess: boolean;
   isAdmin: boolean;
   canEdit: boolean;
+  /** true solo si la BD tiene un rol con permiso de escritura (admin, analyst u operations) */
+  canWriteDb: boolean;
+  /** false cuando los roles son el respaldo local (la BD no devolvió roles) */
+  rolesFromDb: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -23,6 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  const [rolesFromDb, setRolesFromDb] = useState(false);
 
   const loadRoles = async (uid: string) => {
     try {
@@ -34,16 +39,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.warn("[useAuth] RLS bloqueó la carga de roles:", error.message);
         setRoles(["admin"]);
+        setRolesFromDb(false);
       } else if (!data || data.length === 0) {
         console.warn("[useAuth] Sin roles en BD para este usuario.");
         setRoles(["admin"]);
+        setRolesFromDb(false);
       } else {
         console.log("[useAuth] Roles cargados:", data.map(r => r.role));
         setRoles(data.map((r) => r.role as Role));
+        setRolesFromDb(true);
       }
     } catch (err: any) {
       console.warn("[useAuth] Error inesperado cargando roles:", err.message);
       setRoles(["admin"]);
+      setRolesFromDb(false);
     }
     setRolesLoaded(true);
   };
@@ -80,6 +89,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasAccess = roles.length > 0;
   const isAdmin = roles.includes("admin");
   const canEdit = roles.some((r) => ["admin", "analyst", "operations", "executive"].includes(r));
+  // Las políticas RLS de escritura del CRM solo aceptan estos tres roles
+  const canWriteDb = rolesFromDb && roles.some((r) => ["admin", "analyst", "operations"].includes(r));
 
   return (
     <Ctx.Provider
@@ -91,6 +102,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         hasAccess,
         isAdmin,
         canEdit,
+        canWriteDb,
+        rolesFromDb,
         signOut,
       }}
     >

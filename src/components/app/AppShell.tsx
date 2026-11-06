@@ -23,7 +23,7 @@ const nav = [
 ];
 
 export const AppShell = ({ children }: { children?: ReactNode }) => {
-  const { session, loading, user, signOut, hasAccess } = useAuth();
+  const { session, loading, user, signOut, hasAccess, canWriteDb, rolesFromDb } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -109,9 +109,30 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
           className="flex-1 p-6 lg:p-10 overflow-auto"
         >
+          {!canWriteDb && <RoleWarning noRole={!rolesFromDb} email={user?.email ?? ""} />}
           {children ?? <Outlet />}
         </motion.main>
       </div>
     </div>
   );
 };
+
+/** Aviso cuando la base de datos rechazará las escrituras por falta de rol. */
+const RoleWarning = ({ noRole, email }: { noRole: boolean; email: string }) => (
+  <div className="mb-6 border border-amber-300 bg-amber-50 p-4 flex gap-3 text-sm">
+    <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+    <div className="space-y-2 min-w-0">
+      <div className="font-medium text-navy">
+        {noRole
+          ? "Tu usuario no tiene un rol asignado en la base de datos: puedes ver el panel, pero no se guardarán clientes, cotizaciones ni documentos."
+          : "Tu rol actual solo permite consultar: para crear o editar registros necesitas el rol admin, analyst u operations."}
+      </div>
+      <p className="text-steel">
+        Para darte acceso de administrador, en Supabase abre <b>SQL Editor</b>, ejecuta esta instrucción y recarga la página:
+      </p>
+      <pre className="bg-white border border-border p-3 text-xs overflow-x-auto whitespace-pre">{`insert into public.user_roles (user_id, role)
+select id, 'admin' from auth.users where email = '${email}'
+on conflict (user_id, role) do nothing;`}</pre>
+    </div>
+  </div>
+);

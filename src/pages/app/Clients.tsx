@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { describeDbError } from "@/lib/dbErrors";
 import { z } from "zod";
 
 const schema = z.object({
@@ -37,7 +38,7 @@ const Clients = () => {
     if (!parsed.success) { toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" }); return; }
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("clients").insert({ ...parsed.data, owner_id: user?.id } as any);
-    if (error) { console.error("[Clients.insert]", error?.code ?? "error"); toast({ title: "Error", description: "No se pudo registrar el cliente.", variant: "destructive" }); return; }
+    if (error) { console.error("[Clients.insert]", error?.code ?? "error"); toast({ title: "No se pudo registrar el cliente", description: describeDbError(error, "Intenta de nuevo."), variant: "destructive" }); return; }
     toast({ title: "Cliente registrado" });
     setOpen(false);
     load();

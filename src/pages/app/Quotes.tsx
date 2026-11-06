@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { describeDbError } from "@/lib/dbErrors";
 import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
 import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 
@@ -250,7 +251,7 @@ const Quotes = () => {
       if (error || !created) {
         setSaving(false);
         console.error("[Quotes.newClient]", error?.code ?? "error");
-        toast({ title: "Error", description: "No se pudo registrar el cliente nuevo.", variant: "destructive" });
+        toast({ title: "No se pudo registrar el cliente nuevo", description: describeDbError(error, "Intenta de nuevo."), variant: "destructive" });
         return;
       }
       finalClientId = created.id;
@@ -277,7 +278,7 @@ const Quotes = () => {
     setSaving(false);
     if (error) {
       console.error("[Quotes.insert]", error?.code ?? "error");
-      toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" });
+      toast({ title: "No se pudo guardar la cotización", description: describeDbError(error, "Intenta de nuevo."), variant: "destructive" });
       return;
     }
     toast({ title: "Cotización creada", description: `${data.number} · ${formatMoney(safeTotal, data.currency)} ${data.currency}` });

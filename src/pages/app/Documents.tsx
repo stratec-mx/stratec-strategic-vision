@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { describeDbError } from "@/lib/dbErrors";
 import { ArrowLeft, Eye, FilePlus2, FileStack, Loader2, Plus, Trash2, Check, AlertTriangle } from "lucide-react";
 import {
   DOCUMENT_TEMPLATES, findTemplate, emptyDocumentData, normalizeDocumentData,
@@ -109,7 +110,7 @@ export const DocumentsList = () => {
     if (error || !row) {
       console.error("[Documents.create]", error?.code ?? "error");
       if (isMissingTable(error)) setMissing(true);
-      toast({ title: "No se pudo crear el documento", description: isMissingTable(error) ? "Falta crear la tabla en la base de datos." : "Intenta de nuevo.", variant: "destructive" });
+      toast({ title: "No se pudo crear el documento", description: describeDbError(error, "Intenta de nuevo."), variant: "destructive" });
       return;
     }
     setOpen(false);
