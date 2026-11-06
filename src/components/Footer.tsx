@@ -55,7 +55,7 @@ export const Footer = () => {
               <li className="flex items-start gap-3">
                 <Linkedin className="h-4 w-4 text-olive mt-0.5 shrink-0" />
                 <a
-                  href="https://www.linkedin.com/company/stratec-security"
+                  href="https://www.linkedin.com/company/132214015"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-smoke transition-colors font-light"
