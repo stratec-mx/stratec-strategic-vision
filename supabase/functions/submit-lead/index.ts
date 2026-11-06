@@ -69,7 +69,7 @@ serve(async (req: Request) => {
                 .from("rate_limits")
                 .select("*", { count: "exact", head: true })
                 .eq("ip", clientIp)
-                .eq("endpoint", "submit_lead")
+                .eq("action", "submit_lead")
                 .gte("created_at", windowStart);
 
       if (countErr) {
@@ -87,11 +87,12 @@ serve(async (req: Request) => {
                       );
       }
 
-      // Record this attempt
-      await supabase.from("rate_limits").insert({
+      // Record this attempt (la columna se llama "action"; ver migración rate_limits)
+      const { error: rlInsertErr } = await supabase.from("rate_limits").insert({
               ip: clientIp,
-              endpoint: "submit_lead",
-                  });
+              action: "submit_lead",
+      });
+      if (rlInsertErr) console.error("[submit-lead] rate limits insert error:", rlInsertErr.message);
 
       // — 4. Insert the lead ————————————————————————
       const { error: insertErr } = await supabase.from("leads").insert({
@@ -99,7 +100,10 @@ serve(async (req: Request) => {
               email: String(email).substring(0, 255),
               organization: String(organization).substring(0, 150),
               role_title: role ? String(role).substring(0, 120) : null,
-              notes: String(message).substring(0, 1000),
+              phone: telefono ? String(telefono).substring(0, 40) : null,
+              notes: (servicio ? `Servicio: ${String(servicio).substring(0, 150)}
+
+` : "") + String(message).substring(0, 1000),
               source: "web",
               status: "new",
               owner_id: null,
@@ -121,21 +125,32 @@ serve(async (req: Request) => {
       const chatId    = Deno.env.get("TELEGRAM_CHAT_ID");
       if (botToken && chatId) {
         const hora = new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" });
+        // HTML con escape: un *, _ o < escrito por el cliente ya no rompe el aviso
+        const esc = (v: unknown) =>
+          String(v ?? "").substring(0, 500).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const texto =
-          `🔔 *Nuevo contacto en stratecsecurity.com*\n\n` +
-          `👤 ${name}\n` +
-          `🏢 ${organization}\n` +
-          `💼 ${role || "—"}\n` +
-          `📧 ${email}\n` +
-          `📞 ${telefono || "—"}\n` +
-          `📋 Servicio: ${servicio || message || "—"}\n` +
-          `💬 ${message || "—"}\n\n` +
-          `🕐 ${hora}`;
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: "Markdown" }),
-        }).catch((e: Error) => console.warn("Telegram notify failed:", e.message));
+          `🔔 <b>Nuevo contacto en stratecsecurity.com</b>\n\n` +
+          `👤 ${esc(name)}\n` +
+          `🏢 ${esc(organization)}\n` +
+          `💼 ${esc(role || "—")}\n` +
+          `📧 ${esc(email)}\n` +
+          `📞 ${esc(telefono || "—")}\n` +
+          `📋 Servicio: ${esc(servicio || "—")}\n` +
+          `💬 ${esc(message || "—")}\n\n` +
+          `🕐 ${esc(hora)}`;
+        // Se espera la respuesta (máx. 5 s): el runtime puede cortar promesas
+        // pendientes en cuanto la función responde.
+        try {
+          const tg = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: "HTML", disable_web_page_preview: true }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!tg.ok) console.warn("[submit-lead] Telegram respondió", tg.status, (await tg.text()).substring(0, 200));
+        } catch (e) {
+          console.warn("[submit-lead] Telegram notify failed:", (e as Error).message);
+        }
       }
 
       return new Response(JSON.stringify({ ok: true }), {
