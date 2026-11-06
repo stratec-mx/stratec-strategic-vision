@@ -173,10 +173,8 @@ export function SecurityMap({
 
     const seen = new Set<string>();
 
-    value.forEach((m) => {
-      seen.add(m.id);
-      const color = kindColor(kindsRef.current, m.kind);
-      const icon = L.divIcon({
+    const makeIcon = (color: string) =>
+      L.divIcon({
         className: "stratec-pin",
         html: pinSvg(color),
         iconSize: [30, 42],
@@ -184,23 +182,10 @@ export function SecurityMap({
         popupAnchor: [0, -38],
       });
 
-      let lm = markersRef.current.get(m.id);
-      if (!lm) {
-        lm = L.marker([m.lat, m.lng], { icon, draggable: !readOnly });
-        lm.addTo(map);
-        lm.on("dragend", () => {
-          const ll = lm.getLatLng();
-          updateMarker(m.id, { lat: ll.lat, lng: ll.lng });
-        });
-        markersRef.current.set(m.id, lm);
-      } else {
-        lm.setIcon(icon);
-        const cur = lm.getLatLng();
-        if (cur.lat !== m.lat || cur.lng !== m.lng) lm.setLatLng([m.lat, m.lng]);
-        lm.dragging && (readOnly ? lm.dragging.disable() : lm.dragging.enable());
-      }
-
-      // Popup con nota editable + eliminar (DOM nativo).
+    // Popup con nota editable + eliminar (DOM nativo). El <textarea> es la
+    // fuente viva del texto mientras el popup está abierto: por eso NO se
+    // reconstruye en cada cambio de `value` (destruiría el campo y el foco).
+    const buildPopup = (m: SecurityMarker, color: string) => {
       const popup = document.createElement("div");
       popup.style.minWidth = "180px";
       const label = kindLabel(kindsRef.current, m.kind);
@@ -236,7 +221,41 @@ export function SecurityMap({
         });
         popup.appendChild(del);
       }
-      lm.bindPopup(popup);
+      return popup;
+    };
+
+    value.forEach((m) => {
+      seen.add(m.id);
+      const color = kindColor(kindsRef.current, m.kind);
+
+      let lm = markersRef.current.get(m.id);
+      const isNew = !lm;
+      const kindChanged = !isNew && lm.__stratecKind !== m.kind;
+
+      if (isNew) {
+        lm = L.marker([m.lat, m.lng], { icon: makeIcon(color), draggable: !readOnly });
+        lm.addTo(map);
+        lm.on("dragend", () => {
+          const ll = lm.getLatLng();
+          updateMarker(m.id, { lat: ll.lat, lng: ll.lng });
+        });
+        markersRef.current.set(m.id, lm);
+      } else {
+        // setIcon solo si cambió el tipo: Leaflet re-enlaza el popup dentro de setIcon.
+        if (kindChanged) lm.setIcon(makeIcon(color));
+        const cur = lm.getLatLng();
+        if (cur.lat !== m.lat || cur.lng !== m.lng) lm.setLatLng([m.lat, m.lng]);
+        if (lm.dragging) (readOnly ? lm.dragging.disable() : lm.dragging.enable());
+      }
+
+      // Enlazar popup solo al crear, si cambió el tipo o el modo lectura.
+      // Escribir una nota cambia `value` en cada tecla; reconstruir aquí
+      // reemplazaba el <textarea> abierto y perdía el cursor.
+      if (isNew || kindChanged || lm.__stratecReadOnly !== readOnly) {
+        lm.__stratecKind = m.kind;
+        lm.__stratecReadOnly = readOnly;
+        lm.bindPopup(buildPopup(m, color));
+      }
     });
 
     // Quitar marcadores que ya no están en value.

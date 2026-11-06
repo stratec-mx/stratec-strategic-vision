@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, MapPin, ArrowRight, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { ShieldCheck, MapPin, ArrowRight, CheckCircle2, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { SecurityMap } from "@/components/security-map/SecurityMap";
@@ -57,6 +57,7 @@ const SECTORES = ["Gobierno / Institución pública", "Corporativo / Empresa", "
 export default function Diagnostico() {
   const { toast } = useToast();
   const [markers, setMarkers] = useState<SecurityMarker[]>([]);
+  const [showMap, setShowMap] = useState(false);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
   const [phase, setPhase] = useState<"quiz" | "result" | "done">("quiz");
   const [submitting, setSubmitting] = useState(false);
@@ -109,7 +110,7 @@ export default function Diagnostico() {
 
     setSubmitting(true);
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}`, apikey: SUPABASE_KEY },
         body: JSON.stringify({
@@ -118,10 +119,14 @@ export default function Diagnostico() {
           message: msg, honeypot: form.hp,
         }),
       });
+      // fetch solo lanza en error de red: un 4xx/5xx de la Edge Function llega
+      // como respuesta "exitosa". Sin este check el lead se pierde y el usuario
+      // ve "enviado".
+      if (!res.ok) throw new Error(`submit-lead ${res.status}`);
       setPhase("done");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
-      toast({ title: "No se pudo enviar", description: "Revisa tu conexión e intenta de nuevo.", variant: "destructive" });
+      toast({ title: "No se pudo enviar", description: "Intenta de nuevo en un momento, o escríbenos por WhatsApp con tu resultado.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -144,30 +149,13 @@ export default function Diagnostico() {
               </h1>
               <p className="text-steel text-sm md:text-base leading-relaxed mb-8 max-w-2xl">
                 Evaluación guiada basada en la metodología <strong>ISO 31000</strong> de gestión de riesgos.
-                Marca tu predio, responde 10 preguntas y obtén tu nivel de vulnerabilidad con un plan de acción priorizado.
+                Responde 10 preguntas y obtén tu nivel de vulnerabilidad con un plan de acción priorizado. Toma unos 3 minutos.
               </p>
 
-              {/* Mapa del predio */}
+              {/* 1 · Cuestionario — la acción central va primero */}
               <section className="mb-10">
                 <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-[#C4A04A]" /> 1 · Ubica tu predio
-                </h2>
-                <p className="text-sm text-steel mb-4">
-                  Busca tu dirección o usa tu ubicación, luego toca el mapa para marcar accesos, puntos ciegos y zonas que te preocupan. (Opcional, pero mejora tu diagnóstico.)
-                </p>
-                <SecurityMap
-                  value={markers}
-                  onChange={setMarkers}
-                  kinds={DEFAULT_MARKER_KINDS}
-                  height={380}
-                  helpText="Toca el mapa para colocar marcadores sobre tu propiedad."
-                />
-              </section>
-
-              {/* Cuestionario */}
-              <section>
-                <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-[#C4A04A]" /> 2 · Responde el cuestionario
+                  <ShieldCheck className="h-5 w-5 text-[#C4A04A]" /> 1 · Responde el cuestionario
                 </h2>
                 <p className="text-sm text-steel mb-4">{answeredCount} de {QUESTIONS.length} respondidas.</p>
                 <div className="h-1 bg-steel/15 mb-6">
@@ -184,7 +172,9 @@ export default function Diagnostico() {
                       <div className="grid grid-cols-3 gap-2">
                         {([["si", "Sí"], ["no", "No"], ["ns", "No estoy seguro"]] as [Answer, string][]).map(([val, lbl]) => {
                           const sel = answers[q.id] === val;
-                          const base = "text-xs px-2 py-2.5 border rounded-none transition-all ";
+                          // min-h 44px: objetivo táctil mínimo para el pulgar en móvil.
+                          // leading-tight deja que "No estoy seguro" parta en 2 líneas sin apretarse.
+                          const base = "min-h-[44px] text-xs sm:text-sm leading-tight px-2 py-2 border rounded-none transition-all ";
                           const styles = sel
                             ? val === "si" ? "border-green-600 bg-green-50 text-green-800"
                             : val === "no" ? "border-red-500 bg-red-50 text-red-700"
@@ -200,7 +190,44 @@ export default function Diagnostico() {
                     </div>
                   ))}
                 </div>
+              </section>
 
+              {/* 2 · Mapa del predio — opcional y plegado: no estorba el camino
+                  principal, y Leaflet solo se carga si el usuario lo abre. */}
+              <section className="mb-8 border border-steel/20 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowMap((v) => !v)}
+                  aria-expanded={showMap}
+                  className="w-full min-h-[56px] px-5 py-4 flex items-center justify-between gap-3 text-left"
+                >
+                  <span className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-[#C4A04A] shrink-0" />
+                    <span>
+                      <span className="font-display text-lg text-navy">2 · Marca tu predio</span>
+                      <span className="block text-xs text-steel">
+                        Opcional · {markers.length > 0
+                          ? `${markers.length} marcador${markers.length !== 1 ? "es" : ""} colocado${markers.length !== 1 ? "s" : ""}`
+                          : "señala accesos, puntos ciegos y zonas que te preocupan"}
+                      </span>
+                    </span>
+                  </span>
+                  <ChevronDown className={`h-5 w-5 text-steel shrink-0 transition-transform ${showMap ? "rotate-180" : ""}`} />
+                </button>
+                {showMap && (
+                  <div className="px-5 pb-5">
+                    <SecurityMap
+                      value={markers}
+                      onChange={setMarkers}
+                      kinds={DEFAULT_MARKER_KINDS}
+                      height={380}
+                      helpText="Busca tu dirección o usa tu ubicación, luego toca el mapa para colocar marcadores."
+                    />
+                  </div>
+                )}
+              </section>
+
+              <section>
                 <button
                   onClick={goResult}
                   disabled={!allAnswered}
