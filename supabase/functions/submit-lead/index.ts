@@ -101,9 +101,7 @@ serve(async (req: Request) => {
               organization: String(organization).substring(0, 150),
               role_title: role ? String(role).substring(0, 120) : null,
               phone: telefono ? String(telefono).substring(0, 40) : null,
-              notes: (servicio ? `Servicio: ${String(servicio).substring(0, 150)}
-
-` : "") + String(message).substring(0, 1000),
+              notes: (servicio ? `Servicio: ${String(servicio).substring(0, 150)}\n\n` : "") + String(message).substring(0, 1000),
               source: "web",
               status: "new",
               owner_id: null,
