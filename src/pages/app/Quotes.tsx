@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,39 +8,71 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText, FileDown, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
+import { downloadQuotePdf, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 
 const itemSchema = z.object({
-  description: z.string().trim().min(1, "Descripción requerida").max(300, "Descripción demasiado larga"),
+  code: z.string().trim().min(1, "Selecciona un servicio en cada concepto").max(20),
+  title: z.string().trim().min(1, "Cada concepto necesita un nombre").max(200, "Nombre de concepto demasiado largo"),
+  description: z.string().trim().max(1000, "Descripción demasiado larga").optional().or(z.literal("")),
   qty: z.number().positive("Cantidad debe ser > 0").max(100000),
-  unit_price: z.number().min(0, "Precio inválido").max(10_000_000),
+  unit_price: z.number().min(0, "Precio inválido").max(100_000_000),
 });
 const quoteSchema = z.object({
-  number: z.string().trim().min(1, "Número requerido").max(50),
-  client_name: z.string().trim().min(1, "Cliente requerido").max(200),
+  number: z.string().trim().min(1, "Folio requerido").max(50),
   currency: z.enum(["USD", "MXN", "EUR"]),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  notes: z.string().trim().max(4000).optional().or(z.literal("")),
   valid_until: z.string().max(20).optional().or(z.literal("")),
   taxRate: z.number().min(0, "Impuesto inválido").max(100, "Impuesto inválido"),
   items: z.array(itemSchema).min(1, "Agregue al menos un concepto"),
 });
+const newClientSchema = z.object({
+  name: z.string().trim().min(1, "Nombre del cliente requerido").max(200),
+  contact_name: z.string().trim().max(200).optional().or(z.literal("")),
+  contact_email: z.string().trim().email("Correo del cliente inválido").max(255).optional().or(z.literal("")),
+});
 
-type Item = { description: string; qty: number; unit_price: number };
+type Item = { code: string; title: string; description: string; qty: number; unit_price: number };
+type ClientRow = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null };
+
+const NEW_CLIENT = "__new__";
 const STATUS = ["draft", "sent", "accepted", "rejected", "expired"] as const;
 const STATUS_LABEL: Record<string, string> = { draft: "Borrador", sent: "Enviada", accepted: "Aceptada", rejected: "Rechazada", expired: "Expirada" };
+
+const emptyItem = (): Item => ({ code: "", title: "", description: "", qty: 1, unit_price: 0 });
+const isoInDays = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/** Normaliza conceptos guardados (incluye el formato anterior sin código). */
+const normalizeItems = (raw: unknown): Item[] =>
+  (Array.isArray(raw) ? raw : []).map((r: any) => ({
+    code: r?.code ?? "",
+    title: r?.title ?? r?.description ?? "",
+    description: r?.title ? r?.description ?? "" : "",
+    qty: Number(r?.qty) || 0,
+    unit_price: Number(r?.unit_price) || 0,
+  }));
 
 const Quotes = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [list, setList] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientRow[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ number: "", client_name: "", currency: "USD", notes: "", valid_until: "" });
-  const [items, setItems] = useState<Item[]>([{ description: "", qty: 1, unit_price: 0 }]);
+  const [form, setForm] = useState({ number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
+  const [clientId, setClientId] = useState<string>("");
+  const [newClient, setNewClient] = useState({ name: "", contact_name: "", contact_email: "" });
+  const [items, setItems] = useState<Item[]>([emptyItem()]);
   const [taxRate, setTaxRate] = useState(16);
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.unit_price, 0);
@@ -48,50 +80,231 @@ const Quotes = () => {
   const total = subtotal + tax;
 
   const load = async () => {
-    const { data } = await supabase.from("quotes").select("*").order("created_at", { ascending: false });
-    setList(data ?? []);
+    const [q, c] = await Promise.all([
+      supabase.from("quotes").select("*, clients(name, contact_name, contact_email, contact_phone)").order("created_at", { ascending: false }),
+      supabase.from("clients").select("id, name, contact_name, contact_email, contact_phone").order("name"),
+    ]);
+    setList(q.data ?? []);
+    setClients((c.data as ClientRow[]) ?? []);
   };
   useEffect(() => { load(); }, []);
 
-  const addItem = () => setItems([...items, { description: "", qty: 1, unit_price: 0 }]);
-  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
-  const updateItem = (i: number, k: keyof Item, v: any) => setItems(items.map((it, idx) => idx === i ? { ...it, [k]: v } : it));
+  const suggestedNumber = useMemo(() => {
+    const year = new Date().getFullYear();
+    const prefix = `COT-${year}-`;
+    const max = list
+      .map((q) => String(q.number ?? ""))
+      .filter((n) => n.startsWith(prefix))
+      .map((n) => parseInt(n.slice(prefix.length), 10))
+      .filter((n) => !Number.isNaN(n))
+      .reduce((a, b) => Math.max(a, b), 0);
+    return `${prefix}${String(max + 1).padStart(3, "0")}`;
+  }, [list]);
 
-  const submit = async () => {
+  const resetForm = () => {
+    setForm({ number: suggestedNumber, currency: "MXN", notes: "", valid_until: isoInDays(30) });
+    setClientId("");
+    setNewClient({ name: "", contact_name: "", contact_email: "" });
+    setItems([emptyItem()]);
+    setTaxRate(16);
+  };
+
+  const onOpenChange = (v: boolean) => {
+    if (v && !form.number) setForm((f) => ({ ...f, number: suggestedNumber }));
+    setOpen(v);
+  };
+
+  const addItem = () => setItems([...items, emptyItem()]);
+  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
+  const updateItem = (i: number, patch: Partial<Item>) => setItems(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+
+  const selectService = (i: number, code: string) => {
+    const svc = findService(code);
+    const prev = items[i];
+    const prevSvc = findService(prev.code);
+    // Solo sobrescribe la descripción si el usuario no la había personalizado
+    const keepDesc = prev.description && prev.description !== prevSvc?.summary;
+    updateItem(i, {
+      code,
+      title: code === CUSTOM_CODE ? (prev.code === CUSTOM_CODE ? prev.title : "") : svc?.title ?? "",
+      description: keepDesc ? prev.description : svc?.summary ?? "",
+    });
+  };
+
+  /** Cliente en el formato que usa el PDF, a partir de la selección actual. */
+  const currentClient = (): QuotePdfData["client"] | null => {
+    if (clientId === NEW_CLIENT) {
+      return newClient.name.trim()
+        ? { name: newClient.name.trim(), contact: newClient.contact_name || null, email: newClient.contact_email || null }
+        : null;
+    }
+    const c = clients.find((x) => x.id === clientId);
+    return c ? { name: c.name, contact: c.contact_name, email: c.contact_email, phone: c.contact_phone } : null;
+  };
+
+  const validate = () => {
     const parsed = quoteSchema.safeParse({ ...form, taxRate, items });
     if (!parsed.success) {
       toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" });
-      return;
+      return null;
     }
-    // Recompute server-trustworthy totals from validated inputs (do not trust client-side state)
-    const safeSubtotal = parsed.data.items.reduce((s, i) => s + i.qty * i.unit_price, 0);
-    const safeTax = safeSubtotal * (parsed.data.taxRate / 100);
-    const safeTotal = safeSubtotal + safeTax;
+    if (!clientId) {
+      toast({ title: "Datos inválidos", description: "Selecciona un cliente o crea uno nuevo.", variant: "destructive" });
+      return null;
+    }
+    if (clientId === NEW_CLIENT) {
+      const nc = newClientSchema.safeParse(newClient);
+      if (!nc.success) {
+        toast({ title: "Datos inválidos", description: nc.error.issues[0].message, variant: "destructive" });
+        return null;
+      }
+    }
+    return parsed.data;
+  };
+
+  const makePdf = async (data: QuotePdfData, key: string) => {
+    setPdfBusy(key);
+    try {
+      const name = await downloadQuotePdf(data);
+      toast({ title: "PDF generado", description: name });
+    } catch (e: any) {
+      console.error("[Quotes.pdf]", e);
+      toast({ title: "No se pudo generar el PDF", description: e?.message ?? "Intenta de nuevo.", variant: "destructive" });
+    } finally {
+      setPdfBusy(null);
+    }
+  };
+
+  const previewPdf = async () => {
+    const data = validate();
+    const client = currentClient();
+    if (!data || !client) return;
+    await makePdf(
+      {
+        number: data.number,
+        issuedAt: new Date(),
+        validUntil: data.valid_until || null,
+        currency: data.currency,
+        taxRate: data.taxRate,
+        client,
+        items: data.items.map((i) => ({ code: i.code, title: i.title, description: i.description || "", qty: i.qty, unit_price: i.unit_price })),
+        notes: data.notes || null,
+      },
+      "form",
+    );
+  };
+
+  const submit = async (withPdf: boolean) => {
+    const data = validate();
+    if (!data) return;
     setSaving(true);
+
+    let finalClientId = clientId;
+    if (clientId === NEW_CLIENT) {
+      const { data: created, error } = await supabase
+        .from("clients")
+        .insert({
+          name: newClient.name.trim(),
+          contact_name: newClient.contact_name.trim() || null,
+          contact_email: newClient.contact_email.trim() || null,
+          owner_id: user?.id,
+        } as any)
+        .select("id")
+        .single();
+      if (error || !created) {
+        setSaving(false);
+        console.error("[Quotes.newClient]", error?.code ?? "error");
+        toast({ title: "Error", description: "No se pudo registrar el cliente nuevo.", variant: "destructive" });
+        return;
+      }
+      finalClientId = created.id;
+    }
+
+    // Totales recalculados a partir de los datos validados
+    const safeSubtotal = data.items.reduce((s, i) => s + i.qty * i.unit_price, 0);
+    const safeTax = safeSubtotal * (data.taxRate / 100);
+    const safeTotal = safeSubtotal + safeTax;
+    const client = currentClient();
+
     const { error } = await supabase.from("quotes").insert({
-      number: parsed.data.number,
-      currency: parsed.data.currency,
-      notes: parsed.data.notes || null,
-      valid_until: parsed.data.valid_until || null,
-      items: parsed.data.items as any,
+      number: data.number,
+      client_id: finalClientId,
+      currency: data.currency,
+      notes: data.notes || null,
+      valid_until: data.valid_until || null,
+      items: data.items as any,
       subtotal: safeSubtotal,
       tax: safeTax,
       total: safeTotal,
       owner_id: user?.id,
     });
     setSaving(false);
-    if (error) { console.error("[Quotes.insert]", error?.code ?? "error"); toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" }); return; }
-    toast({ title: "Cotización creada", description: `${parsed.data.number} · ${parsed.data.currency} ${safeTotal.toFixed(2)}` });
+    if (error) {
+      console.error("[Quotes.insert]", error?.code ?? "error");
+      toast({ title: "Error", description: "No se pudo crear la cotización.", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Cotización creada", description: `${data.number} · ${formatMoney(safeTotal, data.currency)} ${data.currency}` });
+
+    if (withPdf && client) {
+      await makePdf(
+        {
+          number: data.number,
+          issuedAt: new Date(),
+          validUntil: data.valid_until || null,
+          currency: data.currency,
+          taxRate: data.taxRate,
+          client,
+          items: data.items.map((i) => ({ code: i.code, title: i.title, description: i.description || "", qty: i.qty, unit_price: i.unit_price })),
+          notes: data.notes || null,
+        },
+        "form",
+      );
+    }
     setOpen(false);
-    setForm({ number: "", client_name: "", currency: "USD", notes: "", valid_until: "" });
-    setItems([{ description: "", qty: 1, unit_price: 0 }]);
-    load();
+    await load();
+    resetFormAfterSave();
+  };
+
+  // Se ejecuta tras recargar la lista para que el folio sugerido avance
+  const resetFormAfterSave = () => {
+    setClientId("");
+    setNewClient({ name: "", contact_name: "", contact_email: "" });
+    setItems([emptyItem()]);
+    setTaxRate(16);
+    setForm({ number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
+  };
+
+  const downloadSaved = (q: any) => {
+    const sub = Number(q.subtotal) || 0;
+    const rate = sub > 0 ? Math.round((Number(q.tax) / sub) * 10000) / 100 : 0;
+    makePdf(
+      {
+        number: q.number,
+        issuedAt: new Date(q.created_at),
+        validUntil: q.valid_until,
+        currency: q.currency,
+        taxRate: rate,
+        client: {
+          name: q.clients?.name ?? "Cliente",
+          contact: q.clients?.contact_name,
+          email: q.clients?.contact_email,
+          phone: q.clients?.contact_phone,
+        },
+        items: normalizeItems(q.items),
+        notes: q.notes,
+      },
+      q.id,
+    );
   };
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from("quotes").update({ status: status as any }).eq("id", id);
     load();
   };
+
+  const parents = SERVICE_CATALOG.filter((s) => !s.parentCode);
+  const childrenOf = (code: string) => SERVICE_CATALOG.filter((s) => s.parentCode === code);
 
   return (
     <div>
@@ -100,39 +313,63 @@ const Quotes = () => {
         title="Cotizaciones"
         description="Generación y seguimiento de propuestas económicas institucionales."
         actions={
-          <Sheet open={open} onOpenChange={setOpen}>
+          <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetTrigger asChild>
-              <Button className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
+              <Button onClick={() => !open && resetForm()} className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
                 <Plus className="h-4 w-4 mr-2" /> Nueva cotización
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
               <SheetHeader><SheetTitle className="font-display text-navy">Nueva cotización</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-steel">Número</Label>
-                    <Input className="rounded-none" value={form.number} onChange={e => setForm({ ...form, number: e.target.value })} placeholder="COT-2026-001" />
+                    <Label className="text-xs uppercase tracking-wider text-steel">Folio</Label>
+                    <Input className="rounded-none" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} placeholder={suggestedNumber} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-steel">Moneda</Label>
-                    <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v })}>
+                    <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
                       <SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="MXN">MXN</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="MXN">MXN — Pesos mexicanos</SelectItem>
+                        <SelectItem value="USD">USD — Dólares</SelectItem>
+                        <SelectItem value="EUR">EUR — Euros</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-steel">Cliente / Organización</Label>
-                  <Input className="rounded-none" value={form.client_name} onChange={e => setForm({ ...form, client_name: e.target.value })} />
+                  <Select value={clientId} onValueChange={setClientId}>
+                    <SelectTrigger className="rounded-none"><SelectValue placeholder="Selecciona un cliente" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NEW_CLIENT}>+ Cliente nuevo</SelectItem>
+                      {clients.length > 0 && <SelectSeparator />}
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {clientId === NEW_CLIENT && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                      <Input className="rounded-none" placeholder="Nombre de la organización" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} />
+                      <Input className="rounded-none" placeholder="Atención (contacto)" value={newClient.contact_name} onChange={(e) => setNewClient({ ...newClient, contact_name: e.target.value })} />
+                      <Input className="rounded-none" type="email" placeholder="Correo" value={newClient.contact_email} onChange={(e) => setNewClient({ ...newClient, contact_email: e.target.value })} />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-steel">Vigencia hasta</Label>
-                  <Input type="date" className="rounded-none" value={form.valid_until} onChange={e => setForm({ ...form, valid_until: e.target.value })} />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-steel">Vigencia hasta</Label>
+                    <Input type="date" className="rounded-none" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-steel">IVA (%)</Label>
+                    <Input type="number" className="rounded-none" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} />
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4">
@@ -140,38 +377,90 @@ const Quotes = () => {
                     <Label className="text-xs uppercase tracking-wider text-steel">Conceptos</Label>
                     <Button type="button" size="sm" variant="ghost" onClick={addItem} className="rounded-none text-xs h-8"><Plus className="h-3 w-3 mr-1" />Agregar</Button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {items.map((it, i) => (
-                      <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                        <Input className="rounded-none col-span-6" placeholder="Descripción" value={it.description} onChange={e => updateItem(i, "description", e.target.value)} />
-                        <Input className="rounded-none col-span-2" type="number" min={1} value={it.qty} onChange={e => updateItem(i, "qty", Number(e.target.value))} />
-                        <Input className="rounded-none col-span-3" type="number" min={0} step="0.01" placeholder="Precio" value={it.unit_price} onChange={e => updateItem(i, "unit_price", Number(e.target.value))} />
-                        <Button type="button" size="icon" variant="ghost" className="col-span-1 h-9 w-9" onClick={() => removeItem(i)} disabled={items.length === 1}>
-                          <Trash2 className="h-4 w-4 text-steel" />
-                        </Button>
+                      <div key={i} className="border border-border p-3 space-y-2 bg-secondary/20">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-11">
+                            <Select value={it.code} onValueChange={(v) => selectService(i, v)}>
+                              <SelectTrigger className="rounded-none bg-background">
+                                <SelectValue placeholder="Selecciona un servicio" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-80">
+                                {parents.map((p) => (
+                                  <SelectGroup key={p.code}>
+                                    <SelectLabel className="text-[10px] uppercase tracking-wider text-steel">{p.title}</SelectLabel>
+                                    <SelectItem value={p.code}>
+                                      <span className="font-mono text-xs text-olive mr-2">{p.code}</span>{p.title}
+                                    </SelectItem>
+                                    {childrenOf(p.code).map((c) => (
+                                      <SelectItem key={c.code} value={c.code} className="pl-10">
+                                        <span className="font-mono text-xs text-olive mr-2">{c.code}</span>{c.title}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                ))}
+                                <SelectSeparator />
+                                <SelectItem value={CUSTOM_CODE}>
+                                  <span className="font-mono text-xs text-olive mr-2">{CUSTOM_CODE}</span>{CUSTOM_SERVICE.title}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button type="button" size="icon" variant="ghost" className="col-span-1 h-9 w-9" onClick={() => removeItem(i)} disabled={items.length === 1} aria-label="Quitar concepto">
+                            <Trash2 className="h-4 w-4 text-steel" />
+                          </Button>
+                        </div>
+                        {it.code === CUSTOM_CODE && (
+                          <Input className="rounded-none bg-background" placeholder="Nombre del concepto" value={it.title} onChange={(e) => updateItem(i, { title: e.target.value })} />
+                        )}
+                        <Textarea
+                          className="rounded-none bg-background text-sm"
+                          rows={2}
+                          placeholder="Descripción / alcance del concepto (aparece en el PDF)"
+                          value={it.description}
+                          onChange={(e) => updateItem(i, { description: e.target.value })}
+                        />
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-3 space-y-1">
+                            <Label className="text-[10px] uppercase tracking-wider text-steel">Cantidad</Label>
+                            <Input className="rounded-none bg-background" type="number" min={1} value={it.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} />
+                          </div>
+                          <div className="col-span-5 space-y-1">
+                            <Label className="text-[10px] uppercase tracking-wider text-steel">Precio unitario</Label>
+                            <Input className="rounded-none bg-background" type="number" min={0} step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: Number(e.target.value) })} />
+                          </div>
+                          <div className="col-span-4 text-right text-sm text-navy pb-2">
+                            {formatMoney(it.qty * it.unit_price, form.currency)}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-steel">Impuesto (%)</Label>
-                  <Input type="number" className="rounded-none w-32" value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} />
-                </div>
-
                 <div className="bg-secondary/40 border border-border p-4 space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-steel">Subtotal</span><span className="text-navy">{form.currency} {subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-steel">Impuesto</span><span className="text-navy">{form.currency} {tax.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-display text-lg pt-2 border-t border-border"><span className="text-navy">Total</span><span className="text-navy">{form.currency} {total.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-steel">Subtotal</span><span className="text-navy">{formatMoney(subtotal, form.currency)}</span></div>
+                  <div className="flex justify-between"><span className="text-steel">IVA ({taxRate}%)</span><span className="text-navy">{formatMoney(tax, form.currency)}</span></div>
+                  <div className="flex justify-between font-display text-lg pt-2 border-t border-border"><span className="text-navy">Total</span><span className="text-navy">{formatMoney(total, form.currency)} {form.currency}</span></div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-steel">Notas</Label>
-                  <Textarea className="rounded-none" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+                  <Label className="text-xs uppercase tracking-wider text-steel">Alcance y observaciones (forma de pago, tiempos, exclusiones)</Label>
+                  <Textarea className="rounded-none" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Ej. Forma de pago: 50% de anticipo y 50% contra entrega. Tiempo de ejecución: 3 semanas." />
                 </div>
 
-                <Button onClick={submit} disabled={saving} className="w-full rounded-none bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-xs h-12">
-                  {saving ? "Guardando…" : "Guardar cotización"}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button type="button" variant="outline" onClick={previewPdf} disabled={saving || pdfBusy === "form"} className="rounded-none uppercase tracking-wider text-xs h-12 border-navy text-navy">
+                    {pdfBusy === "form" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                    Vista previa PDF
+                  </Button>
+                  <Button onClick={() => submit(true)} disabled={saving} className="rounded-none bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-xs h-12">
+                    {saving ? "Guardando…" : "Guardar y descargar PDF"}
+                  </Button>
+                </div>
+                <Button type="button" variant="ghost" onClick={() => submit(false)} disabled={saving} className="w-full rounded-none uppercase tracking-wider text-xs h-10 text-steel">
+                  Solo guardar
                 </Button>
               </div>
             </SheetContent>
@@ -190,28 +479,36 @@ const Quotes = () => {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-xs uppercase tracking-wider text-steel">Número</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel">Folio</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel">Cliente</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Total</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Vigencia</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Estado</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Creada</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel text-right">PDF</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {list.map((q) => (
                 <TableRow key={q.id} className="border-border">
                   <TableCell className="font-medium text-navy">{q.number}</TableCell>
-                  <TableCell className="text-navy">{q.currency} {Number(q.total).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-steel text-sm">{q.clients?.name ?? "—"}</TableCell>
+                  <TableCell className="text-navy">{formatMoney(Number(q.total), q.currency)} {q.currency}</TableCell>
                   <TableCell className="text-steel text-sm">{q.valid_until ?? "—"}</TableCell>
                   <TableCell>
                     <Select value={q.status} onValueChange={(v) => updateStatus(q.id, v)}>
                       <SelectTrigger className="rounded-none h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {STATUS.map(s => <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>)}
+                        {STATUS.map((s) => <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </TableCell>
                   <TableCell className="text-steel text-sm">{new Date(q.created_at).toLocaleDateString("es")}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => downloadSaved(q)} disabled={pdfBusy === q.id} aria-label={`Descargar PDF de ${q.number}`}>
+                      {pdfBusy === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
