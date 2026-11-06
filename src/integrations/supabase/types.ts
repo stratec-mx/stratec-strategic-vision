@@ -321,6 +321,63 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          data: Json
+          folio: string
+          id: string
+          owner_id: string | null
+          quote_id: string | null
+          status: string
+          template: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          data?: Json
+          folio: string
+          id?: string
+          owner_id?: string | null
+          quote_id?: string | null
+          status?: string
+          template: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          data?: Json
+          folio?: string
+          id?: string
+          owner_id?: string | null
+          quote_id?: string | null
+          status?: string
+          template?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           client_id: string | null

@@ -38,6 +38,7 @@ import Leads from "./pages/app/Leads.tsx";
 import Clients from "./pages/app/Clients.tsx";
 import Pipeline from "./pages/app/Pipeline.tsx";
 import Quotes from "./pages/app/Quotes.tsx";
+import { DocumentsList, DocumentEditor } from "./pages/app/Documents.tsx";
 import Agenda from "./pages/app/Agenda.tsx";
 import Analytics from "./pages/app/Analytics.tsx";
 import { Messaging, Settings } from "./pages/app/Placeholders.tsx";
@@ -90,6 +91,8 @@ const AppRoutes = () => {
           <Route path="clients" element={<Clients />} />
           <Route path="pipeline" element={<Pipeline />} />
           <Route path="quotes" element={<Quotes />} />
+          <Route path="documents" element={<DocumentsList />} />
+          <Route path="documents/:id" element={<DocumentEditor />} />
           <Route path="agenda" element={<Agenda />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="messaging" element={<Messaging />} />

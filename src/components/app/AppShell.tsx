@@ -3,7 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, Users, Target, GitBranch, FileText,
-  CalendarDays, BarChart3, MessageSquare, Settings, LogOut, Search, ShieldAlert,
+  CalendarDays, BarChart3, MessageSquare, Settings, LogOut, Search, ShieldAlert, FileStack,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/Logo";
@@ -16,6 +16,7 @@ const nav = [
   { to: "/app/clients", label: "Clientes", icon: Users },
   { to: "/app/pipeline", label: "Pipeline", icon: GitBranch },
   { to: "/app/quotes", label: "Cotizaciones", icon: FileText },
+  { to: "/app/documents", label: "Documentos", icon: FileStack },
   { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/app/analytics", label: "Analítica", icon: BarChart3 },
   { to: "/app/messaging", label: "Mensajería", icon: MessageSquare },

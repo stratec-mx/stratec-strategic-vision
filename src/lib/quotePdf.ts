@@ -12,7 +12,7 @@ declare global {
 
 let jspdfPromise: Promise<any> | null = null;
 
-function loadJsPdf(): Promise<any> {
+export function loadJsPdf(): Promise<any> {
   if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
   if (jspdfPromise) return jspdfPromise;
   jspdfPromise = new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ function loadJsPdf(): Promise<any> {
   return jspdfPromise;
 }
 
-async function loadImageDataUrl(url: string): Promise<string | null> {
+export async function loadImageDataUrl(url: string): Promise<string | null> {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -140,7 +140,7 @@ export function amountInWords(total: number, currency: string): string {
   return `(${numberToSpanishWords(int)}${millionsExact ? " DE" : ""} ${info.plural} ${String(cents).padStart(2, "0")}/100 ${info.suffix})`;
 }
 
-const slug = (s: string) =>
+export const slug = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -155,15 +155,15 @@ export const quoteFileName = (d: Pick<QuotePdfData, "number" | "client" | "issue
 };
 
 // ─── Paleta STRATEC (RGB) ───────────────────────────────────────────────────
-const NAVY_DEEP: [number, number, number] = [7, 19, 39];
-const NAVY: [number, number, number] = [11, 30, 60];
-const GOLD: [number, number, number] = [196, 160, 74];
-const STEEL: [number, number, number] = [94, 100, 110];
-const INK: [number, number, number] = [38, 44, 56];
-const MUTED: [number, number, number] = [196, 202, 214];
-const ZEBRA: [number, number, number] = [247, 247, 244];
-const RULE: [number, number, number] = [222, 222, 216];
-const CREAM: [number, number, number] = [248, 245, 237];
+export const NAVY_DEEP: [number, number, number] = [7, 19, 39];
+export const NAVY: [number, number, number] = [11, 30, 60];
+export const GOLD: [number, number, number] = [196, 160, 74];
+export const STEEL: [number, number, number] = [94, 100, 110];
+export const INK: [number, number, number] = [38, 44, 56];
+export const MUTED: [number, number, number] = [196, 202, 214];
+export const ZEBRA: [number, number, number] = [247, 247, 244];
+export const RULE: [number, number, number] = [222, 222, 216];
+export const CREAM: [number, number, number] = [248, 245, 237];
 
 // ─── Generación ─────────────────────────────────────────────────────────────
 
@@ -235,10 +235,11 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
 
   const paragraph = (text: string, size = 9, lh = 13, c: [number, number, number] = INK, indent = 0) => {
     font("helvetica", "normal", size);
-    color(c);
     const lines: string[] = doc.splitTextToSize(text, CW - indent);
     for (const line of lines) {
       ensure(lh);
+      font("helvetica", "normal", size);
+      color(c);
       doc.text(line, M + indent, y);
       y += lh;
     }
@@ -432,6 +433,8 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
   const words: string[] = doc.splitTextToSize(`Importe con letra: ${amountInWords(total, data.currency)}`, CW);
   for (const l of words) {
     ensure(11);
+    font("helvetica", "italic", 7.8);
+    color(STEEL);
     textRight(l, W - M, y);
     y += 11;
   }
