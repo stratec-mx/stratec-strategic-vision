@@ -17,10 +17,16 @@ Situación al 6 de noviembre de 2026:
 ## Paso 2 · Tablas, permisos y tu rol de administrador (1 minuto)
 1. Abre una consulta **nueva** (**New query**). No la ejecutes en la misma consulta del paso 1.
 2. Pega el contenido de [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql).
-3. Al final del script, cambia `TU_CORREO_DE_ACCESO` por el correo con el que entras al dashboard. Deja las comillas.
-4. Presiona **Run**. La última tabla del resultado debe mostrar tu correo con el rol `admin`.
+3. Presiona **Run**. La última tabla del resultado debe mostrar a cada usuario registrado con el rol `admin`.
+   Todos los usuarios actuales y los que crees después reciben **admin** automáticamente.
 
 Puedes ejecutar los dos scripts más de una vez sin problema: no borran datos.
+
+## Paso 2b · Cerrar el registro público (obligatorio, 30 segundos)
+Como cada usuario nuevo recibe **admin**, nadie debe poder crearse una cuenta por su cuenta. La llave pública del sitio permite registrarse por API aunque el sitio no tenga formulario.
+1. Supabase → **Authentication** → **Sign In / Providers**.
+2. Desactiva **Allow new users to sign up** y guarda.
+3. Para dar acceso a alguien: **Authentication → Users → Add user** (o **Invite user**). Recibirá admin automáticamente.
 
 ## Paso 3 · Función que recibe los leads del sitio (3 minutos)
 1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**.
