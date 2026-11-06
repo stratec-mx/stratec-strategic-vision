@@ -350,10 +350,10 @@ function ServiceCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.55, delay: index * 0.07 }}
-      className="bg-[#1A1A24]"
+      className="bg-[#1A1A24] h-full"
     >
       <div
-        className={`border transition-all duration-300 relative overflow-hidden
+        className={`h-full border transition-all duration-300 relative overflow-hidden
           ${open
             ? "border-[rgba(196,160,74,0.45)] bg-[#232330]"
             : "border-[rgba(196,160,74,0.12)] hover:border-[rgba(196,160,74,0.3)] hover:bg-[#1e1e2d]"
