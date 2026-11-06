@@ -446,19 +446,19 @@ const Quotes = () => {
                                 {parents.map((p) => (
                                   <SelectGroup key={p.code}>
                                     <SelectLabel className="text-[10px] uppercase tracking-wider text-steel">{p.title}</SelectLabel>
-                                    <SelectItem value={p.code}>
-                                      <span className="font-mono text-xs text-olive mr-2">{p.code}</span>{p.title}
+                                    <SelectItem value={p.code} className="group focus:bg-secondary focus:text-navy">
+                                      <span className="font-mono text-xs text-olive mr-2 transition-colors group-focus:text-navy group-focus:font-semibold">{p.code}</span>{p.title}
                                     </SelectItem>
                                     {childrenOf(p.code).map((c) => (
-                                      <SelectItem key={c.code} value={c.code} className="pl-10">
-                                        <span className="font-mono text-xs text-olive mr-2">{c.code}</span>{c.title}
+                                      <SelectItem key={c.code} value={c.code} className="pl-10 group focus:bg-secondary focus:text-navy">
+                                        <span className="font-mono text-xs text-olive mr-2 transition-colors group-focus:text-navy group-focus:font-semibold">{c.code}</span>{c.title}
                                       </SelectItem>
                                     ))}
                                   </SelectGroup>
                                 ))}
                                 <SelectSeparator />
-                                <SelectItem value={CUSTOM_CODE}>
-                                  <span className="font-mono text-xs text-olive mr-2">{CUSTOM_CODE}</span>{CUSTOM_SERVICE.title}
+                                <SelectItem value={CUSTOM_CODE} className="group focus:bg-secondary focus:text-navy">
+                                  <span className="font-mono text-xs text-olive mr-2 transition-colors group-focus:text-navy group-focus:font-semibold">{CUSTOM_CODE}</span>{CUSTOM_SERVICE.title}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
