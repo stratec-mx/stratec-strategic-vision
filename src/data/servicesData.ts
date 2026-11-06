@@ -173,7 +173,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   // ── 02 · Protección Civil y Gestión Integral de Riesgos ──────────────────
   "proteccion-civil": {
     slug: "proteccion-civil",
-    heroEmblem: "/images/emblema-proteccion-civil.svg",
+    heroEmblem: "/images/emblema-proteccion-civil.webp",
     numero: "02",
     titulo: "Protección Civil y Gestión Integral de Riesgos",
     descripcionCorta: "Programas internos, brigadas, simulacros y planes de continuidad.",
