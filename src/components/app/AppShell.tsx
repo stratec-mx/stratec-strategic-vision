@@ -23,7 +23,7 @@ const nav = [
 ];
 
 export const AppShell = ({ children }: { children?: ReactNode }) => {
-  const { session, loading, user, signOut, hasAccess, canWriteDb, rolesFromDb } = useAuth();
+  const { session, loading, user, signOut, hasAccess, canWriteDb } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -38,8 +38,8 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           <ShieldAlert className="h-10 w-10 text-olive mx-auto mb-4" />
           <div className="font-display text-xl text-navy mb-2">Sin rol asignado</div>
           <p className="text-sm text-steel mb-4">
-            Su sesión es válida pero no tiene un rol institucional autorizado.
-            Contacte al administrador para habilitar su acceso.
+            Su sesión es válida pero su cuenta aún no tiene un rol asignado.
+            Pida a un administrador que se lo asigne en Configuración → Usuarios y permisos.
           </p>
           <a href="mailto:contacto@stratecsecurity.com" className="text-xs text-navy underline underline-offset-2">
             contacto@stratecsecurity.com
@@ -109,7 +109,7 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
           className="flex-1 p-6 lg:p-10 overflow-auto"
         >
-          {!canWriteDb && <RoleWarning noRole={!rolesFromDb} email={user?.email ?? ""} />}
+          {!canWriteDb && <RoleWarning />}
           {children ?? <Outlet />}
         </motion.main>
       </div>
@@ -117,22 +117,13 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
   );
 };
 
-/** Aviso cuando la base de datos rechazará las escrituras por falta de rol. */
-const RoleWarning = ({ noRole, email }: { noRole: boolean; email: string }) => (
+/** Aviso para roles de solo consulta (viewer): la BD rechazará las escrituras. */
+const RoleWarning = () => (
   <div className="mb-6 border border-amber-300 bg-amber-50 p-4 flex gap-3 text-sm">
     <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-    <div className="space-y-2 min-w-0">
-      <div className="font-medium text-navy">
-        {noRole
-          ? "Tu usuario no tiene un rol asignado en la base de datos: puedes ver el panel, pero no se guardarán clientes, cotizaciones ni documentos."
-          : "Tu rol actual solo permite consultar: para crear o editar registros necesitas el rol admin, analyst u operations."}
-      </div>
-      <p className="text-steel">
-        Para darte acceso de administrador, en Supabase abre <b>SQL Editor</b>, ejecuta esta instrucción y recarga la página:
-      </p>
-      <pre className="bg-white border border-border p-3 text-xs overflow-x-auto whitespace-pre">{`insert into public.user_roles (user_id, role)
-select id, 'admin' from auth.users where email = '${email}'
-on conflict (user_id, role) do nothing;`}</pre>
+    <div className="text-navy">
+      Tu rol solo permite consultar. Para crear o editar clientes, cotizaciones y documentos, un administrador debe
+      asignarte el rol <b>Administrador</b>, <b>Analista</b> u <b>Operaciones</b> en Configuración → Usuarios y permisos.
     </div>
   </div>
 );

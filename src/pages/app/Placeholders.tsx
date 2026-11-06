@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/app/PageHeader";
-import { Construction, ShieldCheck, UserPlus, Trash2, RefreshCw, Shield, Eye, Edit, Settings2 } from "lucide-react";
+import { Construction, ShieldCheck, UserPlus, RefreshCw, Shield, Eye, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, Role } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export const ComingSoon = ({ title, eyebrow, description }: { title: string; eyebrow: string; description: string }) => (
   <div>
@@ -41,167 +39,96 @@ const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: typ
 type UserRow = {
   id: string;
   email: string;
-  role: Role;
+  name: string;
+  role: Role | "none";
   created_at: string;
 };
+
+const NO_ROLE = "none";
+const SUPABASE_PROJECT = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
 
 export const Settings = () => {
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInvite, setShowInvite] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("viewer");
-  const [inviting, setInviting] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
+  // Lista TODOS los usuarios registrados (tabla profiles, visible para admins),
+  // con su rol si lo tienen. Así los usuarios nuevos sin rol aparecen aquí.
   const load = async () => {
     setLoading(true);
-    // Query solo el propio rol (siempre permitido por RLS: auth.uid() = user_id)
-    // La tabla mostrará al menos el usuario actual como admin
-    const { data: roles, error } = await supabase
-      .from("user_roles")
-      .select("user_id, role, created_at")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      // Si RLS bloquea, al menos mostrar el usuario actual
-      if (user) {
-        setRows([{ id: user.id, email: user.email ?? user.id, role: "admin", created_at: new Date().toISOString() }]);
-      }
+    const [p, r] = await Promise.all([
+      supabase.from("profiles").select("id, email, full_name, created_at").order("created_at", { ascending: false }),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
+    if (p.error || r.error) {
+      toast({ title: "No se pudo cargar la lista de usuarios", description: (p.error ?? r.error)?.message, variant: "destructive" });
+      setRows([]);
       setLoading(false);
       return;
     }
-
-    const mapped: UserRow[] = (roles ?? []).map((r) => ({
-      id: r.user_id as string,
-      email: r.user_id === user?.id ? (user?.email ?? r.user_id) : r.user_id,
-      role: r.role as Role,
-      created_at: r.created_at as string,
-    }));
-
-    // Asegurar que el usuario actual siempre aparezca
-    if (user && !mapped.find(r => r.id === user.id)) {
-      mapped.unshift({ id: user.id, email: user.email ?? user.id, role: "admin", created_at: new Date().toISOString() });
+    const roleOf = new Map<string, Role>();
+    // Si un usuario tuviera varios roles, se muestra el de mayor privilegio
+    const rank: Role[] = ["admin", "analyst", "operations", "executive", "viewer"];
+    for (const x of r.data ?? []) {
+      const cur = roleOf.get(x.user_id as string);
+      const next = x.role as Role;
+      if (!cur || rank.indexOf(next) < rank.indexOf(cur)) roleOf.set(x.user_id as string, next);
     }
-
-    setRows(mapped);
+    setRows(
+      (p.data ?? []).map((u) => ({
+        id: u.id as string,
+        email: (u.email as string) ?? (u.id as string),
+        name: (u.full_name as string) ?? "",
+        role: roleOf.get(u.id as string) ?? NO_ROLE,
+        created_at: u.created_at as string,
+      })),
+    );
     setLoading(false);
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    if (isAdmin) load();
+    else setLoading(false);
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updateRole = async (userId: string, role: Role) => {
-    // UPSERT atómico: inserta o actualiza en una sola operación
-    // Evita el race condition de DELETE→INSERT que borraba el rol admin antes de re-insertarlo
-    const { error } = await supabase
-      .from("user_roles")
-      .upsert({ user_id: userId, role }, { onConflict: "user_id" });
+  const admins = rows.filter((x) => x.role === "admin").length;
 
-    if (error) {
-      // Fallback: si no hay constraint único aún, intentar insert directo
-      const { error: insErr } = await supabase.from("user_roles").insert({ user_id: userId, role });
-      if (insErr) {
-        toast({ title: "Error al actualizar rol", description: insErr.message, variant: "destructive" });
-        return;
-      }
-    }
-    toast({ title: "✅ Rol actualizado", description: `Permisos de "${role}" aplicados correctamente.` });
-    load();
-  };
-
-  const removeUser = async (userId: string) => {
-    if (userId === user?.id) {
-      toast({ title: "Acción no permitida", description: "No puedes revocar tu propio acceso de administrador.", variant: "destructive" });
+  const updateRole = async (target: UserRow, role: Role | "none") => {
+    if (target.id === user?.id) {
+      toast({ title: "Acción no permitida", description: "No puedes cambiar tu propio rol. Pide a otro administrador que lo haga.", variant: "destructive" });
       return;
     }
-    // Verificar que quede al menos 1 admin
-    const adminCount = rows.filter(r => r.role === "admin").length;
-    const isRemovingAdmin = rows.find(r => r.id === userId)?.role === "admin";
-    if (isRemovingAdmin && adminCount <= 1) {
-      toast({ title: "Acción no permitida", description: "Debe existir al menos un administrador en el sistema.", variant: "destructive" });
+    if (target.role === "admin" && role !== "admin" && admins <= 1) {
+      toast({ title: "Acción no permitida", description: "Debe existir al menos un administrador.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "✅ Acceso revocado", description: "El usuario ya no tiene acceso al panel." });
-    load();
-  };
-
-  const inviteUser = async () => {
-    if (!inviteEmail || !invitePassword) {
-      toast({ title: "Datos incompletos", description: "Ingresa correo y contraseña temporal.", variant: "destructive" });
-      return;
-    }
-    if (invitePassword.length < 6) {
-      toast({ title: "Contraseña muy corta", description: "Mínimo 6 caracteres.", variant: "destructive" });
-      return;
-    }
-    setInviting(true);
-    try {
-      // Guardar sesión del admin antes de crear el nuevo usuario
-      const { data: { session: adminSession } } = await supabase.auth.getSession();
-      if (!adminSession) throw new Error("Sesión de admin no encontrada.");
-
-      // Crear el nuevo usuario
-      const { data, error } = await supabase.auth.signUp({
-        email: inviteEmail.trim().toLowerCase(),
-        password: invitePassword,
-        options: { emailRedirectTo: `${window.location.origin}/app` },
-      });
-
-      if (error) {
-        if (error.message.includes("already registered") || error.message.includes("already been registered")) {
-          throw new Error("Este correo ya está registrado. Usa 'Actualizar' para asignarle un rol si ya existe.");
-        }
-        throw error;
-      }
-      if (!data.user) throw new Error("No se pudo crear el usuario. Verifica que el correo sea válido.");
-
-      const newUserId = data.user.id;
-
-      // Restaurar sesión del admin si fue reemplazada por el signUp
-      if (data.session) {
-        await supabase.auth.setSession({
-          access_token: adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        });
-      }
-
-      // Asignar rol al nuevo usuario (como admin)
-      const { error: roleErr } = await supabase
-        .from("user_roles")
-        .insert({ user_id: newUserId, role: inviteRole });
-
-      if (roleErr) {
-        toast({
-          title: "⚠️ Usuario creado, rol pendiente",
-          description: `${inviteEmail} fue creado pero no se pudo asignar el rol: ${roleErr.message}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "✅ Colaborador registrado",
-          description: `${inviteEmail} tiene acceso con rol "${inviteRole}".`,
-        });
-      }
-
-      setInviteEmail("");
-      setInvitePassword("");
-      setInviteRole("viewer");
-      setShowInvite(false);
+    setBusy(target.id);
+    if (role === NO_ROLE) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", target.id);
+      setBusy(null);
+      if (error) { toast({ title: "Error al revocar acceso", description: error.message, variant: "destructive" }); return; }
+      toast({ title: "Acceso revocado", description: `${target.email} ya no puede entrar al panel.` });
       load();
-    } catch (err: any) {
-      toast({ title: "Error al crear colaborador", description: err.message, variant: "destructive" });
-    } finally {
-      setInviting(false);
+      return;
     }
+    // Primero se agrega el rol nuevo y después se quitan los demás:
+    // el usuario nunca queda sin rol a mitad del cambio.
+    const { error: insErr } = await supabase
+      .from("user_roles")
+      .upsert({ user_id: target.id, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    if (insErr) {
+      setBusy(null);
+      toast({ title: "Error al asignar rol", description: insErr.message, variant: "destructive" });
+      return;
+    }
+    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", target.id).neq("role", role);
+    setBusy(null);
+    if (delErr) toast({ title: "Rol asignado con advertencia", description: `No se pudo quitar el rol anterior: ${delErr.message}`, variant: "destructive" });
+    else toast({ title: "Rol actualizado", description: `${target.email}: ${ROLE_OPTIONS.find((o) => o.value === role)?.label ?? role}.` });
+    load();
   };
 
   if (!isAdmin) {
@@ -219,16 +146,17 @@ export const Settings = () => {
     );
   }
 
+  const usersUrl = SUPABASE_PROJECT ? `https://supabase.com/dashboard/project/${SUPABASE_PROJECT}/auth/users` : "https://supabase.com/dashboard";
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Configuración · Acceso institucional"
         title="Usuarios y permisos"
-        description="Gestione colaboradores, asigne roles y controle el acceso al panel operativo."
+        description="Asigne roles a los colaboradores registrados y controle el acceso al panel operativo."
       />
 
-      {/* Security summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {ROLE_OPTIONS.map((r) => (
           <div key={r.value} className="border border-border bg-card p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -240,119 +168,75 @@ export const Settings = () => {
         ))}
       </div>
 
-      {/* Actions bar */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-steel">{rows.length} usuario(s) con acceso</div>
+        <div className="text-sm text-steel">
+          {rows.length} usuario(s) registrados · {rows.filter((x) => x.role === NO_ROLE).length} sin rol
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load} className="rounded-none text-xs gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" /> Actualizar
           </Button>
-          <Button size="sm" onClick={() => setShowInvite(!showInvite)} className="rounded-none bg-navy text-smoke text-xs gap-1.5">
+          <Button size="sm" onClick={() => setShowHelp(!showHelp)} className="rounded-none bg-navy text-smoke text-xs gap-1.5">
             <UserPlus className="h-3.5 w-3.5" /> Agregar colaborador
           </Button>
         </div>
       </div>
 
-      {/* Invite form */}
-      {showInvite && (
-        <div className="border border-border bg-card p-6 space-y-4">
-          <div className="font-display text-base text-navy mb-2">Nuevo colaborador</div>
-          <div className="grid lg:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-steel">Correo institucional</Label>
-              <Input
-                type="email"
-                placeholder="usuario@empresa.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="rounded-none h-10 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-steel">Contraseña temporal</Label>
-              <Input
-                type="text"
-                placeholder="Mínimo 6 caracteres"
-                value={invitePassword}
-                onChange={(e) => setInvitePassword(e.target.value)}
-                className="rounded-none h-10 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-steel">Rol asignado</Label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
-                <SelectTrigger className="rounded-none h-10 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button onClick={inviteUser} disabled={inviting} className="rounded-none bg-navy text-smoke text-xs h-9">
-              {inviting ? "Creando…" : "Crear y asignar acceso"}
-            </Button>
-            <Button variant="outline" onClick={() => setShowInvite(false)} className="rounded-none text-xs h-9">
-              Cancelar
-            </Button>
-          </div>
-          <p className="text-[11px] text-steel/70">
-            Se creará la cuenta y se enviará un correo de confirmación. Comparte la contraseña temporal de forma segura.
-          </p>
+      {showHelp && (
+        <div className="border border-border bg-card p-6 space-y-3 text-sm">
+          <div className="font-display text-base text-navy">Cómo agregar un colaborador</div>
+          <p className="text-steel">El registro público está cerrado por seguridad, así que las cuentas se crean desde Supabase:</p>
+          <ol className="list-decimal pl-5 space-y-1 text-navy">
+            <li>
+              Abre{" "}
+              <a href={usersUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                Supabase → Authentication → Users
+              </a>{" "}
+              y presiona <b>Add user → Create new user</b>.
+            </li>
+            <li>Escribe su correo y una contraseña temporal, marca <b>Auto Confirm User</b> y crea la cuenta.</li>
+            <li>Vuelve aquí, presiona <b>Actualizar</b> y asígnale un rol en la tabla de abajo.</li>
+          </ol>
+          <p className="text-[11px] text-steel">Comparte la contraseña temporal por un medio seguro y pídele que la cambie.</p>
         </div>
       )}
 
-      {/* Users table */}
       <div className="border border-border bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-steel">
             <tr>
-              <th className="text-left px-6 py-3 font-medium">ID / Usuario</th>
+              <th className="text-left px-6 py-3 font-medium">Usuario</th>
               <th className="text-left px-6 py-3 font-medium">Registrado</th>
-              <th className="text-left px-6 py-3 font-medium w-52">Rol</th>
-              <th className="text-left px-6 py-3 font-medium w-20">Acciones</th>
+              <th className="text-left px-6 py-3 font-medium w-56">Rol</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-steel">Cargando usuarios…</td></tr>
+              <tr><td colSpan={3} className="px-6 py-8 text-center text-steel">Cargando usuarios…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-steel">Sin usuarios registrados aún.</td></tr>
+              <tr><td colSpan={3} className="px-6 py-8 text-center text-steel">Sin usuarios registrados.</td></tr>
             ) : (
               rows.map((u) => (
                 <tr key={u.id} className={`border-t border-border ${u.id === user?.id ? "bg-secondary/20" : ""}`}>
                   <td className="px-6 py-3">
-                    <div className="font-mono text-xs text-navy">{u.id === user?.id ? `${user.email} (tú)` : u.id.slice(0, 18) + "…"}</div>
+                    <div className="text-navy">{u.email}{u.id === user?.id ? " (tú)" : ""}</div>
+                    {u.name && u.name !== u.email && <div className="text-xs text-steel">{u.name}</div>}
                   </td>
                   <td className="px-6 py-3 text-steel text-xs">
                     {new Date(u.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                   </td>
                   <td className="px-6 py-3">
-                    <Select value={u.role} onValueChange={(v) => updateRole(u.id, v as Role)}>
-                      <SelectTrigger className="rounded-none h-8 text-xs">
+                    <Select value={u.role} onValueChange={(v) => updateRole(u, v as Role | "none")} disabled={busy === u.id || u.id === user?.id}>
+                      <SelectTrigger className={`rounded-none h-8 text-xs ${u.role === NO_ROLE ? "text-amber-700" : ""}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {ROLE_OPTIONS.map((r) => (
                           <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                         ))}
+                        <SelectItem value={NO_ROLE}>Sin acceso</SelectItem>
                       </SelectContent>
                     </Select>
-                  </td>
-                  <td className="px-6 py-3">
-                    {u.id !== user?.id && (
-                      <button
-                        onClick={() => removeUser(u.id)}
-                        className="text-steel hover:text-red-500 transition-colors"
-                        title="Revocar acceso"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))
@@ -361,12 +245,11 @@ export const Settings = () => {
         </table>
       </div>
 
-      {/* Security note */}
       <div className="border border-border bg-secondary/30 p-4 flex gap-3">
         <ShieldCheck className="h-4 w-4 text-olive mt-0.5 shrink-0" />
         <div className="text-xs text-steel leading-relaxed">
-          <span className="font-medium text-navy">Seguridad:</span> El acceso está protegido por Supabase Auth con cifrado extremo a extremo.
-          Los roles se validan en cada sesión. Un usuario sin rol no puede acceder al panel aunque tenga credenciales válidas.
+          <span className="font-medium text-navy">Seguridad:</span> los permisos los aplica la base de datos en cada consulta.
+          Un usuario sin rol puede iniciar sesión, pero no ve ni modifica información del CRM.
           Para mayor seguridad, active la autenticación de dos factores desde la consola de Supabase.
         </div>
       </div>

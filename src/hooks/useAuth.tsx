@@ -37,13 +37,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq("user_id", uid);
 
       if (error) {
-        console.warn("[useAuth] RLS bloqueó la carga de roles:", error.message);
-        setRoles(["admin"]);
+        // Sin acceso: la BD decide los permisos; nunca se asume admin
+        console.warn("[useAuth] No se pudieron cargar los roles:", error.message);
+        setRoles([]);
         setRolesFromDb(false);
       } else if (!data || data.length === 0) {
         console.warn("[useAuth] Sin roles en BD para este usuario.");
-        setRoles(["admin"]);
-        setRolesFromDb(false);
+        setRoles([]);
+        setRolesFromDb(true);
       } else {
         console.log("[useAuth] Roles cargados:", data.map(r => r.role));
         setRoles(data.map((r) => r.role as Role));
@@ -51,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.warn("[useAuth] Error inesperado cargando roles:", err.message);
-      setRoles(["admin"]);
+      setRoles([]);
       setRolesFromDb(false);
     }
     setRolesLoaded(true);

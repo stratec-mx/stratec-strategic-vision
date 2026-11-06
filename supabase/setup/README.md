@@ -17,16 +17,20 @@ Situación al 6 de noviembre de 2026:
 ## Paso 2 · Tablas, permisos y tu rol de administrador (1 minuto)
 1. Abre una consulta **nueva** (**New query**). No la ejecutes en la misma consulta del paso 1.
 2. Pega el contenido de [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql).
-3. Presiona **Run**. La última tabla del resultado debe mostrar a cada usuario registrado con el rol `admin`.
-   Todos los usuarios actuales y los que crees después reciben **admin** automáticamente.
+3. Presiona **Run**. La última tabla del resultado muestra a los usuarios con su rol.
+   En una base sin ningún administrador, todos los usuarios existentes reciben **admin** para poder entrar. Si ya hay un admin, el script no cambia ningún rol. Los usuarios nuevos **no** reciben rol automáticamente.
 
 Puedes ejecutar los dos scripts más de una vez sin problema: no borran datos.
 
-## Paso 2b · Cerrar el registro público (obligatorio, 30 segundos)
-Como cada usuario nuevo recibe **admin**, nadie debe poder crearse una cuenta por su cuenta. La llave pública del sitio permite registrarse por API aunque el sitio no tenga formulario.
+## Paso 2b · Cerrar el registro público (30 segundos)
+La llave pública del sitio permite registrarse por API aunque el sitio no tenga formulario. Conviene cerrarlo para que solo tú des de alta las cuentas.
 1. Supabase → **Authentication** → **Sign In / Providers**.
 2. Desactiva **Allow new users to sign up** y guarda.
-3. Para dar acceso a alguien: **Authentication → Users → Add user** (o **Invite user**). Recibirá admin automáticamente.
+
+### Dar acceso a un colaborador
+1. Supabase → **Authentication → Users → Add user → Create new user**. Escribe su correo y una contraseña temporal, y marca **Auto Confirm User**.
+2. En el dashboard de STRATEC: **Configuración → Usuarios y permisos → Actualizar**. El usuario nuevo aparece como *Sin acceso*. Elige su rol: Administrador, Analista u Operaciones pueden crear y editar; Solo lectura solo consulta.
+3. Sin rol, la cuenta puede iniciar sesión, pero solo ve una pantalla de "Sin rol asignado".
 
 ## Paso 3 · Función que recibe los leads del sitio (3 minutos)
 1. Supabase → **Edge Functions** → **Deploy a new function** → **Via Editor**.

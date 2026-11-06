@@ -84,12 +84,8 @@ begin
   insert into public.profiles (id, email, full_name)
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email))
   on conflict (id) do nothing;
-  -- Todo usuario registrado recibe rol admin (decisión del negocio, 6-nov-2026).
-  -- IMPORTANTE: mantener desactivado el registro público en Supabase
-  -- (Authentication → Sign In / Providers → "Allow new users to sign up" = OFF);
-  -- las cuentas se crean solo desde Authentication → Users → Add user / Invite.
-  insert into public.user_roles (user_id, role) values (new.id, 'admin')
-  on conflict (user_id, role) do nothing;
+  -- No se asigna rol automáticamente: un admin lo asigna en el dashboard
+  -- (Configuración → Usuarios y permisos). Sin rol, el usuario no ve el CRM.
   return new;
 end;
 $$;
@@ -291,11 +287,14 @@ end $$;
 grant select, insert, update, delete on public.profiles, public.user_roles to authenticated;
 grant all on public.profiles, public.user_roles, public.rate_limits to service_role;
 
--- ── Todos los usuarios registrados como administradores ────────────────────
--- Los usuarios que ya existen reciben admin aquí; los nuevos, con el trigger.
+-- ── Primer administrador (solo en una base sin ningún admin) ───────────────
+-- En una instalación nueva, todos los usuarios existentes reciben admin para
+-- poder entrar. Si ya hay al menos un admin, no cambia nada: volver a correr
+-- este script nunca vuelve a dar admin a todos.
 insert into public.user_roles (user_id, role)
 select id, 'admin' from auth.users
+where not exists (select 1 from public.user_roles where role = 'admin')
 on conflict (user_id, role) do nothing;
 
--- Verificación: debe mostrar cada usuario con el rol admin
+-- Verificación: usuarios con su rol
 select u.email, r.role from public.user_roles r join auth.users u on u.id = r.user_id order by u.email;
