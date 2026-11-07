@@ -134,17 +134,17 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
     ],
   },
   {
-    id: "dictamen-seguridad",
+    id: "determinacion-seguridad",
     serviceCode: "STR-01.3",
-    folioPrefix: "DICT",
-    name: "Dictamen de Seguridad",
-    description: "Opinión técnica sobre las condiciones de seguridad de un inmueble o instalación, con resolución favorable, condicionada o no favorable.",
+    folioPrefix: "DET",
+    name: "Determinación de Seguridad",
+    description: "Opinión técnica sobre las condiciones de seguridad de un inmueble o instalación: adecuadas, adecuadas con observaciones o no adecuadas. No sustituye la resolución de la autoridad.",
     blocks: [
-      { type: "text", key: "objeto", title: "Objeto del dictamen", hint: "Qué se dictamina y a solicitud de quién." },
+      { type: "text", key: "objeto", title: "Objeto de la determinación", hint: "Qué se evalúa y a solicitud de quién." },
       { type: "text", key: "fundamento", title: "Fundamento y criterios", hint: "Normatividad, estándares y criterios técnicos aplicados." },
       { type: "text", key: "descripcion", title: "Descripción del inmueble o instalación", hint: "Ubicación, uso, características constructivas y de operación relevantes." },
       { type: "findings", title: "Observaciones", hint: "Condiciones verificadas durante la inspección." },
-      { type: "verdict", title: "Dictamen", hint: "Resolución técnica y su justificación." },
+      { type: "verdict", title: "Determinación", hint: "Conclusión técnica de STRATEC sobre las condiciones evaluadas. La resolución corresponde a la autoridad competente." },
       { type: "text", key: "condiciones", title: "Condiciones y recomendaciones", hint: "Condiciones que deben cumplirse (si es condicionado) y recomendaciones adicionales." },
     ],
   },
@@ -183,7 +183,10 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
   },
 ];
 
-export const findTemplate = (id: string) => DOCUMENT_TEMPLATES.find((t) => t.id === id);
+export const findTemplate = (id: string) => {
+  const real = TEMPLATE_ALIASES[id] ?? id;
+  return DOCUMENT_TEMPLATES.find((t) => t.id === real);
+};
 
 // ─── Escalas y etiquetas ────────────────────────────────────────────────────
 
@@ -195,11 +198,16 @@ export const TERM_LABEL: Record<Term, string> = {
   mediano: "Mediano (3–6 meses)",
   largo: "Largo (más de 6 meses)",
 };
+// Las claves se conservan por compatibilidad con documentos guardados; los
+// textos evitan el lenguaje de resolución, que solo emite la autoridad.
 export const VERDICT_LABEL: Record<Verdict, string> = {
-  favorable: "Favorable",
-  condicionado: "Favorable condicionado",
-  no_favorable: "No favorable",
+  favorable: "Condiciones adecuadas",
+  condicionado: "Adecuadas con observaciones",
+  no_favorable: "Condiciones no adecuadas",
 };
+
+/** Ids anteriores de plantillas, para abrir documentos creados antes del cambio. */
+const TEMPLATE_ALIASES: Record<string, string> = { "dictamen-seguridad": "determinacion-seguridad" };
 export const PROBABILITY_LABEL = ["", "Rara", "Improbable", "Posible", "Probable", "Casi segura"];
 export const IMPACT_LABEL = ["", "Insignificante", "Menor", "Moderado", "Mayor", "Catastrófico"];
 

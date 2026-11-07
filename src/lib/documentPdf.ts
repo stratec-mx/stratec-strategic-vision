@@ -481,10 +481,19 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
       doc.rect(M, y, CW, 46, "F");
       font("helvetica", "bold", 7);
       color([255, 255, 255]);
-      doc.text("RESOLUCIÓN", M + 18, y + 18, { charSpace: 1.8 });
+      doc.text("DETERMINACIÓN TÉCNICA", M + 18, y + 18, { charSpace: 1.8 });
       font("times", "bold", 17);
       doc.text(VERDICT_LABEL[data.verdict].toUpperCase(), M + 18, y + 36, { charSpace: 1 });
-      y += 62;
+      y += 58;
+      // La resolución solo la emite la autoridad: se aclara junto a la determinación
+      font("helvetica", "italic", 7.8);
+      color(STEEL);
+      const note: string[] = doc.splitTextToSize(
+        "Esta determinación es una opinión técnica de STRATEC Security. No constituye dictamen, resolución ni autorización; estas corresponden exclusivamente a la autoridad competente.",
+        CW,
+      );
+      doc.text(note, M, y);
+      y += note.length * 10 + 14;
     }
   });
 
@@ -492,6 +501,9 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
   const legal = [
     `Confidencialidad. Este documento contiene información sensible sobre la seguridad de ${client.name} y es para su uso exclusivo. Queda prohibida su reproducción, distribución o divulgación total o parcial sin autorización por escrito de ${STRATEC_CONTACT.legalName}. Se recomienda restringir su consulta al personal que lo requiera.`,
     `Alcance. Las conclusiones reflejan las condiciones observadas en la fecha de inspección y la información proporcionada por el cliente. Cambios posteriores en las instalaciones, la operación o el entorno pueden modificar el nivel de riesgo.`,
+    ...(template.blocks.some((b) => b.type === "verdict")
+      ? [`Naturaleza del documento. La determinación contenida en este documento es una opinión técnica profesional de ${STRATEC_CONTACT.legalName} basada en la evidencia recabada. No sustituye los dictámenes, resoluciones, autorizaciones o vistos buenos que corresponde emitir a la autoridad competente.`]
+      : []),
     `Aviso de privacidad. Los datos personales recabados para la elaboración de este documento se tratan conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Consulte el aviso integral en ${STRATEC_CONTACT.privacyUrl} o escriba a ${STRATEC_CONTACT.email}.`,
   ];
   font("helvetica", "normal", 7.6);
