@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Plus, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { withLeadContacts } from "@/lib/contacts";
 import { z } from "zod";
 
 const schema = z.object({
@@ -24,18 +26,21 @@ const schema = z.object({
 
 const Leads = () => {
   const { toast } = useToast();
+  const { can } = useAuth();
+  const showContact = can("contactos");
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    let q = supabase.from("leads").select("*").order("created_at", { ascending: false });
+    // Correo y teléfono no se leen de la tabla: vienen de lead_contacts si hay permiso
+    let q = supabase.from("leads").select("id, full_name, organization, role_title, source, status, score, notes, owner_id, created_at, updated_at").order("created_at", { ascending: false });
     if (filter !== "all") q = q.eq("status", filter as any);
     const { data } = await q;
-    setRows(data ?? []);
+    setRows(showContact ? await withLeadContacts(data ?? []) : data ?? []);
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); }, [filter, showContact]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -136,9 +141,9 @@ const Leads = () => {
               <tr key={l.id} className="hover:bg-secondary/30 transition">
                 <td className="py-3 px-4">
                   <div className="text-navy">{l.full_name}</div>
-                  <div className="text-xs text-steel">{l.phone ?? "—"}</div>
+                  <div className="text-xs text-steel">{showContact ? l.phone ?? "—" : "Restringido"}</div>
                 </td>
-                <td className="py-3 px-4 text-steel">{l.email ?? "—"}</td>
+                <td className="py-3 px-4 text-steel">{showContact ? l.email ?? "—" : <span className="text-xs italic">Restringido</span>}</td>
                 <td className="py-3 px-4 text-steel">{l.role_title ?? "—"}</td>
                 <td className="py-3 px-4 text-steel">{l.organization ?? "—"}</td>
                 <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{l.source}</td>

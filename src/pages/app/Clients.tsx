@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
+import { useAuth } from "@/hooks/useAuth";
+import { withClientContacts } from "@/lib/contacts";
 import { z } from "zod";
 
 const schema = z.object({
@@ -22,14 +24,16 @@ const schema = z.object({
 
 const Clients = () => {
   const { toast } = useToast();
+  const { can } = useAuth();
+  const showContact = can("contactos");
   const [rows, setRows] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
-    setRows(data ?? []);
+    const { data } = await supabase.from("clients").select("id, name, industry, contact_name, country, status, notes, owner_id, created_at, updated_at").order("created_at", { ascending: false });
+    setRows(showContact ? await withClientContacts(data ?? []) : data ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [showContact]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,7 +101,7 @@ const Clients = () => {
                 <td className="py-3 px-4 text-steel">{c.industry ?? "—"}</td>
                 <td className="py-3 px-4 text-steel">
                   <div>{c.contact_name ?? "—"}</div>
-                  <div className="text-xs">{c.contact_email ?? ""}</div>
+                  <div className="text-xs">{showContact ? c.contact_email ?? "" : "Contacto restringido"}</div>
                 </td>
                 <td className="py-3 px-4 text-steel">{c.country ?? "—"}</td>
                 <td className="py-3 px-4"><StatusBadge status={c.status} /></td>

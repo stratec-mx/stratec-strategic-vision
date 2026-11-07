@@ -19,7 +19,7 @@ const Dashboard = () => {
   useEffect(() => {
     (async () => {
       const [{ count: leads }, { data: deals }, { count: appts }, { data: leadsList }, { data: apptsList }] = await Promise.all([
-        supabase.from("leads").select("*", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
+        supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
         supabase.from("deals").select("value_amount, stage"),
         supabase.from("appointments").select("*", { count: "exact", head: true }).gte("starts_at", new Date().toISOString()),
         supabase.from("leads").select("id, full_name, organization, status, created_at").order("created_at", { ascending: false }).limit(5),

@@ -33,6 +33,7 @@ import AuditoriaSeguridadPage from "./pages/services/AuditoriaSeguridadPage.tsx"
 import PlanContinuidadOperaciones from "./pages/services/PlanContinuidadOperaciones.tsx";
 import DictamenSeguridad from "./pages/services/DictamenSeguridad.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
+import { RequireAccess } from "./components/app/RequireAccess.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
 import Leads from "./pages/app/Leads.tsx";
 import Clients from "./pages/app/Clients.tsx";
@@ -87,14 +88,14 @@ const AppRoutes = () => {
         {/* App routes */}
         <Route path="/app" element={<AppShell />}>
           <Route index element={<Dashboard />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="pipeline" element={<Pipeline />} />
-          <Route path="quotes" element={<Quotes />} />
-          <Route path="documents" element={<DocumentsList />} />
-          <Route path="documents/:id" element={<DocumentEditor />} />
-          <Route path="agenda" element={<Agenda />} />
-          <Route path="analytics" element={<Analytics />} />
+          <Route path="leads" element={<RequireAccess resource="leads"><Leads /></RequireAccess>} />
+          <Route path="clients" element={<RequireAccess resource="clients"><Clients /></RequireAccess>} />
+          <Route path="pipeline" element={<RequireAccess resource="pipeline"><Pipeline /></RequireAccess>} />
+          <Route path="quotes" element={<RequireAccess resource="quotes"><Quotes /></RequireAccess>} />
+          <Route path="documents" element={<RequireAccess resource="documents"><DocumentsList /></RequireAccess>} />
+          <Route path="documents/:id" element={<RequireAccess resource="documents"><DocumentEditor /></RequireAccess>} />
+          <Route path="agenda" element={<RequireAccess resource="agenda"><Agenda /></RequireAccess>} />
+          <Route path="analytics" element={<RequireAccess resource="analytics"><Analytics /></RequireAccess>} />
           <Route path="messaging" element={<Messaging />} />
           <Route path="settings" element={<Settings />} />
         </Route>

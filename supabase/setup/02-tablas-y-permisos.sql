@@ -259,30 +259,116 @@ create index if not exists appointments_starts_idx on public.appointments (start
 create index if not exists documents_created_idx on public.documents (created_at desc);
 create index if not exists documents_client_idx on public.documents (client_id);
 
--- ── Permisos (RLS) del CRM ─────────────────────────────────────────────────
--- leer: cualquier usuario con rol · crear/editar: admin, analyst, operations · borrar: admin
+-- ── Niveles de acceso configurables ────────────────────────────────────────
+-- Cada rol tiene permiso de ver (can_read) y editar (can_write) por módulo.
+-- Se modifican desde el dashboard: Configuración → Niveles de acceso.
+-- El rol admin siempre tiene acceso total y no depende de esta tabla.
+create table if not exists public.access_rules (
+  role public.app_role not null,
+  resource text not null check (resource in ('leads','clients','contactos','pipeline','agenda','quotes','documents','analytics')),
+  can_read boolean not null default false,
+  can_write boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (role, resource)
+);
+alter table public.access_rules enable row level security;
+
+-- Valores iniciales (6-nov-2026): cotizaciones, documentos y datos de contacto
+-- solo para admin. "on conflict do nothing": volver a correr el script no
+-- borra los cambios hechos desde el dashboard.
+insert into public.access_rules (role, resource, can_read, can_write) values
+  ('analyst','leads',true,true), ('analyst','clients',true,true), ('analyst','contactos',false,false),
+  ('analyst','pipeline',true,true), ('analyst','agenda',true,true), ('analyst','quotes',false,false),
+  ('analyst','documents',false,false), ('analyst','analytics',true,false),
+  ('operations','leads',true,true), ('operations','clients',true,true), ('operations','contactos',false,false),
+  ('operations','pipeline',true,true), ('operations','agenda',true,true), ('operations','quotes',false,false),
+  ('operations','documents',false,false), ('operations','analytics',true,false),
+  ('executive','leads',true,false), ('executive','clients',true,false), ('executive','contactos',false,false),
+  ('executive','pipeline',true,false), ('executive','agenda',true,false), ('executive','quotes',false,false),
+  ('executive','documents',false,false), ('executive','analytics',true,false),
+  ('viewer','leads',true,false), ('viewer','clients',true,false), ('viewer','contactos',false,false),
+  ('viewer','pipeline',true,false), ('viewer','agenda',true,false), ('viewer','quotes',false,false),
+  ('viewer','documents',false,false), ('viewer','analytics',true,false)
+on conflict (role, resource) do nothing;
+
+create or replace function public.can_access(_resource text, _action text)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.has_role(auth.uid(), 'admin')
+      or exists (
+           select 1
+           from public.user_roles ur
+           join public.access_rules ar on ar.role = ur.role
+           where ur.user_id = auth.uid()
+             and ar.resource = _resource
+             and case when _action = 'write' then ar.can_write else ar.can_read end
+         )
+$$;
+revoke execute on function public.can_access(text, text) from public, anon;
+grant execute on function public.can_access(text, text) to authenticated;
+
 do $$
-declare t text; p record;
+declare p record;
 begin
-  for t in select unnest(array['leads','clients','deals','activities','quotes','appointments','documents']) loop
+  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'access_rules' loop
+    execute format('drop policy if exists %I on public.access_rules', p.policyname);
+  end loop;
+end $$;
+-- Cualquier usuario con rol puede leer las reglas (el panel las usa para
+-- mostrar u ocultar módulos); solo admin las modifica.
+create policy "access read" on public.access_rules for select to authenticated
+  using (public.has_any_role(auth.uid()));
+create policy "access admin write" on public.access_rules for all to authenticated
+  using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
+grant select, insert, update, delete on public.access_rules to authenticated;
+grant all on public.access_rules to service_role;
+
+-- ── Permisos (RLS) del CRM ─────────────────────────────────────────────────
+-- Cada tabla pertenece a un módulo; ver/editar según access_rules; borrar: admin.
+do $$
+declare t text; res text; p record;
+begin
+  for t, res in select * from (values
+      ('leads','leads'), ('clients','clients'), ('deals','pipeline'), ('activities','pipeline'),
+      ('appointments','agenda'), ('quotes','quotes'), ('documents','documents')) as m(tbl, resource)
+  loop
     execute format('alter table public.%I enable row level security', t);
     for p in select policyname from pg_policies where schemaname = 'public' and tablename = t loop
       execute format('drop policy if exists %I on public.%I', p.policyname, t);
     end loop;
     execute format($f$
       create policy "crm read" on public.%1$I for select to authenticated
-        using (public.has_any_role(auth.uid()));
+        using (public.can_access(%2$L, 'read'));
       create policy "crm insert" on public.%1$I for insert to authenticated
-        with check (public.has_role(auth.uid(),'admin') or public.has_role(auth.uid(),'analyst') or public.has_role(auth.uid(),'operations'));
+        with check (public.can_access(%2$L, 'write'));
       create policy "crm update" on public.%1$I for update to authenticated
-        using (public.has_role(auth.uid(),'admin') or public.has_role(auth.uid(),'analyst') or public.has_role(auth.uid(),'operations'));
+        using (public.can_access(%2$L, 'write'));
       create policy "crm delete" on public.%1$I for delete to authenticated
         using (public.has_role(auth.uid(),'admin'));
-    $f$, t);
+    $f$, t, res);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     execute format('grant all on public.%I to service_role', t);
   end loop;
 end $$;
+
+-- ── Datos de contacto: ocultos en las tablas, visibles solo por vista ──────
+-- Nadie puede leer correo/teléfono directamente de leads y clients (ni admin).
+-- Se leen por las vistas lead_contacts y client_contacts, que solo devuelven
+-- filas a quien tenga permiso "contactos" (admin siempre). Escribir esos
+-- campos sigue permitido a quien pueda editar el módulo.
+revoke select on public.leads from authenticated, anon;
+grant select (id, full_name, organization, role_title, source, status, score, notes, owner_id, created_at, updated_at)
+  on public.leads to authenticated;
+revoke select on public.clients from authenticated, anon;
+grant select (id, name, industry, contact_name, country, status, notes, owner_id, created_at, updated_at)
+  on public.clients to authenticated;
+
+create or replace view public.lead_contacts as
+  select id, email, phone from public.leads where public.can_access('contactos', 'read');
+create or replace view public.client_contacts as
+  select id, contact_email, contact_phone from public.clients where public.can_access('contactos', 'read');
+revoke all on public.lead_contacts, public.client_contacts from anon, public;
+grant select on public.lead_contacts, public.client_contacts to authenticated;
 
 grant select, insert, update, delete on public.profiles, public.user_roles to authenticated;
 grant all on public.profiles, public.user_roles, public.rate_limits to service_role;
@@ -295,6 +381,9 @@ insert into public.user_roles (user_id, role)
 select id, 'admin' from auth.users
 where not exists (select 1 from public.user_roles where role = 'admin')
 on conflict (user_id, role) do nothing;
+
+-- Recarga el esquema de la API para que vea las vistas nuevas
+notify pgrst, 'reload schema';
 
 -- Verificación: usuarios con su rol
 select u.email, r.role from public.user_roles r join auth.users u on u.id = r.user_id order by u.email;

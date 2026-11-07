@@ -6,6 +6,8 @@ import { useAuth, Role } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { AccessMatrix } from "@/components/app/AccessMatrix";
+import { CreateUserForm } from "@/components/app/CreateUserForm";
 
 export const ComingSoon = ({ title, eyebrow, description }: { title: string; eyebrow: string; description: string }) => (
   <div>
@@ -45,14 +47,13 @@ type UserRow = {
 };
 
 const NO_ROLE = "none";
-const SUPABASE_PROJECT = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
 
 export const Settings = () => {
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   // Lista TODOS los usuarios registrados (tabla profiles, visible para admins),
@@ -146,8 +147,6 @@ export const Settings = () => {
     );
   }
 
-  const usersUrl = SUPABASE_PROJECT ? `https://supabase.com/dashboard/project/${SUPABASE_PROJECT}/auth/users` : "https://supabase.com/dashboard";
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -176,30 +175,13 @@ export const Settings = () => {
           <Button variant="outline" size="sm" onClick={load} className="rounded-none text-xs gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" /> Actualizar
           </Button>
-          <Button size="sm" onClick={() => setShowHelp(!showHelp)} className="rounded-none bg-navy text-smoke text-xs gap-1.5">
-            <UserPlus className="h-3.5 w-3.5" /> Agregar colaborador
+          <Button size="sm" onClick={() => setShowCreate(!showCreate)} className="rounded-none bg-navy text-smoke text-xs gap-1.5">
+            <UserPlus className="h-3.5 w-3.5" /> Agregar usuario
           </Button>
         </div>
       </div>
 
-      {showHelp && (
-        <div className="border border-border bg-card p-6 space-y-3 text-sm">
-          <div className="font-display text-base text-navy">Cómo agregar un colaborador</div>
-          <p className="text-steel">El registro público está cerrado por seguridad, así que las cuentas se crean desde Supabase:</p>
-          <ol className="list-decimal pl-5 space-y-1 text-navy">
-            <li>
-              Abre{" "}
-              <a href={usersUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
-                Supabase → Authentication → Users
-              </a>{" "}
-              y presiona <b>Add user → Create new user</b>.
-            </li>
-            <li>Escribe su correo y una contraseña temporal, marca <b>Auto Confirm User</b> y crea la cuenta.</li>
-            <li>Vuelve aquí, presiona <b>Actualizar</b> y asígnale un rol en la tabla de abajo.</li>
-          </ol>
-          <p className="text-[11px] text-steel">Comparte la contraseña temporal por un medio seguro y pídele que la cambie.</p>
-        </div>
-      )}
+      {showCreate && <CreateUserForm onCreated={() => { setShowCreate(false); load(); }} onCancel={() => setShowCreate(false)} />}
 
       <div className="border border-border bg-card overflow-hidden">
         <table className="w-full text-sm">
@@ -243,6 +225,14 @@ export const Settings = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h2 className="font-display text-xl text-navy">Niveles de acceso</h2>
+          <p className="text-sm text-steel">Define qué módulos puede ver y editar cada rol. Los cambios aplican de inmediato.</p>
+        </div>
+        <AccessMatrix />
       </div>
 
       <div className="border border-border bg-secondary/30 p-4 flex gap-3">

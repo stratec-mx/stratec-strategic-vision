@@ -14,6 +14,7 @@ import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw } from "lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
+import { withClientContacts } from "@/lib/contacts";
 import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
 import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 
@@ -117,11 +118,12 @@ const Quotes = () => {
 
   const load = async () => {
     const [q, c] = await Promise.all([
-      supabase.from("quotes").select("*, clients(name, contact_name, contact_email, contact_phone)").order("created_at", { ascending: false }),
-      supabase.from("clients").select("id, name, contact_name, contact_email, contact_phone").order("name"),
+      supabase.from("quotes").select("*, clients(name, contact_name)").order("created_at", { ascending: false }),
+      // Correo y teléfono vienen de la vista client_contacts (no de la tabla)
+      supabase.from("clients").select("id, name, contact_name").order("name"),
     ]);
     setList(q.data ?? []);
-    setClients((c.data as ClientRow[]) ?? []);
+    setClients((await withClientContacts((c.data ?? []) as { id: string; name: string; contact_name: string | null }[])) as ClientRow[]);
   };
   useEffect(() => { load(); }, []);
 
@@ -326,8 +328,8 @@ const Quotes = () => {
         client: {
           name: q.clients?.name ?? "Cliente",
           contact: q.clients?.contact_name,
-          email: q.clients?.contact_email,
-          phone: q.clients?.contact_phone,
+          email: clients.find((c) => c.id === q.client_id)?.contact_email,
+          phone: clients.find((c) => c.id === q.client_id)?.contact_phone,
         },
         items: normalizeItems(q.items),
         notes: q.notes,

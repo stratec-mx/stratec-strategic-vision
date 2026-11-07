@@ -47,3 +47,14 @@ La llave pública del sitio permite registrarse por API aunque el sitio no tenga
 
 ## Leads anteriores
 Los leads que llegaron antes del cambio de proyecto están en el proyecto anterior (`ivscwwcxasamaxzqmjwd`, creado con Lovable). Si tienes acceso a él (por ejemplo desde Lovable → Cloud → Database), exporta la tabla `leads` a CSV e impórtala aquí con **Table Editor → leads → Insert → Import data from CSV**.
+
+## Paso 5 · Niveles de acceso y alta de usuarios desde el dashboard
+Requiere que el sitio ya tenga la versión con **Ajustes → Niveles de acceso**.
+1. **SQL Editor → New query:** vuelve a ejecutar [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql) completo. Crea la tabla `access_rules` con los valores iniciales (Cotizaciones, Documentos y Datos de contacto solo para admin), las reglas por módulo y las vistas `lead_contacts` y `client_contacts`. Si lo vuelves a correr después, **no** borra los cambios que hagas desde el dashboard.
+2. **Edge Functions → Deploy a new function → Via Editor:** nómbrala `admin-create-user`, pega el código de [`../functions/admin-create-user/index.ts`](../functions/admin-create-user/index.ts) y presiona **Deploy**. Deja **Verify JWT activado**: solo responde a usuarios con sesión, y además verifica que quien la llama sea admin.
+3. Recarga el dashboard. En **Ajustes** verás **Agregar usuario** (crea la cuenta ya confirmada) y la tabla **Niveles de acceso**, donde marcas Ver / Editar por rol y módulo.
+
+Cómo funciona la protección:
+- Las reglas de la base de datos consultan `access_rules` en cada lectura y escritura, así que ocultar un módulo no es solo visual.
+- Nadie puede leer el correo ni el teléfono de leads y clientes directamente de las tablas, ni siquiera un admin. Se leen por las vistas, que solo devuelven datos a quien tenga el permiso **Datos de contacto**.
+- Eliminar registros es exclusivo del admin.

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_rules: {
+        Row: {
+          can_read: boolean
+          can_write: boolean
+          resource: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          can_read?: boolean
+          can_write?: boolean
+          resource: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          can_read?: boolean
+          can_write?: boolean
+          resource?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           body: string | null
@@ -491,9 +515,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_contacts: {
+        Row: { contact_email: string | null; contact_phone: string | null; id: string | null }
+        Relationships: []
+      }
+      lead_contacts: {
+        Row: { email: string | null; id: string | null; phone: string | null }
+        Relationships: []
+      }
     }
     Functions: {
+      can_access: { Args: { _action: string; _resource: string }; Returns: boolean }
       has_any_role: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {

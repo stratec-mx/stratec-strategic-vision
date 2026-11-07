@@ -6,24 +6,26 @@ import {
   CalendarDays, BarChart3, MessageSquare, Settings, LogOut, Search, ShieldAlert, FileStack,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import type { Resource } from "@/lib/access";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const nav = [
+// `resource`: módulo de access_rules; el enlace solo aparece si el usuario puede verlo
+const nav: { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean; resource?: Resource }[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/app/leads", label: "Leads", icon: Target },
-  { to: "/app/clients", label: "Clientes", icon: Users },
-  { to: "/app/pipeline", label: "Pipeline", icon: GitBranch },
-  { to: "/app/quotes", label: "Cotizaciones", icon: FileText },
-  { to: "/app/documents", label: "Documentos", icon: FileStack },
-  { to: "/app/agenda", label: "Agenda", icon: CalendarDays },
-  { to: "/app/analytics", label: "Analítica", icon: BarChart3 },
+  { to: "/app/leads", label: "Leads", icon: Target, resource: "leads" },
+  { to: "/app/clients", label: "Clientes", icon: Users, resource: "clients" },
+  { to: "/app/pipeline", label: "Pipeline", icon: GitBranch, resource: "pipeline" },
+  { to: "/app/quotes", label: "Cotizaciones", icon: FileText, resource: "quotes" },
+  { to: "/app/documents", label: "Documentos", icon: FileStack, resource: "documents" },
+  { to: "/app/agenda", label: "Agenda", icon: CalendarDays, resource: "agenda" },
+  { to: "/app/analytics", label: "Analítica", icon: BarChart3, resource: "analytics" },
   { to: "/app/messaging", label: "Mensajería", icon: MessageSquare },
 ];
 
 export const AppShell = ({ children }: { children?: ReactNode }) => {
-  const { session, loading, user, signOut, hasAccess, canWriteDb } = useAuth();
+  const { session, loading, user, signOut, hasAccess, can } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -61,7 +63,7 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           <Logo size="sm" variant="dark" />
         </div>
         <nav className="flex-1 px-3 py-6 space-y-1">
-          {nav.map((item) => (
+          {nav.filter((item) => !item.resource || can(item.resource)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -109,21 +111,9 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
           className="flex-1 p-6 lg:p-10 overflow-auto"
         >
-          {!canWriteDb && <RoleWarning />}
           {children ?? <Outlet />}
         </motion.main>
       </div>
     </div>
   );
 };
-
-/** Aviso para roles de solo consulta (viewer): la BD rechazará las escrituras. */
-const RoleWarning = () => (
-  <div className="mb-6 border border-amber-300 bg-amber-50 p-4 flex gap-3 text-sm">
-    <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-    <div className="text-navy">
-      Tu rol solo permite consultar. Para crear o editar clientes, cotizaciones y documentos, un administrador debe
-      asignarte el rol <b>Administrador</b>, <b>Analista</b> u <b>Operaciones</b> en Configuración → Usuarios y permisos.
-    </div>
-  </div>
-);
