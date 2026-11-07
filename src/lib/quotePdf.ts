@@ -154,6 +154,34 @@ export const quoteFileName = (d: Pick<QuotePdfData, "number" | "client" | "issue
   return ["Propuesta_STRATEC", slug(d.number) || "SIN-FOLIO", slug(d.client.name) || "Cliente", iso].join("_") + ".pdf";
 };
 
+/**
+ * Dibuja un renglón justificado: reparte el espacio sobrante entre palabras
+ * para que llegue al margen derecho. La última línea de un párrafo (justify =
+ * false) y los renglones que quedarían con huecos muy grandes se alinean a la
+ * izquierda, como en un documento formal. Usa la fuente activa del documento.
+ */
+export function drawJustified(doc: any, line: string, x: number, y: number, width: number, justify: boolean) {
+  const words = line.trim().split(/\s+/);
+  if (!justify || words.length < 2) {
+    doc.text(line.trim(), x, y);
+    return;
+  }
+  const wordsWidth = words.reduce((s, w) => s + doc.getTextWidth(w), 0);
+  const gap = (width - wordsWidth) / (words.length - 1);
+  // Solo se amplía el espacio: si el renglón ya está justo (o excede el ancho),
+  // se dibuja con su espaciado normal para que las palabras nunca se encimen.
+  const space = doc.getTextWidth(" ");
+  if (gap < space || gap > space * 4) {
+    doc.text(line.trim(), x, y);
+    return;
+  }
+  let cx = x;
+  for (const w of words) {
+    doc.text(w, cx, y);
+    cx += doc.getTextWidth(w) + gap;
+  }
+}
+
 // ─── Paleta STRATEC (RGB) ───────────────────────────────────────────────────
 export const NAVY_DEEP: [number, number, number] = [7, 19, 39];
 export const NAVY: [number, number, number] = [11, 30, 60];
@@ -235,12 +263,16 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
 
   const paragraph = (text: string, size = 9, lh = 13, c: [number, number, number] = INK, indent = 0) => {
     font("helvetica", "normal", size);
-    const lines: string[] = doc.splitTextToSize(text, CW - indent);
-    for (const line of lines) {
+    // Cada salto de línea escrito por el usuario es un párrafo propio
+    const lines: { t: string; last: boolean }[] = text.split("\n").flatMap((para) => {
+      const w: string[] = doc.splitTextToSize(para, CW - indent);
+      return w.map((t, i) => ({ t, last: i === w.length - 1 }));
+    });
+    for (const { t: line, last } of lines) {
       ensure(lh);
       font("helvetica", "normal", size);
       color(c);
-      doc.text(line, M + indent, y);
+      drawJustified(doc, line, M + indent, y, CW - indent, !last);
       y += lh;
     }
   };
@@ -468,7 +500,7 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
     doc.text(`${i + 1}.`, M, y);
     font("helvetica", "normal", 8.4);
     color(INK);
-    doc.text(lines, M + 16, y, { lineHeightFactor: 1.37 });
+    lines.forEach((l, li) => drawJustified(doc, l, M + 16, y + li * 11.5, CW - 16, li < lines.length - 1));
     y += lines.length * 11.5 + 4;
   });
   y += 14;
@@ -493,8 +525,10 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
   fill(GOLD);
   doc.rect(M, y, 2.5, legalH, "F");
   let ly = y + 15;
+  const legalW = CW - 26;
   legalLines.forEach((lines) => {
     lines.forEach((line, i) => {
+      const justify = i < lines.length - 1;
       if (i === 0) {
         const [head, ...tail] = line.split(".");
         font("helvetica", "bold", 7.6);
@@ -503,11 +537,11 @@ async function buildQuotePdf(data: QuotePdfData): Promise<{ doc: any; fileName: 
         const hw = doc.getTextWidth(`${head}. `);
         font("helvetica", "normal", 7.6);
         color(STEEL);
-        doc.text(tail.join(".").trimStart(), M + 14 + hw, ly);
+        drawJustified(doc, tail.join(".").trimStart(), M + 14 + hw, ly, legalW - hw, justify);
       } else {
         font("helvetica", "normal", 7.6);
         color(STEEL);
-        doc.text(line, M + 14, ly);
+        drawJustified(doc, line, M + 14, ly, legalW, justify);
       }
       ly += 10;
     });

@@ -963,26 +963,25 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     },
   },
 
-  // ── S8 · Determinación de Seguridad ───────────────────────────────────────
-  // Antes "Dictamen de Seguridad". El dictamen/resolución solo lo emite la
-  // autoridad competente; STRATEC emite una determinación técnica (opinión
-  // profesional) que puede servir de soporte ante esa autoridad.
-  "determinacion-seguridad": {
-    slug: "determinacion-seguridad",
+  // ── S8 · Dictamen de Seguridad ────────────────────────────────────────────
+  // La conclusión del dictamen se denomina "Determinación técnica": la
+  // resolución, autorización o visto bueno solo los emite la autoridad.
+  "dictamen-seguridad": {
+    slug: "dictamen-seguridad",
     numero: "01.3",
-    titulo: "Determinación de Seguridad",
-    descripcionCorta: "Evaluación técnica y determinación de las condiciones de seguridad institucional.",
-    href: "/servicios/determinacion-seguridad",
+    titulo: "Dictamen de Seguridad",
+    descripcionCorta: "Evaluación técnica de instalaciones con determinación técnica de sus condiciones de seguridad.",
+    href: "/servicios/dictamen-seguridad",
     heroImage: "https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?auto=format&fit=crop&w=1920&q=80",
-    breadcrumb: "Determinación de Seguridad",
+    breadcrumb: "Dictamen de Seguridad",
     parentBreadcrumb: "Consultoría en Seguridad",
     parentHref: "/servicios/consultoria-seguridad",
-    h1: "Determinación de Seguridad",
-    lead: "La Determinación de Seguridad es un documento técnico en el que STRATEC establece, con base en la normatividad aplicable y en criterios profesionales, las condiciones de seguridad que guarda una instalación, proceso o actividad. Es una opinión técnica objetiva, documentada y firmada por especialistas, útil para la toma de decisiones institucionales, como soporte en trámites ante la autoridad competente o en procesos de due diligence.",
+    h1: "Dictamen de Seguridad",
+    lead: "El Dictamen de Seguridad es un documento técnico en el que STRATEC evalúa, con base en la normatividad aplicable y en criterios profesionales, las condiciones de seguridad que guarda una instalación, proceso o actividad, y las resume en una determinación técnica. Es una opinión profesional objetiva, documentada y firmada por especialistas, útil para la toma de decisiones institucionales, como soporte en trámites ante la autoridad competente o en procesos de due diligence.",
     blocks: [
       {
         h2: "Visita Técnica de Inspección",
-        p: "Inspección presencial de las instalaciones objeto de la determinación: condiciones físicas, sistemas de seguridad implementados, señalización, controles de acceso, equipos de protección y estado general de la infraestructura. Se documenta con registro fotográfico y levantamiento de datos.",
+        p: "Inspección presencial de las instalaciones objeto del dictamen: condiciones físicas, sistemas de seguridad implementados, señalización, controles de acceso, equipos de protección y estado general de la infraestructura. Se documenta con registro fotográfico y levantamiento de datos.",
         blockImage: "https://images.unsplash.com/photo-1771931322109-180bb1b35bf8?auto=format&fit=crop&w=900&q=80",
       },
       {
@@ -996,47 +995,47 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         blockImage: "https://images.unsplash.com/photo-1710181717510-8e3896937fbd?auto=format&fit=crop&w=900&q=80",
       },
       {
-        h2: "Emisión de la Determinación",
-        p: "Elaboración del documento formal que incluye: datos de la instalación evaluada, metodología aplicada, hallazgos ordenados por área y nivel de criticidad, determinación técnica y firma del profesional responsable. La determinación puede incluir o no una opinión sobre el nivel de riesgo global.",
+        h2: "Emisión del Dictamen y Determinación Técnica",
+        p: "Elaboración del documento formal que incluye: datos de la instalación evaluada, metodología aplicada, hallazgos ordenados por área y nivel de criticidad, la determinación técnica de STRATEC y la firma del profesional responsable. La determinación técnica puede incluir o no una opinión sobre el nivel de riesgo global.",
         blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
       },
       {
         h2: "Seguimiento de Recomendaciones",
-        p: "Una vez emitida la determinación, STRATEC puede acompañar a la organización en la implementación de las recomendaciones y emitir una determinación complementaria que documente la atención de las observaciones originales, útil como soporte ante la autoridad competente o en auditorías internas.",
+        p: "Una vez emitido el dictamen, STRATEC puede acompañar a la organización en la implementación de las recomendaciones y emitir un dictamen complementario que documente la atención de las observaciones originales, útil como soporte ante la autoridad competente o en auditorías internas.",
         blockImage: "https://images.unsplash.com/photo-1652739758426-56a564265f9e?auto=format&fit=crop&w=900&q=80",
       },
     ],
-    nota: "Las determinaciones de STRATEC son opiniones técnicas firmadas por especialistas con trayectoria verificable en seguridad institucional y protección civil. No sustituyen los dictámenes, resoluciones o autorizaciones que corresponde emitir a la autoridad competente, y no emitimos determinaciones favorables que no estén sustentadas en la evidencia técnica recopilada.",
+    nota: "Los dictámenes de STRATEC están firmados por especialistas con trayectoria verificable en seguridad institucional y protección civil. Su determinación técnica es una opinión profesional: no sustituye las resoluciones, autorizaciones o vistos buenos que corresponde emitir a la autoridad competente, y no emitimos determinaciones favorables que no estén sustentadas en la evidencia técnica recopilada.",
     gancho:
-      "Una determinación de seguridad bien fundamentada es un activo: respalda decisiones, documenta las condiciones reales de sus instalaciones y le permite llegar preparado ante la autoridad.",
-    cta: "Solicitar determinación de seguridad",
+      "Un dictamen de seguridad bien fundamentado es un activo: respalda decisiones, documenta las condiciones reales de sus instalaciones y le permite llegar preparado ante la autoridad.",
+    cta: "Solicitar dictamen de seguridad",
     ragSnippet: {
       h2: "¿Necesita documentar las condiciones de seguridad de sus instalaciones antes de un trámite o en un proceso de due diligence?",
-      p: "La Determinación de Seguridad es el documento técnico en el que STRATEC establece las condiciones de seguridad de una instalación con base en la normatividad aplicable. Incluye inspección presencial, evaluación normativa y firma de especialista. Sirve como soporte técnico ante la autoridad competente, que es quien emite la resolución, y en procesos de debida diligencia corporativa.",
+      p: "El Dictamen de Seguridad es el documento técnico en el que STRATEC evalúa las condiciones de seguridad de una instalación con base en la normatividad aplicable y emite una determinación técnica. Incluye inspección presencial, evaluación normativa y firma de especialista. Sirve como soporte técnico ante la autoridad competente, que es quien emite la resolución, y en procesos de debida diligencia corporativa.",
     },
     deliverables: [
-      { fase: "Fase 1 · Inspección",    entregable: "Visita técnica con registro fotográfico y levantamiento de datos in situ",      queResuelve: "Estado real de las condiciones, no solo revisión de documentos" },
-      { fase: "Fase 2 · Normativa",     entregable: "Contraste con NOM aplicables, LGPC y reglamentos estatales y municipales",      queResuelve: "Identifica cumplimientos, incumplimientos y vacíos normativos" },
-      { fase: "Fase 3 · Análisis",      entregable: "Evaluación técnica de controles y capacidad de respuesta institucional",        queResuelve: "Criterio profesional más allá del checklist normativo estándar" },
-      { fase: "Fase 4 · Determinación", entregable: "Documento formal con hallazgos, determinación técnica y firma de especialista", queResuelve: "Soporte técnico documentado para la autoridad competente y el due diligence" },
-      { fase: "Fase 5 · Seguimiento",   entregable: "Acompañamiento en correcciones + determinación complementaria",                 queResuelve: "Evidencia de cierre para auditorías subsecuentes o renovaciones" },
+      { fase: "Fase 1 · Inspección",  entregable: "Visita técnica con registro fotográfico y levantamiento de datos in situ",           queResuelve: "Estado real de las condiciones, no solo revisión de documentos" },
+      { fase: "Fase 2 · Normativa",   entregable: "Contraste con NOM aplicables, LGPC y reglamentos estatales y municipales",           queResuelve: "Identifica cumplimientos, incumplimientos y vacíos normativos" },
+      { fase: "Fase 3 · Análisis",    entregable: "Evaluación técnica de controles y capacidad de respuesta institucional",             queResuelve: "Criterio profesional más allá del checklist normativo estándar" },
+      { fase: "Fase 4 · Dictamen",    entregable: "Documento formal con hallazgos, determinación técnica y firma de especialista",      queResuelve: "Soporte técnico documentado para la autoridad competente y el due diligence" },
+      { fase: "Fase 5 · Seguimiento", entregable: "Acompañamiento en correcciones + dictamen complementario",                           queResuelve: "Evidencia de cierre para auditorías subsecuentes o renovaciones" },
     ],
     seo: {
-      title: "Determinación de Seguridad | Opinión Técnica Normativa | STRATEC",
+      title: "Dictamen de Seguridad Institucional | Determinación Técnica | STRATEC",
       description:
-        "Determinaciones de Seguridad para empresas e instituciones: inspección técnica, evaluación normativa, análisis de condiciones y documento formal firmado por especialistas, como soporte ante la autoridad competente.",
+        "Dictámenes de Seguridad para empresas e instituciones: inspección técnica, evaluación normativa y determinación técnica firmada por especialistas, como soporte ante la autoridad competente.",
       keywords: [
-        "determinación de seguridad",
-        "opinión técnica de seguridad",
+        "dictamen de seguridad",
+        "dictamen técnico de seguridad",
+        "dictamen de seguridad institucional",
+        "determinación técnica de seguridad",
         "evaluación técnica de seguridad",
-        "evaluación de condiciones de seguridad",
-        "preparación para dictamen de protección civil",
-        "revisión normativa de seguridad",
-        "seguridad institucional México",
-        "consultoría seguridad Morelos",
+        "dictamen seguridad empresa",
+        "dictamen seguridad México",
+        "dictamen seguridad Morelos",
         "documento técnico de seguridad",
         "perito en seguridad institucional",
-        "due diligence de seguridad",
+        "preparación para verificación de protección civil",
       ],
     },
   },

@@ -2,7 +2,7 @@
 // con la identidad de STRATEC. Usa la misma carga de jsPDF y paleta que la
 // propuesta económica (quotePdf.ts).
 import {
-  loadJsPdf, loadImageDataUrl, formatLongDate, parseLocalDate, slug, STRATEC_CONTACT,
+  loadJsPdf, loadImageDataUrl, formatLongDate, parseLocalDate, slug, STRATEC_CONTACT, drawJustified,
   NAVY_DEEP, NAVY, GOLD, STEEL, INK, MUTED, ZEBRA, RULE, CREAM,
 } from "@/lib/quotePdf";
 import {
@@ -240,7 +240,7 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
             fill(GOLD);
             doc.rect(M + 3, y - 4, 3, 3, "F");
           }
-          doc.text(l, M + indent, y);
+          drawJustified(doc, l, M + indent, y, CW - indent, li < wrapped.length - 1);
           y += 13.5;
         });
       });
@@ -489,10 +489,10 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
       font("helvetica", "italic", 7.8);
       color(STEEL);
       const note: string[] = doc.splitTextToSize(
-        "Esta determinación es una opinión técnica de STRATEC Security. No constituye dictamen, resolución ni autorización; estas corresponden exclusivamente a la autoridad competente.",
+        "La determinación técnica es una opinión profesional de STRATEC Security. No constituye resolución, autorización ni visto bueno; estos corresponden exclusivamente a la autoridad competente.",
         CW,
       );
-      doc.text(note, M, y);
+      note.forEach((l, li) => drawJustified(doc, l, M, y + li * 10, CW, li < note.length - 1));
       y += note.length * 10 + 14;
     }
   });
@@ -502,7 +502,7 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
     `Confidencialidad. Este documento contiene información sensible sobre la seguridad de ${client.name} y es para su uso exclusivo. Queda prohibida su reproducción, distribución o divulgación total o parcial sin autorización por escrito de ${STRATEC_CONTACT.legalName}. Se recomienda restringir su consulta al personal que lo requiera.`,
     `Alcance. Las conclusiones reflejan las condiciones observadas en la fecha de inspección y la información proporcionada por el cliente. Cambios posteriores en las instalaciones, la operación o el entorno pueden modificar el nivel de riesgo.`,
     ...(template.blocks.some((b) => b.type === "verdict")
-      ? [`Naturaleza del documento. La determinación contenida en este documento es una opinión técnica profesional de ${STRATEC_CONTACT.legalName} basada en la evidencia recabada. No sustituye los dictámenes, resoluciones, autorizaciones o vistos buenos que corresponde emitir a la autoridad competente.`]
+      ? [`Naturaleza del documento. La determinación técnica contenida en este dictamen es una opinión profesional de ${STRATEC_CONTACT.legalName} basada en la evidencia recabada. No sustituye las resoluciones, autorizaciones o vistos buenos que corresponde emitir a la autoridad competente.`]
       : []),
     `Aviso de privacidad. Los datos personales recabados para la elaboración de este documento se tratan conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Consulte el aviso integral en ${STRATEC_CONTACT.privacyUrl} o escriba a ${STRATEC_CONTACT.email}.`,
   ];
@@ -516,8 +516,10 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
   fill(GOLD);
   doc.rect(M, y, 2.5, legalH, "F");
   let ly = y + 16;
+  const legalW = CW - 28;
   legalLines.forEach((lines) => {
     lines.forEach((line, i) => {
+      const justify = i < lines.length - 1;
       if (i === 0) {
         const [head, ...tail] = line.split(".");
         font("helvetica", "bold", 7.6);
@@ -526,11 +528,11 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
         const hw = doc.getTextWidth(`${head}. `);
         font("helvetica", "normal", 7.6);
         color(STEEL);
-        doc.text(tail.join(".").trimStart(), M + 14 + hw, ly);
+        drawJustified(doc, tail.join(".").trimStart(), M + 14 + hw, ly, legalW - hw, justify);
       } else {
         font("helvetica", "normal", 7.6);
         color(STEEL);
-        doc.text(line, M + 14, ly);
+        drawJustified(doc, line, M + 14, ly, legalW, justify);
       }
       ly += 10;
     });

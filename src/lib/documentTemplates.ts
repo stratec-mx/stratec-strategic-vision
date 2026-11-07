@@ -134,17 +134,17 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
     ],
   },
   {
-    id: "determinacion-seguridad",
+    id: "dictamen-seguridad",
     serviceCode: "STR-01.3",
-    folioPrefix: "DET",
-    name: "Determinación de Seguridad",
-    description: "Opinión técnica sobre las condiciones de seguridad de un inmueble o instalación: adecuadas, adecuadas con observaciones o no adecuadas. No sustituye la resolución de la autoridad.",
+    folioPrefix: "DICT",
+    name: "Dictamen de Seguridad",
+    description: "Evaluación técnica de un inmueble o instalación con su determinación técnica: condiciones adecuadas, con observaciones o no adecuadas. No sustituye la resolución de la autoridad.",
     blocks: [
-      { type: "text", key: "objeto", title: "Objeto de la determinación", hint: "Qué se evalúa y a solicitud de quién." },
+      { type: "text", key: "objeto", title: "Objeto del dictamen", hint: "Qué se dictamina y a solicitud de quién." },
       { type: "text", key: "fundamento", title: "Fundamento y criterios", hint: "Normatividad, estándares y criterios técnicos aplicados." },
       { type: "text", key: "descripcion", title: "Descripción del inmueble o instalación", hint: "Ubicación, uso, características constructivas y de operación relevantes." },
       { type: "findings", title: "Observaciones", hint: "Condiciones verificadas durante la inspección." },
-      { type: "verdict", title: "Determinación", hint: "Conclusión técnica de STRATEC sobre las condiciones evaluadas. La resolución corresponde a la autoridad competente." },
+      { type: "verdict", title: "Determinación técnica", hint: "Conclusión técnica de STRATEC sobre las condiciones evaluadas. La resolución corresponde a la autoridad competente." },
       { type: "text", key: "condiciones", title: "Condiciones y recomendaciones", hint: "Condiciones que deben cumplirse (si es condicionado) y recomendaciones adicionales." },
     ],
   },
@@ -207,7 +207,7 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
 };
 
 /** Ids anteriores de plantillas, para abrir documentos creados antes del cambio. */
-const TEMPLATE_ALIASES: Record<string, string> = { "dictamen-seguridad": "determinacion-seguridad" };
+const TEMPLATE_ALIASES: Record<string, string> = { "determinacion-seguridad": "dictamen-seguridad" };
 export const PROBABILITY_LABEL = ["", "Rara", "Improbable", "Posible", "Probable", "Casi segura"];
 export const IMPACT_LABEL = ["", "Insignificante", "Menor", "Moderado", "Mayor", "Catastrófico"];
 
