@@ -1,5 +1,5 @@
 import { Logo } from "./Logo";
-import { Linkedin, Mail, MapPin } from "lucide-react";
+import { Facebook, Linkedin, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const Footer = () => {
@@ -61,6 +61,17 @@ export const Footer = () => {
                   className="hover:text-smoke transition-colors font-light"
                 >
                   LinkedIn
+                </a>
+              </li>
+              <li className="flex items-start gap-3">
+                <Facebook className="h-4 w-4 text-olive mt-0.5 shrink-0" />
+                <a
+                  href="https://www.facebook.com/profile.php?id=61589893637748"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-smoke transition-colors font-light"
+                >
+                  Facebook
                 </a>
               </li>
             </ul>

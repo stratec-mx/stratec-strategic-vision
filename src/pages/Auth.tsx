@@ -89,7 +89,7 @@ const Auth = () => {
           </p>
         </div>
         <div className="relative flex flex-col gap-2 text-xs text-smoke/50">
-          <div className="flex items-center gap-2"><Lock className="h-3 w-3" /> Sesión cifrada extremo a extremo</div>
+          <div className="flex items-center gap-2"><Lock className="h-3 w-3" /> Sesión protegida en tránsito</div>
           <div className="flex items-center gap-2"><ShieldCheck className="h-3 w-3" /> Acceso restringido por credenciales</div>
         </div>
       </div>

@@ -157,7 +157,7 @@ const Schedule = () => {
 
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-steel">
               <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-olive" /> Acuerdo de confidencialidad institucional</div>
-              <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-olive" /> Información cifrada extremo a extremo</div>
+              <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-olive" /> Información protegida en tránsito</div>
             </div>
           </motion.div>
 
