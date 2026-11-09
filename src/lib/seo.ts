@@ -57,7 +57,6 @@ export const ORGANIZATION_SCHEMA = {
     "areaServed": "MX",
     "availableLanguage": ["es", "en"]
   },
-  "foundingDate": "2010",
   "foundingLocation": "Morelos, México",
   "areaServed": [
     "Morelos",
@@ -219,12 +218,12 @@ export const SERVICE_PAGES_SEO = {
   },
   "nom-035": {
     title: "Evaluación NOM-035 | Riesgos Psicosociales | STRATEC",
-    description: "Evaluaciones y auditorías NOM-035 de factores de riesgo psicosocial. Diagnóstico y acciones de mitigación certificadas.",
+    description: "Evaluaciones y auditorías NOM-035 de factores de riesgo psicosocial. Diagnóstico y acciones de mitigación.",
     keywords: ["NOM-035", "factores psicosociales", "evaluación riesgos"]
   },
   "seguridad-eventos": {
     title: "Seguridad y Coordinación de Eventos | STRATEC",
-    description: "Coordinación integral de seguridad para eventos corporativos, institucionales y de alto nivel. Personal operativo certificado.",
+    description: "Coordinación integral de seguridad para eventos corporativos, institucionales y de alto nivel.",
     keywords: ["seguridad eventos", "coordinación operativa", "personal seguridad"]
   },
   "control-acceso": {

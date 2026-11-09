@@ -12,13 +12,16 @@ interface PageSEO {
   canonicalUrl?: string;
 }
 
+import { SERVICES_DATA } from "@/data/servicesData";
+import { coverageData } from "@/data/coverageData";
+
 const baseUrl = "https://www.stratecsecurity.com";
 const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/3948a78b-768d-4148-942e-e912d324102d";
 
-export const seoConfig: Record<string, PageSEO> = {
+const staticConfig: Record<string, PageSEO> = {
   "/": {
-    title: "STRATEC Security | Firma de Consultoría Especializada en Seguridad Institucional | México",
-    description: "STRATEC Security es una firma de consultoría especializada en seguridad institucional con cobertura nacional en México. Consultores profesionales universitarios con más de 20 años de trayectoria. Diagnósticos técnicos, análisis de riesgos, protección civil, inteligencia estratégica e integración tecnológica para gobierno, corporativos, industria e instituciones educativas en CDMX, Monterrey, Guadalajara, Puebla, Morelos y toda la República.",
+    title: "STRATEC Security | Consultoría en Seguridad y Protección Civil para Empresas | México",
+    description: "Consultoría en seguridad, análisis de riesgos y protección civil para empresas e instituciones en Morelos, CDMX, Puebla y Guerrero. Diagnóstico de vulnerabilidad gratuito en línea.",
     keywords: [
       // Variantes de marca (con c, k, z, s, sin e, con h, mal escritas)
       "STRATEC", "Stratec", "stratec",
@@ -122,6 +125,27 @@ export const seoConfig: Record<string, PageSEO> = {
     ogType: "website",
     canonicalUrl: `${baseUrl}/`
   },
+  "/servicios": {
+    title: "Servicios de Consultoría en Seguridad y Protección Civil | STRATEC",
+    description: "Consultoría, capacitación, integración tecnológica y gestión de riesgos para fortalecer la seguridad de empresas e instituciones públicas y privadas en México.",
+    keywords: ["servicios de consultoría en seguridad", "protección civil para empresas", "análisis de riesgos"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/servicios`
+  },
+  "/diagnostico": {
+    title: "Diagnóstico de Vulnerabilidad Gratuito para Empresas | ISO 31000 | STRATEC",
+    description: "Evalúa en 3 minutos qué tan vulnerable es tu empresa o inmueble: 10 preguntas basadas en ISO 31000, nivel de vulnerabilidad y plan de acción priorizado. Gratis.",
+    keywords: ["diagnóstico de vulnerabilidad", "diagnóstico de seguridad gratis", "evaluación de riesgos ISO 31000"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/diagnostico`
+  },
+  "/schedule": {
+    title: "Agenda un Diagnóstico Estratégico Confidencial | STRATEC",
+    description: "Sesión privada de 30 minutos con un consultor de STRATEC para evaluar el contexto de tu organización y proponer un marco de actuación.",
+    keywords: ["agendar consultoría de seguridad", "diagnóstico estratégico"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/schedule`
+  },
   "/cobertura": {
     title: "Cobertura Geográfica | STRATEC Security",
     description: "Cobertura de consultoría de seguridad institucional en México. Morelos, CDMX, Estado de México, Puebla, Guerrero y Jalisco.",
@@ -201,59 +225,87 @@ export const seoConfig: Record<string, PageSEO> = {
   }
 };
 
+/** Metadatos de las páginas de servicio, definidos junto a su contenido. */
+const serviceConfig: Record<string, PageSEO> = Object.fromEntries(
+  Object.values(SERVICES_DATA)
+    .filter((svc) => svc.seo)
+    .map((svc) => [
+      svc.href,
+      {
+        title: svc.seo!.title,
+        description: svc.seo!.description,
+        keywords: svc.seo!.keywords,
+        ogImage: svc.heroImage,
+        ogType: "website",
+        canonicalUrl: `${baseUrl}${svc.href}`,
+      },
+    ]),
+);
+
+/** Metadatos de cada estado y ciudad de cobertura sin entrada propia arriba. */
+const coverageConfig: Record<string, PageSEO> = Object.fromEntries(
+  Object.entries(coverageData).flatMap(([slug, st]) => {
+    const statePath = `/cobertura/${slug}`;
+    const stateEntry: [string, PageSEO] = [
+      statePath,
+      {
+        title: `Consultoría de Seguridad en ${st.state} | STRATEC`,
+        description: `Consultoría en seguridad, análisis de riesgos y protección civil para empresas e instituciones en ${st.state}.`,
+        keywords: [`consultoría seguridad ${st.state}`, `protección civil ${st.state}`],
+        ogType: "website",
+        canonicalUrl: `${baseUrl}${statePath}`,
+      },
+    ];
+    const cities = Object.entries(st.cities ?? {}).map(([citySlug, c]): [string, PageSEO] => [
+      `${statePath}/${citySlug}`,
+      {
+        title: `Consultoría de Seguridad en ${c.name}, ${st.state} | STRATEC`,
+        description: `Consultoría en seguridad, análisis de riesgos y protección civil para empresas e instituciones en ${c.name}, ${st.state}.`,
+        keywords: [`consultoría seguridad ${c.name}`, `protección civil ${c.name}`],
+        ogType: "website",
+        canonicalUrl: `${baseUrl}${statePath}/${citySlug}`,
+      },
+    ]);
+    return [stateEntry, ...cities];
+  }),
+);
+
+export const seoConfig: Record<string, PageSEO> = { ...coverageConfig, ...serviceConfig, ...staticConfig };
+
+const normalizePath = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
+
 /**
- * Get SEO configuration for a specific path
- * Falls back to home page config if path not found
+ * Metadatos de una ruta. Una ruta sin entrada conserva los textos generales,
+ * pero siempre con su propia URL canónica: nunca la de la página de inicio.
  */
 export const getSEOConfig = (path: string): PageSEO => {
-  return seoConfig[path] || seoConfig["/"];
+  const clean = normalizePath(path);
+  return seoConfig[clean] ?? { ...seoConfig["/"], canonicalUrl: `${baseUrl}${clean}` };
+};
+
+const setAttr = (selector: string, attr: string, value: string) => {
+  document.querySelectorAll(selector).forEach((el) => el.setAttribute(attr, value));
 };
 
 /**
- * Utility function to update document meta tags
+ * Actualiza los metadatos al navegar dentro del sitio. Es el único responsable
+ * de título, descripción y canónica; SeoHelmet ya no los duplica.
  */
 export const updateMetaTags = (seo: PageSEO) => {
-  // Title
-  if (typeof document !== "undefined") {
-    document.title = seo.title;
+  if (typeof document === "undefined") return;
+  const url = seo.canonicalUrl ?? baseUrl;
+  const image = seo.ogImage ?? defaultImage;
 
-    // Meta Description
-    const descTag = document.querySelector('meta[name="description"]');
-    if (descTag) {
-      descTag.setAttribute("content", seo.description);
-    }
-
-    // Keywords
-    const keywordsTag = document.querySelector('meta[name="keywords"]');
-    if (keywordsTag) {
-      keywordsTag.setAttribute("content", seo.keywords.join(", "));
-    }
-
-    // Canonical URL
-    const canonicalTag = document.querySelector('link[rel="canonical"]');
-    if (canonicalTag && seo.canonicalUrl) {
-      canonicalTag.setAttribute("href", seo.canonicalUrl);
-    }
-
-    // OG Tags
-    const ogTitleTag = document.querySelector('meta[property="og:title"]');
-    if (ogTitleTag) {
-      ogTitleTag.setAttribute("content", seo.title);
-    }
-
-    const ogDescTag = document.querySelector('meta[property="og:description"]');
-    if (ogDescTag) {
-      ogDescTag.setAttribute("content", seo.description);
-    }
-
-    const ogImageTag = document.querySelector('meta[property="og:image"]');
-    if (ogImageTag && seo.ogImage) {
-      ogImageTag.setAttribute("content", seo.ogImage);
-    }
-
-    const ogUrlTag = document.querySelector('meta[property="og:url"]');
-    if (ogUrlTag && seo.canonicalUrl) {
-      ogUrlTag.setAttribute("content", seo.canonicalUrl);
-    }
-  }
+  document.title = seo.title;
+  setAttr('meta[name="description"]', "content", seo.description);
+  setAttr('meta[name="keywords"]', "content", seo.keywords.join(", "));
+  setAttr('link[rel="canonical"]', "href", url);
+  setAttr('link[rel="alternate"][hreflang]', "href", url);
+  setAttr('meta[property="og:url"]', "content", url);
+  setAttr('meta[property="og:title"]', "content", seo.title);
+  setAttr('meta[property="og:description"]', "content", seo.description);
+  setAttr('meta[property="og:image"]', "content", image);
+  setAttr('meta[name="twitter:title"]', "content", seo.title);
+  setAttr('meta[name="twitter:description"]', "content", seo.description);
+  setAttr('meta[name="twitter:image"]', "content", image);
 };

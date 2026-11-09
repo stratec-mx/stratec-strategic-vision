@@ -153,7 +153,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       "Toda organización enfrenta riesgos. La diferencia está en identificarlos antes de que se conviertan en pérdidas operativas, patrimoniales o reputacionales. Construimos diagnósticos precisos y estrategias de protección alineadas a tu operación.",
     cta: "Solicitar diagnóstico especializado",
     seo: {
-      title: "Consultoría en Seguridad Institucional | STRATEC",
+      title: "Consultoría en Seguridad para Empresas e Instituciones | STRATEC",
       description:
         "Diagnósticos de seguridad, auditorías de vulnerabilidades y estrategias de protección a medida para empresas e instituciones en México. Soluciones profesionales con enfoque ejecutivo.",
       keywords: [
@@ -213,9 +213,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       "Una emergencia no avisa. La diferencia entre una crisis y una contingencia manejada es la preparación previa. Diseñamos tu programa, formamos tus brigadas y garantizamos la continuidad operativa.",
     cta: "Solicitar propuesta especializada",
     seo: {
-      title: "Programa Interno de Protección Civil para Municipios de Morelos | STRATEC",
-      description:
-        "Diseño e implementación de Programas Internos de Protección Civil (PIPC) para empresas, instituciones y municipios del Estado de Morelos. Brigadas de emergencia, simulacros y planes de continuidad operativa.",
+      title: "Protección Civil para Empresas en Morelos | STRATEC",
+      description: "Protección civil para empresas e instituciones en Morelos: Programas Internos de Protección Civil (PIPC), brigadas de emergencia, simulacros y planes de continuidad operativa.",
       keywords: [
         "Programa Interno de Protección Civil",
         "PIPC",
@@ -276,9 +275,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
     cta: "Solicitar programa de capacitación",
     seo: {
-      title: "Capacitación Policial y en Seguridad Institucional | Programas de Prevención | STRATEC",
-      description:
-        "Programas especializados de capacitación policial, formación en protección civil y programas de prevención social del delito para corporaciones, instituciones y municipios en México.",
+      title: "Capacitación en Seguridad y Protección Civil para Empresas | STRATEC",
+      description: "Capacitación en seguridad, gestión de riesgos y protección civil para empresas, instituciones y corporaciones en México. Programas a la medida de cada organización.",
       keywords: [
         "capacitación policial",
         "capacitación policía municipal",
@@ -494,7 +492,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       "Empresas en proceso de licitación pública que requieren acreditar cumplimiento normativo",
     ],
     seo: {
-      title: "Programa Interno de Protección Civil en Morelos | PIPC Empresas | STRATEC",
+      title: "Programa Interno de Protección Civil en Cuernavaca y Morelos | STRATEC",
       description:
         "Diseño e implementación del Programa Interno de Protección Civil (PIPC) para empresas, instituciones y municipios en el Estado de Morelos. Cumplimiento normativo, diagnóstico de riesgos y registro ante autoridades.",
       keywords: [
@@ -643,7 +641,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "Fase 4 · Mitigación",       entregable: "Plan de acciones clasificadas por costo, plazo y reducción del riesgo",        queResuelve: "Orienta la inversión en seguridad con evidencia técnica verificable" },
     ],
     seo: {
-      title: "Estudio y Análisis de Riesgo Institucional | Vulnerabilidades y Amenazas | STRATEC",
+      title: "Estudio y Análisis de Riesgo para Empresas | ISO 31000 | STRATEC",
       description:
         "Estudios y análisis de riesgo para empresas e instituciones: identificación de amenazas, análisis de vulnerabilidades, matriz de riesgos y plan de mitigación. Metodología técnica con entregables ejecutivos.",
       keywords: [
@@ -868,7 +866,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "Fase 5 · Informe",       entregable: "Reporte ejecutivo + plan de mejora con responsables y plazos",            queResuelve: "Instrumento de acción inmediata presentable a dirección general" },
     ],
     seo: {
-      title: "Auditoría de Seguridad Institucional | Revisión de Controles y Protocolos | STRATEC",
+      title: "Auditoría de Seguridad para Empresas e Instituciones | STRATEC",
       description:
         "Auditorías técnicas de seguridad para empresas e instituciones: revisión de procedimientos, evaluación de infraestructura física, análisis de controles e informe ejecutivo con plan de mejora.",
       keywords: [

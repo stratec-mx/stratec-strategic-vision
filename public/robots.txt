@@ -4,6 +4,7 @@ Allow: /
 Disallow: /app
 Disallow: /auth
 Disallow: /admin
+Disallow: /mapa-demo
 Disallow: /api
 Disallow: /*.pdf
 
