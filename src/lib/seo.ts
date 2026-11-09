@@ -47,8 +47,7 @@ export const ORGANIZATION_SCHEMA = {
   "description": "Consultoría estratégica en seguridad institucional, nearshoring y protección civil en México",
   "sameAs": [
     "https://www.linkedin.com/company/132214015",
-    "https://www.facebook.com/stratec",
-    "https://www.instagram.com/stratec"
+    "https://www.facebook.com/profile.php?id=61589893637748"
   ],
   "contactPoint": {
     "@type": "ContactPoint",

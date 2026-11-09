@@ -47,7 +47,7 @@ const Schedule = () => {
     if (honeypot) {
       toast({
         title: "Solicitud enviada correctamente",
-        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
       });
       form.reset();
       return;
@@ -57,7 +57,7 @@ const Schedule = () => {
     if (Date.now() - formLoadTime.current < 4000) {
       toast({
         title: "Solicitud enviada correctamente",
-        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+        description: "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
       });
       form.reset();
       return;
@@ -131,7 +131,7 @@ const Schedule = () => {
     toast({
       title: "Solicitud enviada correctamente",
       description:
-        "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor senior de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
+        "Su solicitud fue enviada a contacto@stratecsecurity.com. Un consultor de STRATEC se pondrá en contacto en menos de 24 horas hábiles.",
     });
     form.reset();
   };
@@ -150,7 +150,7 @@ const Schedule = () => {
               Agende un <span className="text-olive">diagnóstico estratégico</span> confidencial.
             </h1>
             <p className="mt-8 text-lg text-steel max-w-2xl font-light leading-relaxed">
-              Una sesión privada de 30 minutos con un consultor senior de STRATEC. Evaluamos
+              Una sesión privada de 30 minutos con un consultor de STRATEC. Evaluamos
               el contexto institucional de su organización y proponemos un marco de actuación
               alineado a sus objetivos estratégicos.
             </p>
@@ -158,7 +158,6 @@ const Schedule = () => {
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-steel">
               <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-olive" /> Acuerdo de confidencialidad institucional</div>
               <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-olive" /> Información cifrada extremo a extremo</div>
-              <div className="flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-olive" /> Disponibilidad LATAM</div>
             </div>
           </motion.div>
 
