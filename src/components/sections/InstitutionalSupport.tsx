@@ -1,18 +1,18 @@
 import { motion } from "framer-motion";
-import { Shield, Users, Cpu } from "lucide-react";
+import { Shield, Users, Network } from "lucide-react";
 
 const supports = [
   {
     icon: Shield,
-    label: "Miembro activo de foros de seguridad institucional",
+    label: "Experiencia con instituciones de seguridad pública, prevención y procuración de justicia",
   },
   {
     icon: Users,
-    label: "Colaborador con organismos de prevención en Morelos",
+    label: "Más de 300 personas capacitadas: seguridad pública, estudiantes, instituciones de salud y empresas privadas",
   },
   {
-    icon: Cpu,
-    label: "Red de proveedores tecnológicos certificados",
+    icon: Network,
+    label: "Colaboradores especializados en seguridad pública, física, corporativa y protección civil",
   },
 ];
 
@@ -22,10 +22,10 @@ export const InstitutionalSupport = () => {
       <div className="container-wide">
         <div className="text-center mb-12">
           <div className="text-xs uppercase tracking-[0.4em] text-olive/70 mb-4">
-            Respaldo institucional
+            Experiencia institucional
           </div>
           <p className="text-sm text-smoke/30 max-w-md mx-auto font-light">
-            Operamos con soporte de redes institucionales, organismos de prevención y proveedores tecnológicos de primer nivel.
+            Un equipo con experiencia de trabajo en instituciones públicas y privadas.
           </p>
         </div>
 

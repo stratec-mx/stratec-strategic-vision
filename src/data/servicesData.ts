@@ -524,7 +524,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     parentBreadcrumb: "Capacitación Especializada",
     parentHref: "/servicios/capacitacion",
     h1: "Capacitación de Brigadas de Emergencia",
-    lead: "Las brigadas de emergencia son el primer eslabón de respuesta dentro de cualquier organización. STRATEC forma y certifica a los integrantes de tus brigadas con entrenamiento práctico, protocolos actualizados y evaluaciones reales, para que actúen con eficacia cuando una emergencia no da tiempo de improvisar.",
+    lead: "Las brigadas de emergencia son el primer eslabón de respuesta dentro de cualquier organización. STRATEC forma y evalúa a los integrantes de tus brigadas con entrenamiento práctico, protocolos actualizados y evaluaciones reales, para que actúen con eficacia cuando una emergencia no da tiempo de improvisar.",
     blocks: [
       {
         h2: "Brigada de Evacuación",

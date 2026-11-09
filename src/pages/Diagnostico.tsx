@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { SecurityMap } from "@/components/security-map/SecurityMap";
 import { SecurityMarker, DEFAULT_MARKER_KINDS } from "@/components/security-map/types";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
 
 const SUPABASE_URL = "https://xtfsqdwkbsghkzszpisz.supabase.co";
 const SUPABASE_KEY =
@@ -91,6 +92,7 @@ export default function Diagnostico() {
       toast({ title: "Faltan preguntas", description: "Responde las 10 preguntas para ver tu resultado.", variant: "destructive" });
       return;
     }
+    track.diagnosticoResultado(level.key);
     setPhase("result");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -123,6 +125,7 @@ export default function Diagnostico() {
       // como respuesta "exitosa". Sin este check el lead se pierde y el usuario
       // ve "enviado".
       if (!res.ok) throw new Error(`submit-lead ${res.status}`);
+      track.diagnosticoLead(level.key, form.sector);
       setPhase("done");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -312,7 +315,7 @@ export default function Diagnostico() {
               <p className="text-sm text-steel/80 max-w-lg mx-auto mb-8">
                 Recibirás el reporte completo en tu correo. Si quieres avanzar de inmediato, agenda tu evaluación por WhatsApp.
               </p>
-              <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer" onClick={() => track.whatsappClick("diagnostico")}
                  className="inline-flex items-center gap-2 bg-navy hover:bg-navy-deep text-smoke px-8 py-4 uppercase tracking-wider text-sm transition-colors">
                 Agendar evaluación por WhatsApp <ArrowRight className="h-4 w-4" />
               </a>

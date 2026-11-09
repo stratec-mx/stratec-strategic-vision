@@ -29,7 +29,7 @@ const cases = [
     sector: "Infraestructura",
     title: "Infraestructura crítica institucional",
     desc: "Programa de protección integral con coordinación interinstitucional y gobierno de datos sensibles bajo protocolos de confidencialidad.",
-    metric: "100+ personas capacitadas por proyecto",
+    metric: "300+ personas capacitadas",
   },
 ];
 

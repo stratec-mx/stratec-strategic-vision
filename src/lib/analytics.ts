@@ -26,7 +26,7 @@ export function trackEvent(
 
   // Meta Pixel
   if (typeof window !== "undefined" && (window as any).fbq) {
-    (window as any).fbq("track", "CustomEvent", { eventName, ...params });
+    (window as any).fbq("trackCustom", eventName, params);
   }
 }
 
@@ -38,12 +38,35 @@ export const track = {
   /**
    * Click en botón de WhatsApp
    */
-  whatsappClick: () =>
+  whatsappClick: (label: string = "whatsapp_cta") =>
     trackEvent("click_whatsapp", {
       category: "contact",
-      label: "whatsapp_cta",
+      label,
       value: 1,
     }),
+
+  /**
+   * El visitante terminó el cuestionario y vio su nivel de vulnerabilidad
+   */
+  diagnosticoResultado: (nivel: string) =>
+    trackEvent("diagnostico_resultado", {
+      category: "engagement",
+      label: nivel,
+    }),
+
+  /**
+   * El visitante dejó sus datos en el diagnóstico: posible cliente.
+   * Solo se envía el nivel y el sector, nunca nombre, empresa o correo.
+   */
+  diagnosticoLead: (nivel: string, sector: string) => {
+    trackEvent("generate_lead", {
+      category: "lead",
+      label: "diagnostico",
+      nivel,
+      sector: sector || "sin_especificar",
+    });
+    track.metaLead();
+  },
 
   /**
    * Click en botón de email
