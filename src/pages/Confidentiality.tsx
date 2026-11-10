@@ -34,7 +34,7 @@ const Confidentiality = () => (
       },
       {
         title: "Canal institucional",
-        body: "Cualquier inquietud relacionada con el manejo confidencial de información puede dirigirse al Comité de Ética y Cumplimiento al correo cumplimiento@stratec.mx. Las comunicaciones recibidas son tratadas bajo absoluta reserva.",
+        body: "Cualquier inquietud relacionada con el manejo confidencial de información puede enviarse al correo contacto@stratecsecurity.com con el asunto «Confidencialidad». Las comunicaciones recibidas son tratadas bajo absoluta reserva.",
       },
     ]}
   />

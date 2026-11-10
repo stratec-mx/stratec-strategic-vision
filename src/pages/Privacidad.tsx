@@ -25,6 +25,7 @@ const Privacidad = () => (
           "Atender solicitudes de diagnóstico, propuesta de servicios y agendamiento ejecutivo.",
           "Establecer y dar cumplimiento a la relación contractual con clientes institucionales.",
           "Emitir comunicaciones estrictamente vinculadas a los servicios de interés o contratados.",
+          "Contactarte por teléfono, correo electrónico o WhatsApp cuando lo solicites, para dar seguimiento a tu diagnóstico, cita o cotización.",
           "Cumplir con obligaciones legales, regulatorias y de auditoría aplicables en México.",
           "Mejorar nuestros servicios mediante el análisis estadístico agregado de uso del sitio.",
         ],

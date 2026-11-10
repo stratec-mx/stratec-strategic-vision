@@ -488,7 +488,7 @@ export default function Diagnostico() {
                   <label className="flex items-start gap-3 border border-steel/20 bg-smoke/60 px-4 py-3 cursor-pointer">
                     <input type="checkbox" checked={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.checked })} className="mt-1 h-4 w-4 accent-[#0B1F3A]" />
                     <span className="text-sm text-navy">
-                      Deseo que un asesor de STRATEC me contacte
+                      Deseo que un asesor de STRATEC me contacte por teléfono o WhatsApp
                       <span className="block text-xs text-steel">Opcional. Si no la marcas, solo recibirás tu diagnóstico.</span>
                     </span>
                   </label>

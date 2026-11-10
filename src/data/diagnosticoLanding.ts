@@ -21,7 +21,7 @@ export const FAQ = [
   { q: "¿Cuánto cuesta?", a: "Nada. El diagnóstico básico y su PDF son gratuitos." },
   { q: "¿Qué tan completo es?", a: "Es un diagnóstico básico a partir de tus respuestas. Sirve como punto de partida: no sustituye una evaluación en sitio ni la revisión de la autoridad competente." },
   { q: "¿Por qué piden correo y teléfono?", a: "Para entregarte tu diagnóstico y poder darle seguimiento si lo solicitas. Tus datos se tratan conforme a nuestro aviso de privacidad." },
-  { q: "¿Me va a contactar un asesor?", a: "Solo si marcas la casilla \"Deseo que un asesor de STRATEC me contacte\". Si no la marcas, solo recibes tu diagnóstico." },
+  { q: "¿Me va a contactar un asesor?", a: "Solo si marcas la casilla \"Deseo que un asesor de STRATEC me contacte por teléfono o WhatsApp\". Si no la marcas, solo recibes tu diagnóstico." },
   { q: "¿Puedo hacerlo desde cualquier estado?", a: "Sí. El diagnóstico funciona para empresas e instituciones de toda la República." },
   { q: "¿En qué se basa?", a: "En la metodología ISO 31000 de gestión de riesgos y en buenas prácticas de protección civil y seguridad corporativa." },
 ];
