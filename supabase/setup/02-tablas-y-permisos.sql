@@ -342,7 +342,8 @@ begin
       create policy "crm insert" on public.%1$I for insert to authenticated
         with check (public.can_access(%2$L, 'write'));
       create policy "crm update" on public.%1$I for update to authenticated
-        using (public.can_access(%2$L, 'write'));
+        using (public.can_access(%2$L, 'write'))
+        with check (public.can_access(%2$L, 'write'));
       create policy "crm delete" on public.%1$I for delete to authenticated
         using (public.has_role(auth.uid(),'admin'));
     $f$, t, res);

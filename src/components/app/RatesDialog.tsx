@@ -44,7 +44,8 @@ export const RatesDialog = ({ rates, onSaved }: { rates: Record<string, ServiceR
         price_low: toNum(r.price_low),
         price_medium: toNum(r.price_medium),
         price_high: toNum(r.price_high),
-        extra_site_pct: toNum(r.extra_site_pct) ?? 0,
+        // La base de datos acepta de 0 a 200 %
+        extra_site_pct: Math.min(200, toNum(r.extra_site_pct) ?? 0),
         updated_at: new Date().toISOString(),
         updated_by: user?.id ?? null,
       }));
@@ -113,7 +114,7 @@ export const RatesDialog = ({ rates, onSaved }: { rates: Record<string, ServiceR
                       </td>
                     ))}
                     <td className="py-2 pl-1 w-24">
-                      <Input type="number" min={0} disabled={!editable} className={cell} value={r.extra_site_pct} onChange={(e) => set(s.code, { extra_site_pct: e.target.value })} />
+                      <Input type="number" min={0} max={200} disabled={!editable} className={cell} value={r.extra_site_pct} onChange={(e) => set(s.code, { extra_site_pct: e.target.value })} />
                     </td>
                   </tr>
                 );
