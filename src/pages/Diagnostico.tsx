@@ -15,6 +15,7 @@ import { SecurityMarker, DEFAULT_MARKER_KINDS } from "@/components/security-map/
 import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
 import { GIROS, encodeLeadProfile, type GiroId } from "@/lib/pricing";
+import { DiagnosticoHero, DiagnosticoInfo, DiagnosticoFaq } from "@/components/diagnostico/DiagnosticoLanding";
 
 const SUPABASE_URL = "https://xtfsqdwkbsghkzszpisz.supabase.co";
 const SUPABASE_KEY =
@@ -120,6 +121,15 @@ export default function Diagnostico() {
 
   const setAnswer = (id: number, val: Answer) => setAnswers((a) => ({ ...a, [id]: val }));
   const top = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const startQuiz = () => {
+    track.ctaClick("diagnostico_comenzar");
+    document.getElementById("cuestionario")?.scrollIntoView({ behavior: "smooth" });
+  };
+  const backToQuiz = () => {
+    setPhase("quiz");
+    // Espera a que el cuestionario vuelva a montarse
+    setTimeout(() => document.getElementById("cuestionario")?.scrollIntoView(), 50);
+  };
 
   const goGate = () => {
     if (!ready) {
@@ -220,26 +230,28 @@ export default function Diagnostico() {
   return (
     <div className="min-h-screen bg-smoke">
       <Navbar />
-      <main className="pt-28 pb-20">
-        <div className="container-wide max-w-3xl mx-auto px-4">
+      <main className={phase === "quiz" ? "" : "pt-28 pb-20"}>
 
-          {/* ── FASE CUESTIONARIO ── */}
+          {/* ── LANDING + CUESTIONARIO ── */}
           {phase === "quiz" && (
             <>
-              <div className="eyebrow mb-3">— Diagnóstico básico · Gratis</div>
-              <h1 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-4">
-                Genera y descarga tu diagnóstico PDF gratuito
-              </h1>
-              <p className="text-steel text-sm md:text-base leading-relaxed mb-8 max-w-2xl">
-                Un diagnóstico <strong>básico y gratuito</strong> basado en la metodología <strong>ISO 31000</strong> de gestión de riesgos.
-                Responde 10 preguntas y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en PDF. Toma unos 3 minutos.
+              <DiagnosticoHero onStart={startQuiz} />
+              <DiagnosticoInfo onStart={startQuiz} />
+              <section id="cuestionario" className="scroll-mt-20 py-20 md:py-24 bg-smoke">
+              <div className="container-wide max-w-3xl mx-auto px-4">
+              <div className="eyebrow mb-3">— Tu diagnóstico</div>
+              <h2 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-3">
+                Empieza: 10 preguntas sobre tu organización
+              </h2>
+              <p className="text-steel text-sm md:text-base leading-relaxed mb-10">
+                Contesta con lo que sabes hoy. Si no estás seguro, elige "No estoy seguro": también cuenta para tu resultado.
               </p>
 
               {/* 1 · Cuestionario */}
               <section className="mb-10">
-                <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
+                <h3 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-[#C4A04A]" /> 1 · Responde el cuestionario
-                </h2>
+                </h3>
                 <p className="text-sm text-steel mb-4">{answeredCount} de {QUESTIONS.length} respondidas.</p>
                 <div className="h-1 bg-steel/15 mb-6">
                   <div className="h-full bg-[#C4A04A] transition-all" style={{ width: `${(answeredCount / QUESTIONS.length) * 100}%` }} />
@@ -276,9 +288,9 @@ export default function Diagnostico() {
 
               {/* 2 · Datos de la organización */}
               <section className="mb-10 border border-steel/20 bg-white p-5">
-                <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
+                <h3 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-[#C4A04A]" /> 2 · Sobre tu organización
-                </h2>
+                </h3>
                 <p className="text-sm text-steel mb-4">Para adaptar las recomendaciones a tu tipo de inmueble.</p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <label className="space-y-1">
@@ -352,8 +364,13 @@ export default function Diagnostico() {
               >
                 Generar mi diagnóstico <ArrowRight className="h-4 w-4" />
               </button>
+              </div>
+              </section>
+              <DiagnosticoFaq onStart={startQuiz} />
             </>
           )}
+
+        <div className="container-wide max-w-3xl mx-auto px-4">
 
           {/* ── FASE CONTACTO (para ver y descargar) ── */}
           {phase === "gate" && (
@@ -393,7 +410,7 @@ export default function Diagnostico() {
                   </p>
                 </form>
               </section>
-              <button type="button" onClick={() => setPhase("quiz")} className="mt-4 text-xs text-steel underline mx-auto block">
+              <button type="button" onClick={backToQuiz} className="mt-4 text-xs text-steel underline mx-auto block">
                 Volver a mis respuestas
               </button>
             </motion.div>
