@@ -32,7 +32,7 @@ La llave pública del sitio permite registrarse por API aunque el sitio no tenga
 2. En el dashboard de STRATEC: **Configuración → Usuarios y permisos → Actualizar**. El usuario nuevo aparece como *Sin acceso*. Elige su rol: Administrador, Analista u Operaciones pueden crear y editar; Solo lectura solo consulta.
 3. Sin rol, la cuenta puede iniciar sesión, pero solo ve una pantalla de "Sin rol asignado".
 
-## Paso 2c · Tarifas para el precio sugerido (30 segundos)
+## Paso 2c · Tarifas para el precio sugerido y horas reales (30 segundos)
 1. Abre una consulta **nueva** (**New query**).
 2. Pega el contenido de [`03-tarifas.sql`](03-tarifas.sql) y presiona **Run**.
 3. Debe terminar con *service_rates lista*. Después captura tus precios en el dashboard: **Cotizaciones → Tarifas**.

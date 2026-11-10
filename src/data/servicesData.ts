@@ -1071,8 +1071,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     },
     deliverablesListTitle: "¿Qué incluye cada mes?",
     deliverablesList: [
-      "Una reunión virtual de seguimiento",
-      "Revisión de pendientes y documentación",
+      "Una reunión virtual de seguimiento de hasta 60 minutos",
+      "Hasta 2 horas de asesoría y revisión documental",
       "Calendario de actividades preventivas",
       "Seguimiento de vigencias y vencimientos",
       "Orientación ante observaciones o requerimientos",
@@ -1124,11 +1124,6 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         blockImage: "https://images.unsplash.com/photo-1758404958502-44f156617bae?auto=format&fit=crop&w=900&q=80",
       },
       {
-        h2: "Prevención de violencia laboral",
-        p: "Protocolo para prevenir, atender y dar seguimiento a situaciones de violencia en el trabajo, como parte de la política de prevención que exige la NOM-035-STPS-2018.",
-        blockImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=900&q=80",
-      },
-      {
         h2: "Comunicación y coordinación en crisis",
         p: "Responsables, líneas de comunicación y pasos a seguir para coordinar la respuesta y proteger a colaboradores y directivos.",
         blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
@@ -1139,7 +1134,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     cta: "Solicitar protocolos para mi organización",
     ragSnippet: {
       h2: "¿Tu personal sabe qué hacer ante una llamada de extorsión?",
-      p: "STRATEC diseña protocolos de actuación a la medida ante extorsión telefónica, fraude e ingeniería social, amenazas, incidentes de seguridad y violencia laboral. Cada protocolo define cómo reconocer el riesgo, a quién informar y qué acciones seguir. Se elabora a distancia.",
+      p: "STRATEC diseña protocolos de actuación a la medida ante extorsión telefónica, fraude e ingeniería social, amenazas e incidentes de seguridad. Cada protocolo define cómo reconocer el riesgo, a quién informar y qué acciones seguir. Se elabora a distancia.",
     },
     deliverables: [
       { fase: "1 · Diagnóstico",     entregable: "Entrevistas y diagnóstico de necesidades",        queResuelve: "Identifica a qué riesgos está expuesto tu personal" },
@@ -1150,14 +1145,83 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     seo: {
       title: "Protocolos de Seguridad y Prevención de Extorsión para Empresas | STRATEC",
       description:
-        "Protocolos de actuación para empresas ante extorsión telefónica, fraude e ingeniería social, amenazas, incidentes de seguridad y violencia laboral. Diseño a la medida y a distancia.",
+        "Protocolos de actuación para empresas ante extorsión telefónica, fraude e ingeniería social, amenazas e incidentes de seguridad. Diseño a la medida y a distancia.",
       keywords: [
         "protocolo de extorsión telefónica empresa",
         "prevención de extorsión empresas",
         "protocolo de seguridad empresarial",
         "protocolo fraude ingeniería social",
-        "protocolo violencia laboral NOM-035",
         "protocolos de actuación seguridad",
+      ],
+    },
+  },
+
+  // ── S12 · NOM-035: riesgo psicosocial y violencia laboral (a distancia) ──
+  "nom-035-violencia-laboral": {
+    slug: "nom-035-violencia-laboral",
+    numero: "01.5",
+    titulo: "NOM-035: Riesgo Psicosocial y Prevención de Violencia Laboral",
+    descripcionCorta: "Cuestionarios de la NOM-035, política de prevención, protocolo de violencia laboral y mecanismo de quejas.",
+    href: "/servicios/nom-035-violencia-laboral",
+    heroImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=1920&q=80",
+    breadcrumb: "NOM-035 y Violencia Laboral",
+    parentBreadcrumb: "Consultoría en Seguridad",
+    parentHref: "/servicios/consultoria-seguridad",
+    h1: "NOM-035: riesgo psicosocial y prevención de violencia laboral",
+    lead: "La NOM-035-STPS-2018 pide a los centros de trabajo identificar y prevenir los factores de riesgo psicosocial, prevenir la violencia laboral y promover un entorno organizacional favorable. Te ayudamos a cumplirla con los cuestionarios oficiales, una política clara y un protocolo que tu personal sepa aplicar.",
+    intro: "No se trata de tener un documento archivado: la norma pide evaluar, actuar y dar seguimiento. Lo hacemos contigo, a distancia y con resultados que tu dirección puede usar.",
+    blocks: [
+      {
+        h2: "Cuestionarios oficiales (guías de referencia I, II y III)",
+        p: "Aplicamos en línea los cuestionarios que corresponden al tamaño de tu centro de trabajo: identificación de personas expuestas a acontecimientos traumáticos severos, factores de riesgo psicosocial y, en centros de más de 50 trabajadores, evaluación del entorno organizacional. Las respuestas son confidenciales.",
+        blockImage: "https://images.unsplash.com/photo-1643962577583-a4c880a109ae?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Análisis de resultados y medidas de control",
+        p: "Calificamos los cuestionarios, identificamos las áreas y factores con mayor nivel de riesgo y proponemos las acciones de prevención y control que conviene aplicar.",
+        blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Política de prevención",
+        p: "Redactamos la política de prevención de riesgos psicosociales, prevención de la violencia laboral y promoción de un entorno organizacional favorable, lista para aprobarse y difundirse.",
+        blockImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Protocolo de violencia laboral y mecanismo de quejas",
+        p: "Definimos cómo recibir una queja de forma segura y confidencial, quién la atiende, cómo se investiga, cómo se protege a la persona afectada y cómo se da seguimiento, incluido el acoso y el hostigamiento.",
+        blockImage: "https://images.unsplash.com/photo-1573871906629-f5c700caf507?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Difusión y capacitación",
+        p: "Material de difusión para el personal y sesiones virtuales para directivos, mandos medios y responsables de recibir las quejas.",
+        blockImage: "https://images.unsplash.com/photo-1758404958502-44f156617bae?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+    modalidades: "A distancia · Cuestionarios en línea, entrevistas virtuales y entrega documental",
+    gancho: "Evaluar, prevenir y atender: la NOM-035 aplicada a tu organización, sin papeleo innecesario.",
+    cta: "Solicitar NOM-035 para mi organización",
+    ragSnippet: {
+      h2: "¿Qué pide la NOM-035 a tu empresa?",
+      p: "La NOM-035-STPS-2018 aplica a todos los centros de trabajo en México. Según el número de trabajadores, pide una política de prevención, identificar a quienes vivieron acontecimientos traumáticos severos, analizar los factores de riesgo psicosocial y evaluar el entorno organizacional, además de mecanismos para recibir quejas por violencia laboral. STRATEC aplica los cuestionarios en línea y elabora la política, el protocolo y las medidas de control, a distancia.",
+    },
+    deliverables: [
+      { fase: "1 · Cuestionarios", entregable: "Aplicación en línea de las guías que correspondan",     queResuelve: "Mide el riesgo psicosocial real de tu organización" },
+      { fase: "2 · Resultados",    entregable: "Informe de resultados por área y factor de riesgo",     queResuelve: "Muestra dónde actuar primero" },
+      { fase: "3 · Política",      entregable: "Política de prevención y protocolo de violencia laboral", queResuelve: "Define reglas, responsables y mecanismo de quejas" },
+      { fase: "4 · Acciones",      entregable: "Programa de medidas de control y difusión",             queResuelve: "Convierte el diagnóstico en acciones verificables" },
+    ],
+    seo: {
+      title: "NOM-035: Cuestionarios, Política y Protocolo de Violencia Laboral | STRATEC",
+      description:
+        "Cumplimiento de la NOM-035-STPS-2018 a distancia: aplicación en línea de las guías de referencia, informe de resultados, política de prevención, protocolo de violencia laboral y mecanismo de quejas.",
+      keywords: [
+        "NOM-035",
+        "NOM-035 cuestionarios",
+        "guía de referencia II y III NOM-035",
+        "política de prevención de riesgos psicosociales",
+        "protocolo de violencia laboral",
+        "protocolo de acoso y hostigamiento laboral",
+        "riesgo psicosocial empresas",
       ],
     },
   },

@@ -219,6 +219,31 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { type: "actions", title: "Recomendaciones de implementación", hint: "Difusión, capacitación y fechas de revisión." },
     ],
   },
+  {
+    id: "informe-nom-035",
+    serviceCode: "STR-01.5",
+    folioPrefix: "N035",
+    name: "Informe NOM-035",
+    description: "Resultados de los cuestionarios de la NOM-035-STPS-2018, política de prevención, protocolo de violencia laboral y medidas de control.",
+    blocks: [
+      { type: "text", key: "resumen", title: "Resumen ejecutivo", hint: "Nivel de riesgo general, áreas y factores con mayor riesgo y acciones prioritarias." },
+      {
+        type: "text",
+        key: "alcance",
+        title: "Alcance y metodología",
+        hint: "Centro de trabajo, número de trabajadores, guías aplicadas, periodo y tasa de respuesta.",
+        defaultText:
+          "Se aplicaron en medios digitales las guías de referencia de la NOM-035-STPS-2018 que corresponden al número de trabajadores del centro de trabajo. Las respuestas son confidenciales y se reportan de forma agregada, por área y por factor de riesgo, conforme a los criterios de calificación de la propia norma.",
+      },
+      { type: "text", key: "traumaticos", title: "Acontecimientos traumáticos severos (guía I)", hint: "Número de trabajadores identificados y canalización recomendada, sin datos personales." },
+      { type: "text", key: "resultados", title: "Resultados por factor y dominio de riesgo", hint: "Calificación final, por categoría, dominio y área (guía II o III)." },
+      { type: "findings", title: "Hallazgos", hint: "Áreas, factores o prácticas que requieren atención." },
+      { type: "text", key: "politica", title: "Política de prevención", hint: "Prevención de riesgos psicosociales, prevención de la violencia laboral y promoción del entorno organizacional favorable." },
+      { type: "text", key: "protocolo", title: "Protocolo de violencia laboral y mecanismo de quejas", hint: "Cómo se recibe, investiga y resuelve una queja; confidencialidad y no represalias." },
+      { type: "actions", title: "Programa de medidas de control", hint: "Acciones por área y factor, con responsable y plazo." },
+      { type: "text", key: "conclusiones", title: "Conclusiones", hint: CONCLUSIONES_HINT },
+    ],
+  },
 ];
 
 export const findTemplate = (id: string) => {

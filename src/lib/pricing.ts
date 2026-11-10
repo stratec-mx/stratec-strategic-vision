@@ -82,7 +82,7 @@ export function classify(p: ClientProfile): Classification {
 
 // ─── Qué nivel aplica a cada servicio ─────────────────────────────────────
 // Protección civil y dictamen se tarifican por riesgo; lo demás, por tamaño.
-const RISK_BASED = new Set(["STR-02", "STR-02.1", "STR-02.3", "STR-01.3"]);
+const RISK_BASED = new Set(["STR-02", "STR-02.1", "STR-02.3", "STR-02.5", "STR-01.3"]);
 export const basisOf = (code: string): "riesgo" | "tamaño" => (RISK_BASED.has(code) ? "riesgo" : "tamaño");
 export const levelFor = (code: string, c: Classification): Level => (basisOf(code) === "riesgo" ? c.risk : c.size);
 export const levelLabel = (code: string, l: Level) => (basisOf(code) === "riesgo" ? RISK_LABEL[l] : SIZE_LABEL[l]);
@@ -125,7 +125,7 @@ const PRESENCIAL = new Set(["STR-01.2", "STR-01.3", "STR-03.1", "STR-04.1", "STR
 export function internalAlerts(codes: string[], p: ClientProfile): string[] {
   if (p.morelos) return [];
   const out: string[] = [];
-  if (codes.includes("STR-02.1"))
+  if (codes.includes("STR-02.1") || codes.includes("STR-02.5"))
     out.push("Programa Interno fuera de Morelos: confirma si el estado exige registro local o carta de corresponsabilidad antes de ofertarlo completo.");
   if (codes.some((c) => PRESENCIAL.has(c)))
     out.push("Hay servicios presenciales fuera de Morelos: considera traslado y viáticos en el precio.");
@@ -137,6 +137,45 @@ export function internalAlerts(codes: string[], p: ClientProfile): string[] {
 export const QUOTE_SCOPE: Record<string, string> = {
   "STR-02.3": "La revisión es documental y preventiva; no sustituye la inspección ni la resolución de la autoridad.",
   "STR-02.1": "Salvo que se indique, no incluye dictámenes especializados (eléctrico, estructural o de gas) ni derechos de trámite.",
-  "STR-02.4": "Atención de lunes a viernes de 9:00 a 18:00 h. El acompañamiento no incluye atención de emergencias.",
+  "STR-02.5": "La actualización parte del Programa Interno vigente del cliente. Salvo que se indique, no incluye dictámenes especializados ni derechos de trámite.",
+  "STR-02.4":
+    "Atención de lunes a viernes de 9:00 a 18:00 h: una reunión virtual mensual de hasta 60 minutos y hasta 2 horas mensuales de asesoría y revisión documental. No incluye atención de emergencias, disponibilidad permanente, visitas presenciales, dictámenes ni elaboración de documentos completos, que se cotizan por separado.",
   "STR-01.4": "Los protocolos orientan la actuación del personal; no sustituyen la denuncia ante la autoridad ni la asesoría legal.",
+  "STR-01.5":
+    "La aplicación de los cuestionarios se realiza en medios digitales. Los resultados son confidenciales y se entregan de forma agregada; el servicio no incluye atención clínica ni psicológica individual.",
 };
+
+// ─── Perfil capturado en el diagnóstico público ───────────────────────────
+// El diagnóstico guarda el perfil en las notas del lead con este marcador para
+// que la cotización se arme ya clasificada. Formato: [perfil] k=v; k=v
+const PROFILE_TAG = "[perfil]";
+
+export interface LeadProfile {
+  profile: Partial<ClientProfile>;
+  codes: string[];
+}
+
+export function encodeLeadProfile(p: Partial<ClientProfile>, codes: string[]): string {
+  const kv: string[] = [];
+  if (p.giro) kv.push(`giro=${p.giro}`);
+  if (p.people) kv.push(`personas=${p.people}`);
+  if (p.area) kv.push(`m2=${p.area}`);
+  if (p.morelos !== undefined) kv.push(`morelos=${p.morelos ? "si" : "no"}`);
+  if (codes.length) kv.push(`servicios=${codes.join(",")}`);
+  return `${PROFILE_TAG} ${kv.join("; ")}`;
+}
+
+export function parseLeadProfile(notes: string | null | undefined): LeadProfile | null {
+  const line = (notes ?? "").split("\n").find((l) => l.trim().startsWith(PROFILE_TAG));
+  if (!line) return null;
+  const kv = Object.fromEntries(
+    line.trim().slice(PROFILE_TAG.length).split(";").map((s) => s.split("=").map((x) => x.trim()) as [string, string]).filter(([k, v]) => k && v),
+  );
+  const profile: Partial<ClientProfile> = {};
+  if (GIROS.some((g) => g.id === kv.giro)) profile.giro = kv.giro as GiroId;
+  if (Number(kv.personas) > 0) profile.people = Number(kv.personas);
+  if (Number(kv.m2) > 0) profile.area = Number(kv.m2);
+  if (kv.morelos) profile.morelos = kv.morelos === "si";
+  const codes = (kv.servicios ?? "").split(",").map((c) => c.trim()).filter((c) => /^STR-\d{2}(\.\d)?$/.test(c));
+  return { profile, codes };
+}

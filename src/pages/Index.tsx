@@ -12,6 +12,7 @@ import { Cases } from "@/components/sections/Cases";
 import { Advantages } from "@/components/sections/Advantages";
 import { CTA } from "@/components/sections/CTA";
 import { InstitutionalSupport } from "@/components/sections/InstitutionalSupport";
+import { DiagnosticoCTA } from "@/components/sections/DiagnosticoCTA";
 
 const Index = () => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const Index = () => {
         <About />
         <Services />
         <Sectors />
+        <DiagnosticoCTA />
         <Methodology />
         <Technology />
         <Cases />

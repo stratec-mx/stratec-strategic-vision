@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { parseLeadProfile } from "@/lib/pricing";
+
+/** Texto que el diagnóstico público pone en las notas cuando el visitante marca la casilla. */
+const WANTS_CONTACT = "DESEA QUE UN ASESOR LO CONTACTE";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { withLeadContacts } from "@/lib/contacts";
@@ -28,6 +33,7 @@ const Leads = () => {
   const { toast } = useToast();
   const { can } = useAuth();
   const showContact = can("contactos");
+  const canQuote = can("quotes", "write");
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
@@ -142,6 +148,24 @@ const Leads = () => {
                 <td className="py-3 px-4">
                   <div className="text-navy">{l.full_name}</div>
                   <div className="text-xs text-steel">{showContact ? l.phone ?? "—" : "Restringido"}</div>
+                  {(String(l.notes ?? "").includes(WANTS_CONTACT) || parseLeadProfile(l.notes)) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {String(l.notes ?? "").includes(WANTS_CONTACT) && (
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200">Pidió contacto</span>
+                      )}
+                      {parseLeadProfile(l.notes) && canQuote && (
+                        <Link to={`/app/quotes?lead=${l.id}`} className="text-[11px] text-navy underline inline-flex items-center gap-1">
+                          <FileText className="h-3 w-3" /> Cotizar con su perfil
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                  {l.notes && (
+                    <details className="mt-1 max-w-sm">
+                      <summary className="text-[11px] text-steel cursor-pointer">Notas</summary>
+                      <p className="text-xs text-steel whitespace-pre-line mt-1">{l.notes}</p>
+                    </details>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-steel">{showContact ? l.email ?? "—" : <span className="text-xs italic">Restringido</span>}</td>
                 <td className="py-3 px-4 text-steel">{l.role_title ?? "—"}</td>

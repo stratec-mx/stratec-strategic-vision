@@ -58,9 +58,9 @@ function homeRoute() {
 ${p("Asesoramos a gobiernos, corporativos e instituciones en la anticipación, prevención y gestión integral de riesgos.")}
 ${p("STRATEC integra inteligencia estratégica, gestión de riesgos y tecnología institucional para acompañar a organizaciones complejas en la toma de decisiones críticas.")}
 <h2>Áreas de especialización</h2>${SERVICE_LINKS}
-<h2>Diagnóstico de vulnerabilidad gratuito</h2>
-${p("Evalúa qué tan vulnerable es tu inmueble en 3 minutos con 10 preguntas basadas en ISO 31000.")}
-${p("")}<p>${a("/diagnostico", "Hacer el diagnóstico gratuito")}</p>
+<h2>Genera y descarga tu diagnóstico PDF gratuito</h2>
+${p("Un diagnóstico básico de seguridad para tu empresa o institución, sin costo: 10 preguntas, tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en PDF.")}
+<p>${a("/diagnostico", "Generar mi diagnóstico gratis")}</p>
 <h2>Metodología</h2>
 ${ul(["Diagnóstico", "Análisis", "Estrategia", "Integración", "Implementación", "Seguimiento"].map(esc))}
 <h2>Sectores</h2>
@@ -119,7 +119,7 @@ export function buildRoutes(): PrerenderRoute[] {
     ...coverageRoutes(),
     route(
       "/diagnostico",
-      `<h1>Identifica qué tan vulnerable te encuentras</h1>${p("Evaluación guiada basada en la metodología ISO 31000 de gestión de riesgos. Responde 10 preguntas y obtén tu nivel de vulnerabilidad con un plan de acción priorizado. Toma unos 3 minutos.")}`,
+      `<h1>Genera y descarga tu diagnóstico PDF gratuito</h1>${p("Un diagnóstico básico y gratuito basado en la metodología ISO 31000 de gestión de riesgos. Responde 10 preguntas y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en PDF. Toma unos 3 minutos.")}`,
     ),
     route(
       "/schedule",

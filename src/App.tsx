@@ -35,6 +35,7 @@ import DictamenSeguridad from "./pages/services/DictamenSeguridad.tsx";
 import RevisionProgramaInterno from "./pages/services/RevisionProgramaInterno.tsx";
 import AcompanamientoMensual from "./pages/services/AcompanamientoMensual.tsx";
 import ProtocolosSeguridad from "./pages/services/ProtocolosSeguridad.tsx";
+import Nom035ViolenciaLaboral from "./pages/services/Nom035ViolenciaLaboral.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
 import { RequireAccess } from "./components/app/RequireAccess.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         <Route path="/servicios/revision-programa-interno" element={<RevisionProgramaInterno />} />
         <Route path="/servicios/acompanamiento-mensual" element={<AcompanamientoMensual />} />
         <Route path="/servicios/protocolos-seguridad" element={<ProtocolosSeguridad />} />
+        <Route path="/servicios/nom-035-violencia-laboral" element={<Nom035ViolenciaLaboral />} />
         <Route path="/servicios/determinacion-seguridad" element={<Navigate to="/servicios/dictamen-seguridad" replace />} />
 
         {/* App routes */}

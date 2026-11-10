@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,12 +15,12 @@ import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw } from "lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
-import { withClientContacts } from "@/lib/contacts";
+import { withClientContacts, withLeadContacts } from "@/lib/contacts";
 import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
 import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 import { ClientClassifier } from "@/components/app/ClientClassifier";
 import { RatesDialog } from "@/components/app/RatesDialog";
-import { classify, suggestPrice, internalAlerts, QUOTE_SCOPE, DEFAULT_PROFILE, type ClientProfile, type ServiceRate } from "@/lib/pricing";
+import { classify, suggestPrice, internalAlerts, parseLeadProfile, QUOTE_SCOPE, DEFAULT_PROFILE, type ClientProfile, type ServiceRate } from "@/lib/pricing";
 
 const itemSchema = z.object({
   code: z.string().trim().min(1, "Selecciona un servicio en cada concepto").max(20),
@@ -27,6 +28,8 @@ const itemSchema = z.object({
   description: z.string().trim().max(1000, "Descripción demasiado larga").optional().or(z.literal("")),
   qty: z.number().positive("Cantidad debe ser > 0").max(100000),
   unit_price: z.number().min(0, "Precio inválido").max(100_000_000),
+  /** Horas estimadas del concepto (interno, no aparece en el PDF) */
+  hours: z.number().min(0, "Horas inválidas").max(100000).optional(),
 });
 const quoteSchema = z.object({
   number: z.string().trim().min(1, "Folio requerido").max(50),
@@ -43,7 +46,7 @@ const newClientSchema = z.object({
 });
 
 /** auto: el precio sigue la tarifa sugerida hasta que se edita a mano. No se guarda. */
-type Item = { code: string; title: string; description: string; qty: number; unit_price: number; auto?: boolean };
+type Item = { code: string; title: string; description: string; qty: number; unit_price: number; hours?: number; auto?: boolean };
 type ClientRow = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null };
 
 const NEW_CLIENT = "__new__";
@@ -65,7 +68,11 @@ const normalizeItems = (raw: unknown): Item[] =>
     description: r?.title ? r?.description ?? "" : "",
     qty: Number(r?.qty) || 0,
     unit_price: Number(r?.unit_price) || 0,
+    hours: Number(r?.hours) || 0,
   }));
+
+/** Horas estimadas de una cotización guardada (suma de sus conceptos). */
+const estimatedHours = (raw: unknown) => normalizeItems(raw).reduce((s, i) => s + (i.hours ?? 0), 0);
 
 const DRAFT_KEY = "stratec.quoteDraft.v1";
 type Draft = {
@@ -140,6 +147,7 @@ const Quotes = () => {
   const subtotal = items.reduce((s, i) => s + i.qty * i.unit_price, 0);
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
+  const totalHours = items.reduce((s, i) => s + (i.hours ?? 0), 0);
 
   const load = async () => {
     const [q, c, r] = await Promise.all([
@@ -154,6 +162,49 @@ const Quotes = () => {
     setClients((await withClientContacts((c.data ?? []) as { id: string; name: string; contact_name: string | null }[])) as ClientRow[]);
   };
   useEffect(() => { load(); }, []);
+
+  // Desde Leads: /app/quotes?lead=<id> arma la cotización con el perfil del diagnóstico
+  const [searchParams, setSearchParams] = useSearchParams();
+  const leadId = searchParams.get("lead");
+  useEffect(() => {
+    if (!leadId) return;
+    // Se quita ?lead de la URL para que recargar no vuelva a armar la cotización
+    setSearchParams({}, { replace: true });
+    (async () => {
+      const { data: lead } = await supabase.from("leads").select("id, full_name, organization, notes").eq("id", leadId).maybeSingle();
+      if (!lead) return;
+      const parsed = parseLeadProfile(lead.notes);
+      if (!parsed) {
+        toast({ title: "Este lead no trae perfil del diagnóstico", description: "Captura la clasificación a mano." });
+        return;
+      }
+      const hasDraft = clientId || items.some((i) => i.code);
+      if (hasDraft && !window.confirm("¿Reemplazar la cotización en preparación con los datos de este lead?")) return;
+      const [withContact] = await withLeadContacts([lead]);
+      const placeholderName = lead.full_name.startsWith("Sin nombre");
+      const org = lead.organization && lead.organization !== "No indicada" ? lead.organization : "";
+      setClientId(NEW_CLIENT);
+      setNewClient({
+        name: org || (placeholderName ? "" : lead.full_name),
+        contact_name: placeholderName ? "" : lead.full_name,
+        contact_email: withContact?.email ?? "",
+      });
+      setProfile({ ...DEFAULT_PROFILE, ...parsed.profile });
+      const codes = parsed.codes.filter((c) => findService(c));
+      setItems(
+        codes.length
+          ? codes.map((code) => {
+              const svc = findService(code)!;
+              return { code, title: svc.title, description: svc.summary, qty: 1, unit_price: 0, auto: true };
+            })
+          : [emptyItem()],
+      );
+      const scopes = codes.map((c) => QUOTE_SCOPE[c]).filter(Boolean);
+      setForm((f) => ({ ...f, number: "", notes: scopes.join("\n") }));
+      setOpen(true);
+      toast({ title: "Cotización armada desde el diagnóstico", description: "Revisa la clasificación (niveles y materiales peligrosos no vienen del sitio) y los conceptos." });
+    })();
+  }, [leadId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const suggestedNumber = useMemo(() => {
     const year = new Date().getFullYear();
@@ -217,7 +268,8 @@ const Quotes = () => {
   };
 
   const validate = () => {
-    const parsed = quoteSchema.safeParse({ ...form, taxRate, items });
+    // Sin folio capturado se usa el sugerido (el que se ve en el campo)
+    const parsed = quoteSchema.safeParse({ ...form, number: form.number.trim() || suggestedNumber, taxRate, items });
     if (!parsed.success) {
       toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" });
       return null;
@@ -379,6 +431,23 @@ const Quotes = () => {
     load();
   };
 
+  /** Horas reales invertidas: comparadas con las estimadas dicen si la tarifa es rentable. */
+  const saveHours = async (id: string, raw: string, prev: number | null) => {
+    const value = raw.trim() === "" ? null : Math.max(0, Number(raw) || 0);
+    if (value === (prev == null ? null : Number(prev))) return;
+    const { error } = await supabase.from("quotes").update({ hours_actual: value }).eq("id", id);
+    if (error) {
+      const missing = error.code === "42703" || error.code === "PGRST204";
+      toast({
+        title: "No se pudieron guardar las horas",
+        description: missing ? "Falta ejecutar supabase/setup/03-tarifas.sql en Supabase (paso 2c del README)." : describeDbError(error, "Intenta de nuevo."),
+        variant: "destructive",
+      });
+      return;
+    }
+    load();
+  };
+
   const parents = SERVICE_CATALOG.filter((s) => !s.parentCode);
   const childrenOf = (code: string) => SERVICE_CATALOG.filter((s) => s.parentCode === code);
 
@@ -521,11 +590,15 @@ const Quotes = () => {
                           onChange={(e) => updateItem(i, { description: e.target.value })}
                         />
                         <div className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-3 space-y-1">
+                          <div className="col-span-2 space-y-1">
                             <Label className="text-[10px] uppercase tracking-wider text-steel">Cantidad</Label>
                             <Input className="rounded-none bg-background" type="number" min={1} value={it.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} />
                           </div>
-                          <div className="col-span-5 space-y-1">
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-[10px] uppercase tracking-wider text-steel" title="Horas estimadas de trabajo. Interno: no aparece en el PDF">Horas est.</Label>
+                            <Input className="rounded-none bg-background" type="number" min={0} step="0.5" value={it.hours || ""} onChange={(e) => updateItem(i, { hours: Math.max(0, Number(e.target.value) || 0) })} />
+                          </div>
+                          <div className="col-span-4 space-y-1">
                             <Label className="text-[10px] uppercase tracking-wider text-steel">Precio unitario</Label>
                             <Input className="rounded-none bg-background" type="number" min={0} step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: Number(e.target.value), auto: false })} />
                           </div>
@@ -554,6 +627,12 @@ const Quotes = () => {
                   <div className="flex justify-between"><span className="text-steel">Subtotal</span><span className="text-navy">{formatMoney(subtotal, form.currency)}</span></div>
                   <div className="flex justify-between"><span className="text-steel">IVA ({taxRate}%)</span><span className="text-navy">{formatMoney(tax, form.currency)}</span></div>
                   <div className="flex justify-between font-display text-lg pt-2 border-t border-border"><span className="text-navy">Total</span><span className="text-navy">{formatMoney(total, form.currency)} {form.currency}</span></div>
+                  {totalHours > 0 && (
+                    <div className="flex justify-between text-[11px] text-steel pt-1">
+                      <span>Horas estimadas (interno): {totalHours}</span>
+                      <span>{formatMoney(subtotal / totalHours, form.currency)} por hora, antes de IVA</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -611,6 +690,7 @@ const Quotes = () => {
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Cliente</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Total</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Vigencia</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel" title="Horas estimadas / horas reales (interno)">Horas est. / reales</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Estado</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Creada</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel text-right">PDF</TableHead>
@@ -623,6 +703,32 @@ const Quotes = () => {
                   <TableCell className="text-steel text-sm">{q.clients?.name ?? "—"}</TableCell>
                   <TableCell className="text-navy">{formatMoney(Number(q.total), q.currency)} {q.currency}</TableCell>
                   <TableCell className="text-steel text-sm">{q.valid_until ?? "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {(() => {
+                      const est = estimatedHours(q.items);
+                      const real = Number(q.hours_actual) || 0;
+                      const sub = Number(q.subtotal) || 0;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-steel w-8 text-right">{est || "—"}</span>
+                          <span className="text-steel">/</span>
+                          <Input
+                            key={`${q.id}-${q.hours_actual ?? ""}`}
+                            type="number"
+                            min={0}
+                            step="0.5"
+                            defaultValue={q.hours_actual ?? ""}
+                            onBlur={(e) => saveHours(q.id, e.target.value, q.hours_actual)}
+                            className="rounded-none h-8 w-20 text-xs"
+                            aria-label={`Horas reales de ${q.number}`}
+                          />
+                          {real > 0 && sub > 0 && (
+                            <span className="text-[11px] text-steel whitespace-nowrap">{formatMoney(sub / real, q.currency)}/h</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <Select value={q.status} onValueChange={(v) => updateStatus(q.id, v)}>
                       <SelectTrigger className="rounded-none h-8 w-36 text-xs"><SelectValue /></SelectTrigger>

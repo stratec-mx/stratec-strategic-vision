@@ -439,6 +439,7 @@ export type Database = {
           currency: string
           deal_id: string | null
           id: string
+          hours_actual: number | null
           items: Json
           notes: string | null
           number: string
@@ -456,6 +457,7 @@ export type Database = {
           currency?: string
           deal_id?: string | null
           id?: string
+          hours_actual?: number | null
           items?: Json
           notes?: string | null
           number: string
@@ -473,6 +475,7 @@ export type Database = {
           currency?: string
           deal_id?: string | null
           id?: string
+          hours_actual?: number | null
           items?: Json
           notes?: string | null
           number?: string

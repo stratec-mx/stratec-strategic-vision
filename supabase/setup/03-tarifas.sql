@@ -1,4 +1,5 @@
--- STRATEC · Paso 4: tarifas por servicio para el precio sugerido en cotizaciones.
+-- STRATEC · Paso 2c: tarifas por servicio para el precio sugerido en cotizaciones
+-- y horas reales por cotización.
 -- Se puede ejecutar varias veces sin duplicar nada.
 -- Requiere haber ejecutado 02-tablas-y-permisos.sql (usa public.can_access).
 
@@ -35,6 +36,10 @@ create policy "rates delete" on public.service_rates for delete to authenticated
 revoke all on public.service_rates from anon;
 grant select, insert, update, delete on public.service_rates to authenticated;
 grant all on public.service_rates to service_role;
+
+-- Horas reales invertidas en cada cotización (las estimadas van por concepto,
+-- dentro de items). Sirven para medir rentabilidad y calibrar las tarifas.
+alter table public.quotes add column if not exists hours_actual numeric(8,2);
 
 notify pgrst, 'reload schema';
 

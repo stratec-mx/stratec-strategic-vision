@@ -1,16 +1,20 @@
-// Diagnóstico de vulnerabilidad — entrada pública de clientes (lead magnet).
-// Flujo: ubicar el predio en el mapa → cuestionario ISO 31000 → nivel de
-// vulnerabilidad + plan de acción → captura de lead (Supabase submit-lead).
+// Diagnóstico básico gratuito — entrada pública de clientes (lead magnet).
+// Flujo: cuestionario ISO 31000 + datos de la organización → correo y teléfono
+// (captura de lead, Supabase submit-lead) → resultado en pantalla y PDF.
+// El perfil (giro, personas, superficie, estado) viaja en las notas del lead
+// para que la cotización se arme ya clasificada en el dashboard.
 
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, MapPin, ArrowRight, CheckCircle2, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
+import { ShieldCheck, MapPin, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Lock, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { SecurityMap } from "@/components/security-map/SecurityMap";
 import { SecurityMarker, DEFAULT_MARKER_KINDS } from "@/components/security-map/types";
 import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
+import { GIROS, encodeLeadProfile, type GiroId } from "@/lib/pricing";
 
 const SUPABASE_URL = "https://xtfsqdwkbsghkzszpisz.supabase.co";
 const SUPABASE_KEY =
@@ -21,17 +25,19 @@ type Answer = "si" | "no" | "ns";
 interface Service {
   short: string;
   url: string;
+  /** Código del cotizador */
+  code: string;
   color: string;
   bg: string;
 }
 
 const SERVICES: Record<string, Service> = {
-  consultoria:  { short: "Consultoría en Seguridad", url: "/servicios/consultoria-seguridad",     color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
-  proteccion:   { short: "Protección Civil",         url: "/servicios/proteccion-civil",          color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
-  capacitacion: { short: "Capacitación",             url: "/servicios/capacitacion",              color: "#5E646E", bg: "rgba(94,100,110,0.1)" },
-  revision:     { short: "Revisión de Programa Interno", url: "/servicios/revision-programa-interno", color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
-  protocolos:   { short: "Protocolos de Seguridad",  url: "/servicios/protocolos-seguridad",      color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
-  tecnologia:   { short: "Tecnología de Seguridad",  url: "/servicios/integracion-tecnologica",   color: "#9a7d2f", bg: "rgba(196,160,74,0.12)" },
+  consultoria:  { short: "Consultoría en Seguridad", url: "/servicios/consultoria-seguridad", code: "STR-01", color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
+  proteccion:   { short: "Programa Interno de Protección Civil", url: "/servicios/programa-interno-proteccion-civil", code: "STR-02.1", color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
+  capacitacion: { short: "Capacitación", url: "/servicios/capacitacion", code: "STR-03", color: "#5E646E", bg: "rgba(94,100,110,0.1)" },
+  revision:     { short: "Revisión de Programa Interno", url: "/servicios/revision-programa-interno", code: "STR-02.3", color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
+  protocolos:   { short: "Protocolos de Seguridad", url: "/servicios/protocolos-seguridad", code: "STR-01.4", color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
+  tecnologia:   { short: "Tecnología de Seguridad", url: "/servicios/integracion-tecnologica", code: "STR-04", color: "#9a7d2f", bg: "rgba(196,160,74,0.12)" },
 };
 
 interface Question {
@@ -55,19 +61,39 @@ const QUESTIONS: Question[] = [
   { id: 10, text: "¿Existe un plan para continuar operaciones después de una emergencia o interrupción significativa?", short: "Plan de continuidad operativa (BCP)", services: ["tecnologia", "consultoria"], riesgo: "Sin plan de continuidad, un incidente de 48 horas puede paralizar la organización por semanas, con pérdidas operativas y de reputación." },
 ];
 
-const SECTORES = ["Gobierno / Institución pública", "Corporativo / Empresa", "Educación", "Industria / Planta", "Inmobiliario / Condominio", "Salud", "Comercio", "Otro"];
+// Rangos que ve el visitante → valor representativo para la clasificación interna
+const PERSONAS = [
+  { id: "1-15", label: "1 a 15 personas", value: 10 },
+  { id: "16-50", label: "16 a 50 personas", value: 40 },
+  { id: "51-250", label: "51 a 250 personas", value: 150 },
+  { id: "251-1000", label: "251 a 1,000 personas", value: 600 },
+  { id: "1000+", label: "Más de 1,000 personas", value: 1500 },
+];
+const SUPERFICIE = [
+  { id: "ns", label: "No lo sé", value: 0 },
+  { id: "500", label: "Hasta 500 m²", value: 300 },
+  { id: "1500", label: "De 500 a 1,500 m²", value: 1000 },
+  { id: "5000", label: "De 1,500 a 5,000 m²", value: 3000 },
+  { id: "5000+", label: "Más de 5,000 m²", value: 8000 },
+];
+const ESTADOS = ["Morelos", "Ciudad de México", "Estado de México", "Puebla", "Guerrero", "Otro estado"];
+
+const inputCls = "h-11 px-3 border border-steel/25 bg-white text-sm text-navy focus:border-[#C4A04A] focus:outline-none w-full";
 
 export default function Diagnostico() {
   const { toast } = useToast();
   const [markers, setMarkers] = useState<SecurityMarker[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
-  const [phase, setPhase] = useState<"quiz" | "result" | "done">("quiz");
+  const [phase, setPhase] = useState<"quiz" | "gate" | "result">("quiz");
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", org: "", email: "", tel: "", sector: "", hp: "" });
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [org, setOrg] = useState({ giro: "", personas: "", superficie: "ns", estado: "" });
+  const [form, setForm] = useState({ name: "", org: "", email: "", tel: "", contact: false, hp: "" });
 
   const answeredCount = Object.keys(answers).length;
-  const allAnswered = answeredCount === QUESTIONS.length;
+  const profileReady = !!(org.giro && org.personas && org.estado);
+  const ready = answeredCount === QUESTIONS.length && profileReady;
 
   // Score de preparación 0–10 (Sí=1, No estoy seguro=0.5, No=0). Mayor = menos vulnerable.
   const score = useMemo(
@@ -81,36 +107,58 @@ export default function Diagnostico() {
     if (score >= 5) return { key: "medio", label: "Vulnerabilidad media", color: "#C4A04A", badge: "Vulnerabilidades identificadas",
       body: "Tienes una base, pero las áreas señaladas pueden amplificar el impacto de un incidente real. El plan prioriza las correcciones por urgencia." };
     return { key: "alto", label: "Vulnerabilidad alta", color: "#C0392B", badge: "Riesgo elevado",
-      body: "Los resultados indican múltiples brechas en protocolos, protección civil, capacitación y tecnología. Se recomienda una evaluación integral urgente." };
+      body: "Los resultados indican múltiples brechas en protocolos, protección civil, capacitación y tecnología. Se recomienda una evaluación integral." };
   }, [score]);
 
   const failed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "no" || answers[q.id] === "ns"), [answers]);
+  const passed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "si"), [answers]);
+  const recommended = useMemo(() => [...new Set(failed.flatMap((q) => q.services))].map((k) => SERVICES[k]), [failed]);
   const fmt = (n: number) => (n === Math.floor(n) ? n.toString() : n.toFixed(1));
+  const giroLabel = GIROS.find((g) => g.id === org.giro)?.label ?? "";
+  const personasLabel = PERSONAS.find((p) => p.id === org.personas)?.label ?? "";
+  const superficieLabel = SUPERFICIE.find((s) => s.id === org.superficie)?.label ?? "";
 
   const setAnswer = (id: number, val: Answer) => setAnswers((a) => ({ ...a, [id]: val }));
+  const top = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  const goResult = () => {
-    if (!allAnswered) {
-      toast({ title: "Faltan preguntas", description: "Responde las 10 preguntas para ver tu resultado.", variant: "destructive" });
+  const goGate = () => {
+    if (!ready) {
+      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos de tu organización.", variant: "destructive" });
       return;
     }
     track.diagnosticoResultado(level.key);
-    setPhase("result");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setPhase("gate");
+    top();
   };
 
   const submitGate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.org.trim() || !form.email.trim()) {
-      toast({ title: "Campos requeridos", description: "Completa nombre, empresa y correo.", variant: "destructive" });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       toast({ title: "Correo inválido", description: "Ingresa un correo válido.", variant: "destructive" });
       return;
     }
-    const servicios = [...new Set(failed.flatMap((q) => q.services))].map((s) => SERVICES[s].short).join(" · ") || "Evaluación general";
-    const msg = `Diagnóstico de vulnerabilidad — Score: ${fmt(score)}/10 (${level.label}) | Sector: ${form.sector || "No especificado"} | Marcadores en mapa: ${markers.length} | Servicios sugeridos: ${servicios}`;
+    if (form.tel.replace(/\D/g, "").length < 10) {
+      toast({ title: "Teléfono inválido", description: "Ingresa un teléfono de 10 dígitos.", variant: "destructive" });
+      return;
+    }
+    const servicios = recommended.map((s) => s.short).join(" · ") || "Evaluación general";
+    const perfil = encodeLeadProfile(
+      {
+        giro: org.giro as GiroId,
+        people: PERSONAS.find((p) => p.id === org.personas)?.value,
+        area: SUPERFICIE.find((s) => s.id === org.superficie)?.value,
+        morelos: org.estado === "Morelos",
+      },
+      recommended.map((s) => s.code),
+    );
+    const msg = [
+      form.contact ? "DESEA QUE UN ASESOR LO CONTACTE" : "No pidió contacto de un asesor (solo descargó su diagnóstico)",
+      `Diagnóstico básico: ${fmt(score)}/10 (${level.label})`,
+      `Giro: ${giroLabel} | ${personasLabel} | Superficie: ${superficieLabel} | Estado: ${org.estado}`,
+      `Áreas a atender: ${failed.map((q) => q.short).join(", ") || "ninguna"}`,
+      markers.length ? `Marcadores en mapa: ${markers.length}` : "",
+      perfil,
+    ].filter(Boolean).join("\n");
 
     setSubmitting(true);
     try {
@@ -118,26 +166,56 @@ export default function Diagnostico() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}`, apikey: SUPABASE_KEY },
         body: JSON.stringify({
-          name: form.name, email: form.email, organization: form.org,
-          role: form.sector, telefono: form.tel, servicio: servicios,
-          message: msg, honeypot: form.hp,
+          name: form.name.trim() || "Sin nombre (diagnóstico web)",
+          email: form.email.trim(),
+          organization: form.org.trim() || "No indicada",
+          role: giroLabel,
+          telefono: form.tel.trim(),
+          servicio: servicios.slice(0, 150),
+          message: msg,
+          honeypot: form.hp,
         }),
       });
       // fetch solo lanza en error de red: un 4xx/5xx de la Edge Function llega
-      // como respuesta "exitosa". Sin este check el lead se pierde y el usuario
-      // ve "enviado".
+      // como respuesta "exitosa". Sin este check el lead se pierde.
       if (!res.ok) throw new Error(`submit-lead ${res.status}`);
-      track.diagnosticoLead(level.key, form.sector);
-      setPhase("done");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      track.diagnosticoLead(level.key, org.giro);
+      setPhase("result");
+      top();
     } catch {
-      toast({ title: "No se pudo enviar", description: "Intenta de nuevo en un momento, o escríbenos por WhatsApp con tu resultado.", variant: "destructive" });
+      toast({ title: "No se pudo generar", description: "Intenta de nuevo en un momento, o escríbenos por WhatsApp.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const waText = encodeURIComponent(`Hola STRATEC, hice el diagnóstico de vulnerabilidad (nivel: ${level.label}, score ${fmt(score)}/10) y quiero agendar mi evaluación.`);
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const { downloadDiagnosticoPdf } = await import("@/lib/diagnosticoPdf");
+      await downloadDiagnosticoPdf({
+        date: new Date(),
+        name: form.name.trim(),
+        org: form.org.trim(),
+        giro: giroLabel,
+        estado: org.estado,
+        score: fmt(score),
+        levelLabel: level.label,
+        levelBody: level.body,
+        levelColor: level.color,
+        failed: failed.map((q) => ({ short: q.short, riesgo: q.riesgo, service: SERVICES[q.services[0]].short })),
+        passed: passed.map((q) => q.short),
+        services: recommended.map((s) => ({ short: s.short, url: s.url })),
+      });
+      track.diagnosticoPdf(level.key);
+    } catch (e) {
+      toast({ title: "No se pudo generar el PDF", description: (e as Error)?.message ?? "Intenta de nuevo.", variant: "destructive" });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  const waText = encodeURIComponent(`Hola STRATEC, hice el diagnóstico básico (nivel: ${level.label}, ${fmt(score)}/10) y quiero agendar una evaluación.`);
 
   return (
     <div className="min-h-screen bg-smoke">
@@ -148,16 +226,16 @@ export default function Diagnostico() {
           {/* ── FASE CUESTIONARIO ── */}
           {phase === "quiz" && (
             <>
-              <div className="eyebrow mb-3">— Diagnóstico gratuito</div>
+              <div className="eyebrow mb-3">— Diagnóstico básico · Gratis</div>
               <h1 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-4">
-                Identifica qué tan vulnerable te encuentras
+                Genera y descarga tu diagnóstico PDF gratuito
               </h1>
               <p className="text-steel text-sm md:text-base leading-relaxed mb-8 max-w-2xl">
-                Evaluación guiada basada en la metodología <strong>ISO 31000</strong> de gestión de riesgos.
-                Responde 10 preguntas y obtén tu nivel de vulnerabilidad con un plan de acción priorizado. Toma unos 3 minutos.
+                Un diagnóstico <strong>básico y gratuito</strong> basado en la metodología <strong>ISO 31000</strong> de gestión de riesgos.
+                Responde 10 preguntas y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en PDF. Toma unos 3 minutos.
               </p>
 
-              {/* 1 · Cuestionario — la acción central va primero */}
+              {/* 1 · Cuestionario */}
               <section className="mb-10">
                 <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-[#C4A04A]" /> 1 · Responde el cuestionario
@@ -178,7 +256,6 @@ export default function Diagnostico() {
                         {([["si", "Sí"], ["no", "No"], ["ns", "No estoy seguro"]] as [Answer, string][]).map(([val, lbl]) => {
                           const sel = answers[q.id] === val;
                           // min-h 44px: objetivo táctil mínimo para el pulgar en móvil.
-                          // leading-tight deja que "No estoy seguro" parta en 2 líneas sin apretarse.
                           const base = "min-h-[44px] text-xs sm:text-sm leading-tight px-2 py-2 border rounded-none transition-all ";
                           const styles = sel
                             ? val === "si" ? "border-green-600 bg-green-50 text-green-800"
@@ -197,8 +274,44 @@ export default function Diagnostico() {
                 </div>
               </section>
 
-              {/* 2 · Mapa del predio — opcional y plegado: no estorba el camino
-                  principal, y Leaflet solo se carga si el usuario lo abre. */}
+              {/* 2 · Datos de la organización */}
+              <section className="mb-10 border border-steel/20 bg-white p-5">
+                <h2 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-[#C4A04A]" /> 2 · Sobre tu organización
+                </h2>
+                <p className="text-sm text-steel mb-4">Para adaptar las recomendaciones a tu tipo de inmueble.</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-xs text-steel">Giro *</span>
+                    <select value={org.giro} onChange={(e) => setOrg({ ...org, giro: e.target.value })} className={inputCls}>
+                      <option value="">Selecciona</option>
+                      {GIROS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs text-steel">Personas en el inmueble (trabajadores y visitantes) *</span>
+                    <select value={org.personas} onChange={(e) => setOrg({ ...org, personas: e.target.value })} className={inputCls}>
+                      <option value="">Selecciona</option>
+                      {PERSONAS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs text-steel">Superficie construida aproximada</span>
+                    <select value={org.superficie} onChange={(e) => setOrg({ ...org, superficie: e.target.value })} className={inputCls}>
+                      {SUPERFICIE.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs text-steel">Estado *</span>
+                    <select value={org.estado} onChange={(e) => setOrg({ ...org, estado: e.target.value })} className={inputCls}>
+                      <option value="">Selecciona</option>
+                      {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </label>
+                </div>
+              </section>
+
+              {/* 3 · Mapa del predio — opcional y plegado: Leaflet solo se carga si se abre */}
               <section className="mb-8 border border-steel/20 bg-white">
                 <button
                   type="button"
@@ -209,7 +322,7 @@ export default function Diagnostico() {
                   <span className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-[#C4A04A] shrink-0" />
                     <span>
-                      <span className="font-display text-lg text-navy">2 · Marca tu predio</span>
+                      <span className="font-display text-lg text-navy">3 · Marca tu predio</span>
                       <span className="block text-xs text-steel">
                         Opcional · {markers.length > 0
                           ? `${markers.length} marcador${markers.length !== 1 ? "es" : ""} colocado${markers.length !== 1 ? "s" : ""}`
@@ -232,19 +345,61 @@ export default function Diagnostico() {
                 )}
               </section>
 
-              <section>
-                <button
-                  onClick={goResult}
-                  disabled={!allAnswered}
-                  className="mt-8 w-full h-14 bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  Ver mi nivel de vulnerabilidad <ArrowRight className="h-4 w-4" />
-                </button>
-              </section>
+              <button
+                onClick={goGate}
+                disabled={!ready}
+                className="w-full h-14 bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                Generar mi diagnóstico <ArrowRight className="h-4 w-4" />
+              </button>
             </>
           )}
 
-          {/* ── FASE RESULTADO + GATE ── */}
+          {/* ── FASE CONTACTO (para ver y descargar) ── */}
+          {phase === "gate" && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="text-center mb-8">
+                <CheckCircle2 className="h-12 w-12 text-[#C4A04A] mx-auto mb-4" />
+                <h1 className="font-display text-3xl text-navy font-light mb-3">Tu diagnóstico está listo</h1>
+                <p className="text-sm text-steel max-w-lg mx-auto">
+                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico básico en PDF. Es gratis.
+                </p>
+              </div>
+              <section className="border border-navy/15 bg-white p-6 md:p-8">
+                <form onSubmit={submitGate} className="space-y-4">
+                  <input type="text" tabIndex={-1} autoComplete="off" value={form.hp} onChange={(e) => setForm({ ...form, hp: e.target.value })} className="hidden" aria-hidden />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <input required type="email" autoComplete="email" placeholder="Correo *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
+                    <input required type="tel" autoComplete="tel" inputMode="tel" placeholder="Teléfono (10 dígitos) *" value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={inputCls} />
+                    <input autoComplete="name" placeholder="Nombre (opcional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
+                    <input autoComplete="organization" placeholder="Empresa o institución (opcional)" value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className={inputCls} />
+                  </div>
+                  <label className="flex items-start gap-3 border border-steel/20 bg-smoke/60 px-4 py-3 cursor-pointer">
+                    <input type="checkbox" checked={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.checked })} className="mt-1 h-4 w-4 accent-[#0B1F3A]" />
+                    <span className="text-sm text-navy">
+                      Deseo que un asesor de STRATEC me contacte
+                      <span className="block text-xs text-steel">Opcional. Si no la marcas, solo recibirás tu diagnóstico.</span>
+                    </span>
+                  </label>
+                  <button type="submit" disabled={submitting} className="w-full h-14 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando…</> : <>Ver y descargar mi diagnóstico <ArrowRight className="h-4 w-4" /></>}
+                  </button>
+                  <p className="text-[0.7rem] text-steel/80 text-center flex items-center justify-center gap-1.5">
+                    <Lock className="h-3 w-3 shrink-0" />
+                    <span>
+                      Tus datos se tratan de forma confidencial conforme a nuestro{" "}
+                      <Link to="/privacidad" className="underline">aviso de privacidad</Link>.
+                    </span>
+                  </p>
+                </form>
+              </section>
+              <button type="button" onClick={() => setPhase("quiz")} className="mt-4 text-xs text-steel underline mx-auto block">
+                Volver a mis respuestas
+              </button>
+            </motion.div>
+          )}
+
+          {/* ── FASE RESULTADO ── */}
           {phase === "result" && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <div className="text-center mb-8">
@@ -256,11 +411,19 @@ export default function Diagnostico() {
                 <p className="text-sm text-steel leading-relaxed max-w-xl mx-auto">{level.body}</p>
               </div>
 
-              {/* Vulnerabilidades detectadas */}
+              <button
+                type="button"
+                onClick={downloadPdf}
+                disabled={pdfBusy}
+                className="w-full h-14 mb-10 bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Descargar mi diagnóstico en PDF
+              </button>
+
               {failed.length > 0 && (
                 <section className="mb-10">
                   <h2 className="font-display text-lg text-navy mb-4">
-                    {failed.length} área{failed.length > 1 ? "s" : ""} con vulnerabilidad detectada{failed.length > 1 ? "s" : ""}
+                    {failed.length} área{failed.length > 1 ? "s" : ""} a atender
                   </h2>
                   <div className="space-y-3">
                     {failed.map((q) => {
@@ -271,7 +434,7 @@ export default function Diagnostico() {
                             <div className="text-sm font-medium text-navy mb-1">{q.short}</div>
                             <div className="text-xs text-steel leading-relaxed">{q.riesgo}</div>
                           </div>
-                          <span className="text-[0.7rem] px-2 py-1 self-start whitespace-nowrap" style={{ color: svc.color, backgroundColor: svc.bg }}>{svc.short}</span>
+                          <Link to={svc.url} className="text-[0.7rem] px-2 py-1 self-start whitespace-nowrap hover:underline" style={{ color: svc.color, backgroundColor: svc.bg }}>{svc.short}</Link>
                         </div>
                       );
                     })}
@@ -279,48 +442,18 @@ export default function Diagnostico() {
                 </section>
               )}
 
-              {/* Gate de captura */}
-              <section className="border border-navy/15 bg-white p-6 md:p-8">
-                <h2 className="font-display text-xl text-navy mb-2">Recibe tu diagnóstico completo</h2>
-                <p className="text-sm text-steel mb-6">
-                  Te enviamos el reporte detallado con el plan de acción priorizado y las referencias normativas aplicables. Sin costo.
+              <section className="border border-navy/15 bg-white p-6 md:p-8 text-center">
+                <h2 className="font-display text-xl text-navy mb-2">
+                  {form.contact ? "Un asesor te contactará pronto" : "¿Quieres una evaluación completa?"}
+                </h2>
+                <p className="text-sm text-steel mb-6 max-w-lg mx-auto">
+                  Este es un diagnóstico básico a partir de tus respuestas. Una evaluación con STRATEC revisa tu caso a fondo y te entrega un plan a la medida.
                 </p>
-                <form onSubmit={submitGate} className="space-y-4">
-                  <input type="text" tabIndex={-1} autoComplete="off" value={form.hp} onChange={(e) => setForm({ ...form, hp: e.target.value })} className="hidden" aria-hidden />
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <input required placeholder="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 px-3 border border-steel/25 text-sm text-navy focus:border-[#C4A04A] focus:outline-none" />
-                    <input required placeholder="Empresa / institución *" value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className="h-11 px-3 border border-steel/25 text-sm text-navy focus:border-[#C4A04A] focus:outline-none" />
-                    <input required type="email" placeholder="Correo *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11 px-3 border border-steel/25 text-sm text-navy focus:border-[#C4A04A] focus:outline-none" />
-                    <input placeholder="Teléfono (opcional)" value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className="h-11 px-3 border border-steel/25 text-sm text-navy focus:border-[#C4A04A] focus:outline-none" />
-                  </div>
-                  <select value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })} className="w-full h-11 px-3 border border-steel/25 text-sm text-navy focus:border-[#C4A04A] focus:outline-none">
-                    <option value="">Sector (opcional)</option>
-                    {SECTORES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <button type="submit" disabled={submitting} className="w-full h-14 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando…</> : <>Recibir mi diagnóstico <ArrowRight className="h-4 w-4" /></>}
-                  </button>
-                  <p className="text-[0.7rem] text-steel/70 text-center">Tus datos se tratan de forma confidencial conforme a nuestra política de privacidad.</p>
-                </form>
+                <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer" onClick={() => track.whatsappClick("diagnostico")}
+                   className="inline-flex items-center gap-2 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold px-8 py-4 uppercase tracking-wider text-sm transition-colors">
+                  Hablar por WhatsApp <ArrowRight className="h-4 w-4" />
+                </a>
               </section>
-            </motion.div>
-          )}
-
-          {/* ── FASE CONFIRMACIÓN ── */}
-          {phase === "done" && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center py-10">
-              <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-6" />
-              <h1 className="font-display text-3xl text-navy font-light mb-3">Diagnóstico enviado</h1>
-              <p className="text-steel max-w-lg mx-auto mb-2">
-                Gracias, {form.name.split(" ")[0] || "equipo"}. Tu nivel de vulnerabilidad es <strong style={{ color: level.color }}>{level.label.toLowerCase()}</strong> (score {fmt(score)}/10).
-              </p>
-              <p className="text-sm text-steel/80 max-w-lg mx-auto mb-8">
-                Recibirás el reporte completo en tu correo. Si quieres avanzar de inmediato, agenda tu evaluación por WhatsApp.
-              </p>
-              <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer" onClick={() => track.whatsappClick("diagnostico")}
-                 className="inline-flex items-center gap-2 bg-navy hover:bg-navy-deep text-smoke px-8 py-4 uppercase tracking-wider text-sm transition-colors">
-                Agendar evaluación por WhatsApp <ArrowRight className="h-4 w-4" />
-              </a>
             </motion.div>
           )}
 

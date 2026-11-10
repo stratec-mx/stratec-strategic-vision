@@ -59,7 +59,7 @@ export const RatesDialog = ({ rates, onSaved }: { rates: Record<string, ServiceR
       const missing = error.code === "42P01" || error.code === "PGRST205";
       toast({
         title: "No se pudieron guardar las tarifas",
-        description: missing ? "Falta ejecutar supabase/setup/03-tarifas.sql en Supabase (paso 4 del README)." : describeDbError(error, "Intenta de nuevo."),
+        description: missing ? "Falta ejecutar supabase/setup/03-tarifas.sql en Supabase (paso 2c del README)." : describeDbError(error, "Intenta de nuevo."),
         variant: "destructive",
       });
       return;

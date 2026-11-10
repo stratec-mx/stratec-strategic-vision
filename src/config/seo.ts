@@ -133,9 +133,9 @@ const staticConfig: Record<string, PageSEO> = {
     canonicalUrl: `${baseUrl}/servicios`
   },
   "/diagnostico": {
-    title: "Diagnóstico de Vulnerabilidad Gratuito para Empresas | ISO 31000 | STRATEC",
-    description: "Evalúa en 3 minutos qué tan vulnerable es tu empresa o inmueble: 10 preguntas basadas en ISO 31000, nivel de vulnerabilidad y plan de acción priorizado. Gratis.",
-    keywords: ["diagnóstico de vulnerabilidad", "diagnóstico de seguridad gratis", "evaluación de riesgos ISO 31000"],
+    title: "Diagnóstico de Seguridad Gratuito en PDF para Empresas | ISO 31000 | STRATEC",
+    description: "Genera y descarga gratis un diagnóstico básico de seguridad en PDF: 10 preguntas basadas en ISO 31000, nivel de vulnerabilidad, áreas a atender y plan de acción. Toma 3 minutos.",
+    keywords: ["diagnóstico de vulnerabilidad", "diagnóstico de seguridad gratis", "diagnóstico de seguridad PDF", "evaluación de riesgos ISO 31000"],
     ogType: "website",
     canonicalUrl: `${baseUrl}/diagnostico`
   },

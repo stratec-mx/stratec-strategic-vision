@@ -69,6 +69,15 @@ export const track = {
   },
 
   /**
+   * Descargó el PDF de su diagnóstico
+   */
+  diagnosticoPdf: (nivel: string) =>
+    trackEvent("diagnostico_pdf", {
+      category: "engagement",
+      label: nivel,
+    }),
+
+  /**
    * Click en botón de email
    */
   emailClick: () =>

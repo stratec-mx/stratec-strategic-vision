@@ -20,8 +20,19 @@ const toCode = (numero: string) => `STR-${numero}`;
 const sortKey = (numero: string) =>
   numero.split(".").map((p) => p.padStart(3, "0")).join(".");
 
-export const SERVICE_CATALOG: CatalogService[] = Object.values(SERVICES_DATA)
-  .slice()
+/**
+ * Servicios que se cotizan pero no tienen página propia en el sitio
+ * (variantes de un servicio publicado). numero sigue el mismo esquema.
+ */
+export const QUOTE_ONLY_SERVICES: { numero: string; titulo: string; descripcionCorta: string }[] = [
+  {
+    numero: "02.5",
+    titulo: "Actualización de Programa Interno de Protección Civil",
+    descripcionCorta: "Actualización del Programa Interno vigente: cambios del inmueble, personal, brigadas, análisis de riesgos y anexos.",
+  },
+];
+
+export const SERVICE_CATALOG: CatalogService[] = [...Object.values(SERVICES_DATA), ...QUOTE_ONLY_SERVICES]
   .sort((a, b) => sortKey(a.numero).localeCompare(sortKey(b.numero)))
   .map((s) => ({
     code: toCode(s.numero),

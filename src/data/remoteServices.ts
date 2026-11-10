@@ -22,7 +22,7 @@ export const REMOTE_GROUPS: RemoteGroup[] = [
   {
     need: "Responder",
     text: "Saber qué hacer ante una amenaza o una crisis.",
-    slugs: ["protocolos-seguridad", "plan-continuidad-operaciones"],
+    slugs: ["protocolos-seguridad", "nom-035-violencia-laboral", "plan-continuidad-operaciones"],
   },
 ];
 
