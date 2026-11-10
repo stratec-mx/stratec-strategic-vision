@@ -59,7 +59,7 @@ const QUESTIONS: Question[] = [
   { id: 5, text: "¿Tienes extintores fáciles de ver y de alcanzar, con su recarga al día?", short: "Extintores listos para usarse", services: ["revision", "proteccion"], riesgo: "Un extintor vencido o tapado no sirve cuando hay fuego. Además puede costarte una multa o una suspensión." },
   { id: 6, text: "¿Sabes qué hacer si alguien llama para extorsionarte, intenta estafarte o te amenaza?", short: "Saber qué hacer ante extorsión o amenazas", services: ["protocolos", "consultoria"], riesgo: "Sin un plan, quien extorsiona toma el control desde la primera llamada y el daño económico crece." },
   { id: 7, text: "¿Tu personal ha tomado algún curso de primeros auxilios, evacuación o seguridad en el último año?", short: "Personal con curso reciente", services: ["capacitacion"], riesgo: "Sin práctica, las personas se paralizan o se equivocan en una emergencia. Un plan solo funciona si la gente sabe aplicarlo." },
-  { id: 8, text: "¿Tus cámaras y el control de quién entra funcionan bien, y alguien las revisa?", short: "Cámaras y control de entradas funcionando", services: ["tecnologia"], riesgo: "Si nadie revisa las cámaras, solo sirven para ver lo que ya pasó: no evitan el problema ni avisan a tiempo." },
+  { id: 8, text: "¿Tus cámaras de seguridad están grabando bien en este momento? (Si no tienes cámaras, responde No.)", short: "Cámaras grabando bien", services: ["tecnologia"], riesgo: "Muchas cámaras dejan de grabar sin que nadie lo note. Si no graban, no ayudan a evitar un robo ni sirven como prueba." },
   { id: 9, text: "¿Guardas copias de tu información importante (clientes, facturas, contabilidad) y has comprobado que sí se pueden recuperar?", short: "Copias de tu información importante", services: ["tecnologia"], riesgo: "Sin copias, un virus, el robo de una computadora o una falla pueden borrar tu información para siempre." },
   { id: 10, text: "¿Tienes un plan para seguir trabajando si tu negocio tuviera que cerrar unos días por una emergencia?", short: "Plan para seguir trabajando", services: ["tecnologia", "consultoria"], riesgo: "Sin un plan, un problema de dos días puede detener tu negocio por semanas y costarte clientes." },
 ];
@@ -224,6 +224,19 @@ export default function Diagnostico() {
           telefono: form.tel.trim(),
           servicio: servicios.slice(0, 150),
           message: msg,
+          // Datos separados para el aviso de Telegram (la nota del lead usa "message")
+          diagnostico: {
+            puntaje: fmt(score),
+            nivel: level.label,
+            quiereContacto: form.contact,
+            giro: giroLabel,
+            personas: personasLabel,
+            superficie: org.superficie === "ns" ? "" : superficieLabel,
+            estado: org.estado,
+            areas: failed.map((q) => q.short),
+            servicios: recommended.map((s) => `${s.code} · ${s.short}`),
+            marcadores: markers.length,
+          },
           honeypot: form.hp,
         }),
       });

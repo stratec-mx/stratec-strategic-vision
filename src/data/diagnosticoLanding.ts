@@ -5,7 +5,7 @@ export const AREAS_TEXT = [
   { title: "Protección civil", text: "Salidas de emergencia libres y señalizadas, extintores al día y teléfonos de emergencia a la vista." },
   { title: "Extorsión y amenazas", text: "Si sabes qué hacer ante una llamada de extorsión, un intento de estafa o una amenaza." },
   { title: "Capacitación", text: "Si tu personal tomó algún curso de primeros auxilios, evacuación o seguridad en el último año." },
-  { title: "Cámaras y entradas", text: "Si tus cámaras y el control de quién entra funcionan, y si alguien los revisa." },
+  { title: "Cámaras", text: "Si tus cámaras de seguridad están grabando bien." },
   { title: "Tu información y tu operación", text: "Si guardas copias de tu información y tienes un plan para seguir trabajando tras una emergencia." },
 ];
 

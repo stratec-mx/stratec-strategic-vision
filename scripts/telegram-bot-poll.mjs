@@ -52,8 +52,72 @@ const {
 
 const TG = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
-// mapa chatId → pendingId del preview activo (para modificación por chat)
-const activePending = new Map();
+// chatId → pendingId de la vista previa activa (para modificar la imagen por chat).
+// Se guarda en archivo: cada revisión de mensajes es un proceso nuevo, así que
+// en memoria se perdía entre un mensaje y el siguiente. Caduca a las 24 h.
+const ACTIVE_TTL_MS = 24 * 3600 * 1000;
+const activeFile = (chatId) => join(PENDING_DIR, `active-${chatId}.txt`);
+const activePending = {
+  get(chatId) {
+    const f = activeFile(chatId);
+    if (!existsSync(f)) return undefined;
+    const [id, ts] = readFileSync(f, "utf8").trim().split(" ");
+    if (!id || Date.now() - Number(ts || 0) > ACTIVE_TTL_MS) return undefined;
+    return existsSync(join(PENDING_DIR, `${id}.json`)) ? id : undefined;
+  },
+  set(chatId, id) {
+    if (!existsSync(PENDING_DIR)) mkdirSync(PENDING_DIR, { recursive: true });
+    writeFileSync(activeFile(chatId), `${id} ${Date.now()}`);
+  },
+  delete(chatId) {
+    const f = activeFile(chatId);
+    if (existsSync(f)) unlinkSync(f);
+  },
+};
+
+// ── Menú principal: botones fijos abajo del chat ─────────────────────────────
+const BTN = {
+  nueva: "📝 Nueva publicación",
+  carrusel: "🎠 Carrusel",
+  foto: "📷 Usar mi foto",
+  ayuda: "❓ Cómo funciona",
+};
+const TECLADO_MENU = {
+  keyboard: [[{ text: BTN.nueva }, { text: BTN.carrusel }], [{ text: BTN.foto }, { text: BTN.ayuda }]],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+const TEXTO_AYUDA =
+  "🤖 <b>STRATEC · Bot de publicaciones</b>\n\n" +
+  "Usa los botones de abajo del chat:\n\n" +
+  "📝 <b>Nueva publicación</b>\n" +
+  "Eliges un servicio, un tema en tendencia o escribes el tuyo. El bot crea la imagen con el diseño STRATEC y los textos para Facebook y LinkedIn.\n\n" +
+  "🎠 <b>Carrusel</b>\n" +
+  "5 imágenes sobre un tema, para Facebook. Escribe: <code>/carrusel tu tema</code>\n\n" +
+  "📷 <b>Usar mi foto</b>\n" +
+  "Mándame una foto o una imagen (también las que crees con Meta AI o ChatGPT) y escribe el tema en el pie de foto. " +
+  "El bot escribe los textos y te deja elegir: publicarla tal cual o con el diseño STRATEC.\n\n" +
+  "<b>Antes de publicar</b> siempre ves una vista previa con botones: ✅ Publicar ahora, 📅 Programar o 🔄 Regenerar. " +
+  "En las imágenes creadas por el bot, puedes escribir qué cambiar (ej.: «fondo más oscuro»).\n\n" +
+  "⏱️ El bot revisa mensajes cada pocos minutos: la respuesta puede tardar de 1 a 5 minutos.";
+
+async function mostrarMenuPrincipal(chatId, conAyuda = false) {
+  await sendMessage(chatId, conAyuda ? TEXTO_AYUDA : "📌 <b>¿Qué hacemos?</b> Elige una opción con los botones de abajo.", {
+    reply_markup: TECLADO_MENU,
+  });
+}
+
+// Comandos del botón "Menú" de Telegram (se registran al usar /start)
+const registrarComandos = () =>
+  tg("setMyCommands", {
+    commands: [
+      { command: "menu", description: "Mostrar los botones del bot" },
+      { command: "genera", description: "Nueva publicación (con o sin tema)" },
+      { command: "carrusel", description: "Carrusel de 5 imágenes sobre un tema" },
+      { command: "ayuda", description: "Cómo funciona el bot" },
+    ],
+  });
 
 // fetch con timeout explícito — evita que cuelgue indefinidamente
 async function fetchConTimeout(url, opts, timeoutMs = 120_000) {
@@ -1300,6 +1364,8 @@ async function procesarAgendarSlot(chatId, pendingId, tsMs, callbackId) {
     await sendMessage(chatId, "❌ Post no encontrado. Genera uno nuevo.");
     return;
   }
+  // Ya programado: los mensajes siguientes no deben modificar esta imagen
+  activePending.delete(chatId);
   pending.scheduledAt = new Date(Number(tsMs)).toISOString();
   writeFileSync(join(PENDING_DIR, `${pendingId}.json`), JSON.stringify(pending));
 
@@ -1361,6 +1427,51 @@ async function publicarPendientesAgendados() {
 
 // ── Flujo: foto subida por el usuario ────────────────────────────────────────
 
+// Botones de la vista previa de una foto propia; conDiseno = ya tiene el diseño
+function tecladoFoto(pendingId, conDiseno) {
+  return [
+    [
+      { text: "✅ Publicar ahora", callback_data: `pub:${pendingId}` },
+      { text: "📅 Programar",      callback_data: `sched:${pendingId}` },
+    ],
+    [
+      conDiseno
+        ? { text: "↩️ Usar foto original", callback_data: `orig:${pendingId}` }
+        : { text: "🎨 Aplicar diseño STRATEC", callback_data: `dis:${pendingId}` },
+      { text: "🔄 Nueva caption", callback_data: `recap:${pendingId}` },
+    ],
+  ];
+}
+
+// Aplica (o quita) el diseño STRATEC a una foto propia ya en vista previa
+async function procesarDisenoFoto(chatId, pendingId, callbackId, aplicar) {
+  await answerCb(callbackId, aplicar ? "Aplicando diseño…" : "Volviendo a la foto original…");
+  const pending = readPending(pendingId);
+  if (!pending) {
+    await sendMessage(chatId, "❌ Post no encontrado. Vuelve a enviar la imagen.");
+    return;
+  }
+  const rawBuffer = Buffer.from(pending.rawImageBase64 || pending.imageBase64, "base64");
+  let imagen = rawBuffer;
+  if (aplicar) {
+    let datos = pending;
+    // Fotos enviadas antes de este cambio no tienen titular: se generan ahora
+    if (!pending.titular) {
+      datos = await generarCaptionsDesdeImagen(rawBuffer, pending.tema);
+      updatePendingMeta(pendingId, {
+        titular: datos.titular, subtitulo: datos.subtitulo, puntos: datos.puntos, categoria: datos.categoria,
+      });
+    }
+    imagen = await buildInfografia(rawBuffer, datos);
+  }
+  updatePendingImage(pendingId, imagen);
+  const preview =
+    (aplicar ? `🎨 <b>Con diseño STRATEC</b>\n\n` : `📷 <b>Foto original</b>\n\n`) +
+    `<b>Facebook:</b>\n${String(pending.facebook || "").substring(0, 350)}\n\n` +
+    `<b>LinkedIn (inicio):</b>\n${String(pending.linkedin || "").substring(0, 200)}...`;
+  await sendPhotoBuffer(chatId, imagen, preview, tecladoFoto(pendingId, aplicar));
+}
+
 async function procesarFoto(chatId, fileId, temaHint) {
   const actionTick = setInterval(
     () => tg("sendChatAction", { chat_id: chatId, action: "upload_photo" }).catch(() => {}),
@@ -1379,23 +1490,21 @@ async function procesarFoto(chatId, fileId, temaHint) {
       rawImageBase64: rawBuffer.toString("base64"),
       linkedin:       captions.linkedin,
       facebook:       captions.facebook,
+      // Para poder aplicar el diseño STRATEC a esta foto
+      titular:        captions.titular,
+      subtitulo:      captions.subtitulo,
+      puntos:         captions.puntos,
+      categoria:      captions.categoria,
       tema,
     });
 
     const preview =
       `📋 <b>Preview${temaHint ? ` — ${temaHint}` : ""}</b>\n\n` +
       `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
-      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
+      `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...\n\n` +
+      `<i>🎨 Puedes publicarla tal cual o con el diseño STRATEC (título, puntos y barra de marca).</i>`;
 
-    await sendPhotoBuffer(chatId, rawBuffer, preview, [
-      [
-        { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
-        { text: "📅 Programar",       callback_data: `sched:${pendingId}` },
-      ],
-      [
-        { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
-      ],
-    ]);
+    await sendPhotoBuffer(chatId, rawBuffer, preview, tecladoFoto(pendingId, false));
   } catch (err) {
     clearInterval(actionTick);
     throw err;
@@ -1601,15 +1710,7 @@ async function procesarRecaptionado(chatId, pendingId, callbackId) {
     `<b>Facebook:</b>\n${captions.facebook.substring(0, 350)}\n\n` +
     `<b>LinkedIn (inicio):</b>\n${captions.linkedin.substring(0, 200)}...`;
 
-  await sendPhotoBuffer(chatId, rawBuffer, preview, [
-    [
-      { text: "✅ Publicar ahora",  callback_data: `pub:${pendingId}` },
-      { text: "📅 Programar",       callback_data: `sched:${pendingId}` },
-    ],
-    [
-      { text: "🔄 Nueva caption",  callback_data: `recap:${pendingId}` },
-    ],
-  ]);
+  await sendPhotoBuffer(chatId, rawBuffer, preview, tecladoFoto(pendingId, false));
 }
 
 // ── Carrusel — Flujo principal ────────────────────────────────────────────────
@@ -1804,6 +1905,8 @@ async function main() {
         if (data.startsWith("pub:"))             await procesarAprobacion(chatId, messageId, data.slice(4), id);
         else if (data.startsWith("reg:"))         await procesarRegeneracion(chatId, data.slice(4), id);
         else if (data.startsWith("recap:"))       await procesarRecaptionado(chatId, data.slice(6), id);
+        else if (data.startsWith("dis:"))         await procesarDisenoFoto(chatId, data.slice(4), id, true);
+        else if (data.startsWith("orig:"))        await procesarDisenoFoto(chatId, data.slice(5), id, false);
         else if (data.startsWith("sched:"))       await procesarProgramar(chatId, data.slice(6), id);
         else if (data.startsWith("carr_pub:"))    await procesarPublicarCarrusel(chatId, data.slice(9), id);
         else if (data.startsWith("carr_reg:"))    await procesarRegenerarCarrusel(chatId, data.slice(9), id);
@@ -1919,6 +2022,31 @@ async function main() {
       if (!msg.text) continue;
       const text = msg.text.trim();
 
+      // Botones fijos del menú (van antes que la modificación por chat)
+      if (text === BTN.nueva) {
+        activePending.delete(chatId);
+        await mostrarMenuTemas(chatId);
+        continue;
+      }
+      if (text === BTN.carrusel) {
+        await sendMessage(chatId,
+          "🎠 <b>Carrusel</b>\n\nEscribe el tema así:\n<code>/carrusel protección civil empresas Morelos</code>",
+          { reply_markup: TECLADO_MENU });
+        continue;
+      }
+      if (text === BTN.foto) {
+        await sendMessage(chatId,
+          "📷 <b>Usar mi foto</b>\n\nMándame la foto o imagen y escribe el tema en el pie de foto (opcional).\n" +
+          "Para mejor calidad, envíala como <b>Archivo</b>.\n\n" +
+          "Después podrás publicarla tal cual o con el diseño STRATEC.",
+          { reply_markup: TECLADO_MENU });
+        continue;
+      }
+      if (text === BTN.ayuda) {
+        await mostrarMenuPrincipal(chatId, true);
+        continue;
+      }
+
       // Texto libre con preview activo → modificación de imagen vía GPT-4o
       const activePid = activePending.get(chatId);
       if (activePid && !text.startsWith("/")) {
@@ -1942,20 +2070,12 @@ async function main() {
         await mostrarMenuTemas(chatId);
 
       } else if (/^\/(start|ayuda|help)/i.test(text)) {
-        await sendMessage(chatId,
-          "🤖 <b>STRATEC Bot de Publicaciones</b>\n\n" +
-          "<b>Opción 1 — Generar imagen con IA:</b>\n" +
-          "/genera [tema] — Crea imagen con Leonardo.ai + caption\n\n" +
-          "<b>Opción 2 — Publicar tu propia foto:</b>\n" +
-          "Envía una foto o imagen directamente al chat.\n" +
-          "Escribe el tema en el caption (opcional).\n" +
-          "Para máxima calidad: envía como <b>Archivo</b>, no como foto.\n\n" +
-          "<b>Ejemplos /genera:</b>\n" +
-          "<code>/genera auditoría de seguridad industrial Morelos</code>\n" +
-          "<code>/genera capacitación brigadas emergencia</code>\n" +
-          "<code>/genera programa interno de protección civil PIPC</code>\n" +
-          "<code>/genera videovigilancia CCTV empresas Cuernavaca</code>"
-        );
+        await registrarComandos();
+        await mostrarMenuPrincipal(chatId, true);
+
+      } else {
+        // /menu o cualquier texto que el bot no reconoce: mostrar los botones
+        await mostrarMenuPrincipal(chatId, false);
       }
 
     } catch (err) {
