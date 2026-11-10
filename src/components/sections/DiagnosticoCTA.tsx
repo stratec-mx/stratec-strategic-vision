@@ -20,7 +20,7 @@ export const DiagnosticoCTA = () => (
         <div className="absolute top-0 left-0 right-0 h-1 bg-[#C4A04A]" />
         <div className="relative px-6 py-12 md:px-14 md:py-16 text-center">
           <div className="inline-flex flex-wrap justify-center gap-2 mb-6">
-            {["Básico", "Gratis", "PDF descargable"].map((t) => (
+            {["Básico", "GRATIS", "PDF descargable"].map((t) => (
               <span key={t} className="text-[10px] uppercase tracking-[0.25em] px-3 py-1 border border-[#C4A04A]/50 text-[#C4A04A]">
                 {t}
               </span>
@@ -45,7 +45,7 @@ export const DiagnosticoCTA = () => (
             onClick={() => track.ctaClick("home_diagnostico_pdf")}
             className="mt-10 inline-flex items-center justify-center gap-3 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm px-8 h-14 w-full sm:w-auto transition-colors"
           >
-            <FileDown className="h-5 w-5" /> Generar mi diagnóstico gratis <ArrowRight className="h-4 w-4" />
+            <FileDown className="h-5 w-5" /> Generar mi diagnóstico GRATIS <ArrowRight className="h-4 w-4" />
           </Link>
           <p className="mt-4 text-xs text-smoke/50">
             Para ver y descargar tu PDF te pediremos un correo y un teléfono de contacto.

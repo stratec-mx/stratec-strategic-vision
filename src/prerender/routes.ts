@@ -61,7 +61,7 @@ ${p("STRATEC integra inteligencia estratégica, gestión de riesgos y tecnologí
 <h2>Áreas de especialización</h2>${SERVICE_LINKS}
 <h2>Genera y descarga tu diagnóstico PDF gratuito</h2>
 ${p("Un diagnóstico básico de seguridad para tu empresa o institución, sin costo: 10 preguntas, tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en PDF.")}
-<p>${a("/diagnostico", "Generar mi diagnóstico gratis")}</p>
+<p>${a("/diagnostico", "Generar mi diagnóstico GRATIS")}</p>
 <h2>Metodología</h2>
 ${ul(["Diagnóstico", "Análisis", "Estrategia", "Integración", "Implementación", "Seguimiento"].map(esc))}
 <h2>Sectores</h2>
@@ -120,7 +120,7 @@ export function buildRoutes(): PrerenderRoute[] {
     ...coverageRoutes(),
     route(
       "/diagnostico",
-      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, gratis</h1>${p("Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
+      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS</h1>${p("Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
 <h2>Qué evalúa</h2>${AREAS_TEXT.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}
 <h2>Cómo funciona</h2>${ul(["Responde 10 preguntas y algunos datos generales de tu organización.", "Deja un correo y un teléfono para recibir el resultado.", "Ve tu resultado y descarga el PDF."].map(esc))}
 <h2>Qué incluye tu PDF</h2>${ul(INCLUDES.map(esc))}

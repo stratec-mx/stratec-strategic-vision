@@ -379,7 +379,7 @@ export default function Diagnostico() {
                 <CheckCircle2 className="h-12 w-12 text-[#C4A04A] mx-auto mb-4" />
                 <h1 className="font-display text-3xl text-navy font-light mb-3">Tu diagnóstico está listo</h1>
                 <p className="text-sm text-steel max-w-lg mx-auto">
-                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico básico en PDF. Es gratis.
+                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico básico en PDF. Es GRATIS.
                 </p>
               </div>
               <section className="border border-navy/15 bg-white p-6 md:p-8">

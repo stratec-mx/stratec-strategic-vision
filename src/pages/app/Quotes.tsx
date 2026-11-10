@@ -419,7 +419,8 @@ const Quotes = () => {
           email: clients.find((c) => c.id === q.client_id)?.contact_email,
           phone: clients.find((c) => c.id === q.client_id)?.contact_phone,
         },
-        items: normalizeItems(q.items),
+        // Solo los campos que imprime el PDF: las horas son internas
+        items: normalizeItems(q.items).map((i) => ({ code: i.code, title: i.title, description: i.description, qty: i.qty, unit_price: i.unit_price })),
         notes: q.notes,
       },
       q.id,

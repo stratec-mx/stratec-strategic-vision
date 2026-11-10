@@ -58,12 +58,12 @@ export const DiagnosticoHero = ({ onStart }: StartProps) => (
     <div className="relative container-wide grid lg:grid-cols-12 gap-12 items-center">
       <div className="lg:col-span-7">
         <div className="flex flex-wrap gap-2 mb-6">
-          {["Básico", "Gratis", "PDF descargable"].map((t) => (
+          {["Básico", "GRATIS", "PDF descargable"].map((t) => (
             <span key={t} className="text-[10px] uppercase tracking-[0.25em] px-3 py-1 border border-[#C4A04A]/50 text-[#C4A04A]">{t}</span>
           ))}
         </div>
         <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-light leading-[1.08] text-balance">
-          Genera y descarga tu diagnóstico de seguridad en PDF, <span style={{ color: GOLD }}>gratis</span>
+          Genera y descarga tu diagnóstico de seguridad en PDF, <span style={{ color: GOLD }}>GRATIS</span>
         </h1>
         <p className="mt-6 text-lg text-smoke/75 max-w-xl leading-relaxed">
           Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción
@@ -190,7 +190,7 @@ export const DiagnosticoFaq = ({ onStart }: StartProps) => (
       <div className="container-wide">
         <h2 className="font-display text-3xl md:text-4xl font-light mb-6">Tu diagnóstico, en unos 3 minutos</h2>
         <button type="button" onClick={onStart} className="inline-flex items-center justify-center gap-3 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm px-8 h-14 transition-colors">
-          <FileDown className="h-5 w-5" /> Comenzar mi diagnóstico gratis
+          <FileDown className="h-5 w-5" /> Comenzar mi diagnóstico GRATIS
         </button>
       </div>
     </section>

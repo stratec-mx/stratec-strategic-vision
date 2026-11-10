@@ -58,7 +58,7 @@ create or replace function public.service_rates_stamp()
 returns trigger language plpgsql set search_path = public
 as $$
 begin
-  new.updated_at := now();
+  new.updated_at := clock_timestamp();
   new.updated_by := coalesce(auth.uid(), new.updated_by);
   return new;
 end;

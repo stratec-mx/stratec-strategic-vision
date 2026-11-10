@@ -1,7 +1,19 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- STRATEC · Configuración de base de datos · PASO 2 de 2: tablas y permisos
 -- Requiere haber ejecutado antes 01-tipos.sql (en otra consulta).
--- Es seguro ejecutarlo más de una vez: no borra datos existentes.
+-- Antes de ejecutarlo: 00-revisar-estado.sql (qué hay hoy) y 00b-respaldo.sql.
+--
+-- Qué modifica, además de crear estructuras que falten:
+--   · Reemplaza TODAS las políticas de user_roles, profiles, access_rules y de
+--     las 7 tablas del CRM por las de este script (00 las lista antes).
+--   · Borra asignaciones de rol repetidas (mismo usuario y mismo rol dos
+--     veces). No se pierde ningún permiso: queda una de cada una.
+--   · Si NO existe ningún admin, da rol admin a todas las cuentas de
+--     auth.users (00 muestra cuántas serían). Si ya hay admin, no cambia roles.
+--   · Quita a anon y authenticated la lectura directa de correo y teléfono
+--     de leads y clients (se leen por las vistas lead_contacts/client_contacts).
+-- No borra leads, clientes, cotizaciones ni ningún otro registro del CRM.
+-- Se puede ejecutar más de una vez.
 --
 -- Equivale a todas las migraciones de supabase/migrations/ en su estado
 -- final, y además corrige la política recursiva de user_roles
@@ -50,11 +62,12 @@ begin
   end if;
 end $$;
 
--- El rol 'executive' se reemplazó por 'operations' (sin duplicar si ya tenía ambos)
-delete from public.user_roles a using public.user_roles b
-  where a.user_id = b.user_id and a.role = 'executive' and b.role = 'operations';
-update public.user_roles set role = 'operations' where role = 'executive';
--- Duplicados exactos (si la tabla anterior no tenía restricción única)
+-- El rol 'executive' (Ejecutivo, solo lectura) es un rol vigente en el
+-- dashboard: este script ya NO lo convierte a 'operations'. Esa conversión
+-- era de la migración de mayo de 2026 y, repetida hoy, daría permiso de
+-- edición a quien se asignó como solo lectura.
+-- Asignaciones repetidas exactas (mismo usuario y mismo rol), necesarias de
+-- quitar para el índice único. Queda una de cada una.
 delete from public.user_roles a using public.user_roles b
   where a.ctid > b.ctid and a.user_id = b.user_id and a.role = b.role;
 create unique index if not exists user_roles_user_role_key on public.user_roles (user_id, role);
