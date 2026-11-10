@@ -222,6 +222,24 @@
   </url>
 
   <url>
+    <loc>https://www.stratecsecurity.com/servicios/revision-programa-interno</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/acompanamiento-mensual</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.stratecsecurity.com/servicios/protocolos-seguridad</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://www.stratecsecurity.com/diagnostico</loc>
     <lastmod>2026-11-09</lastmod>
     <changefreq>monthly</changefreq>

@@ -4,6 +4,7 @@
 import { getSEOConfig } from "@/config/seo";
 import { coverageData } from "@/data/coverageData";
 import { SERVICES_DATA, SERVICIOS_INDEX } from "@/data/servicesData";
+import { REMOTE_GROUPS, remoteServices } from "@/data/remoteServices";
 
 export interface PrerenderRoute {
   path: string;
@@ -30,6 +31,10 @@ const NAV = ul([
 ]);
 
 const SERVICE_LINKS = ul(SERVICIOS_INDEX.map((s) => `${a(s.href, s.titulo)}: ${esc(s.descripcionCorta)}`));
+
+const REMOTE = `<h2>Servicios a distancia</h2>${REMOTE_GROUPS.map(
+  (g) => `<h3>${esc(g.need)}</h3>${p(g.text)}${ul(remoteServices(g).map((s) => `${a(s.href, s.titulo)}: ${esc(s.descripcionCorta)}`))}`,
+).join("")}`;
 
 const STATE_LINKS = ul(Object.entries(coverageData).map(([slug, st]) => a(`/cobertura/${slug}`, st.state)));
 
@@ -89,12 +94,12 @@ function coverageRoutes() {
       `/cobertura/${slug}`,
       `<h1>Consultoría de Seguridad Institucional en ${esc(st.state)}</h1>${p(st.defaultContext)}${st.defaultSectors?.length ? `<h2>Sectores</h2>${ul(st.defaultSectors.map(esc))}` : ""}${
         cities.length ? `<h2>Ciudades</h2>${ul(cities.map(([c, v]) => a(`/cobertura/${slug}/${c}`, v.name)))}` : ""
-      }<h2>Servicios</h2>${SERVICE_LINKS}`,
+      }<h2>Servicios</h2>${SERVICE_LINKS}${REMOTE}`,
     );
     const cityRoutes = cities.map(([c, v]) =>
       route(
         `/cobertura/${slug}/${c}`,
-        `<h1>Consultoría de Seguridad Institucional en ${esc(v.name)}</h1>${p(v.context)}<h2>Sectores</h2>${ul(v.sectors.map(esc))}<h2>Servicios</h2>${SERVICE_LINKS}`,
+        `<h1>Consultoría de Seguridad Institucional en ${esc(v.name)}</h1>${p(v.context)}<h2>Sectores</h2>${ul(v.sectors.map(esc))}<h2>Servicios</h2>${SERVICE_LINKS}${REMOTE}`,
       ),
     );
     return [stateRoute, ...cityRoutes];
@@ -108,7 +113,7 @@ export function buildRoutes(): PrerenderRoute[] {
     homeRoute(),
     route(
       "/servicios",
-      `<h1>Servicios</h1>${p("STRATEC desarrolla soluciones de consultoría, capacitación, integración tecnológica y gestión de riesgos orientadas a fortalecer las capacidades de seguridad de organizaciones públicas y privadas.")}${SERVICE_LINKS}`,
+      `<h1>Servicios</h1>${p("STRATEC desarrolla soluciones de consultoría, capacitación, integración tecnológica y gestión de riesgos orientadas a fortalecer las capacidades de seguridad de organizaciones públicas y privadas.")}${SERVICE_LINKS}${REMOTE}`,
     ),
     ...serviceRoutes(),
     ...coverageRoutes(),

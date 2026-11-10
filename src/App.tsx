@@ -32,6 +32,9 @@ import GpsMonitoreoVehicular from "./pages/services/GpsMonitoreoVehicular.tsx";
 import AuditoriaSeguridadPage from "./pages/services/AuditoriaSeguridadPage.tsx";
 import PlanContinuidadOperaciones from "./pages/services/PlanContinuidadOperaciones.tsx";
 import DictamenSeguridad from "./pages/services/DictamenSeguridad.tsx";
+import RevisionProgramaInterno from "./pages/services/RevisionProgramaInterno.tsx";
+import AcompanamientoMensual from "./pages/services/AcompanamientoMensual.tsx";
+import ProtocolosSeguridad from "./pages/services/ProtocolosSeguridad.tsx";
 import { AppShell } from "./components/app/AppShell.tsx";
 import { RequireAccess } from "./components/app/RequireAccess.tsx";
 import Dashboard from "./pages/app/Dashboard.tsx";
@@ -84,6 +87,9 @@ const AppRoutes = () => {
         <Route path="/servicios/auditoria-seguridad" element={<AuditoriaSeguridadPage />} />
         <Route path="/servicios/plan-continuidad-operaciones" element={<PlanContinuidadOperaciones />} />
         <Route path="/servicios/dictamen-seguridad" element={<DictamenSeguridad />} />
+        <Route path="/servicios/revision-programa-interno" element={<RevisionProgramaInterno />} />
+        <Route path="/servicios/acompanamiento-mensual" element={<AcompanamientoMensual />} />
+        <Route path="/servicios/protocolos-seguridad" element={<ProtocolosSeguridad />} />
         <Route path="/servicios/determinacion-seguridad" element={<Navigate to="/servicios/dictamen-seguridad" replace />} />
 
         {/* App routes */}

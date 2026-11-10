@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      service_rates: {
+        Row: {
+          code: string
+          extra_site_pct: number
+          price_high: number | null
+          price_low: number | null
+          price_medium: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          extra_site_pct?: number
+          price_high?: number | null
+          price_low?: number | null
+          price_medium?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          extra_site_pct?: number
+          price_high?: number | null
+          price_low?: number | null
+          price_medium?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           body: string | null

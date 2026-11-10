@@ -6,6 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { NetworkBackground } from "@/components/NetworkBackground";
 import { SERVICIOS_INDEX } from "@/data/servicesData";
+import { RemoteServices } from "@/components/services/RemoteServices";
 
 // ─── Datos de formatos de intervención (antes solo en homepage) ──────────────
 const FORMATS = [
@@ -300,6 +301,11 @@ export default function ServicesIndex() {
             </motion.div>
           </div>
         </section>
+
+        {/* Servicios a distancia */}
+        <div className="container-wide border-t border-[rgba(196,160,74,0.1)]">
+          <RemoteServices />
+        </div>
 
         {/* ══════════════════════════════════════════════════════
             CTA final

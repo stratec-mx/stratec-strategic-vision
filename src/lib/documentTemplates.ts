@@ -181,6 +181,44 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { type: "text", key: "conclusiones", title: "Conclusiones", hint: CONCLUSIONES_HINT },
     ],
   },
+  {
+    id: "revision-programa-interno",
+    serviceCode: "STR-02.3",
+    folioPrefix: "REV",
+    name: "Reporte de Revisión de Programa Interno",
+    description: "Revisión documental del Programa Interno de Protección Civil: faltantes, inconsistencias, vencimientos y recomendaciones.",
+    blocks: [
+      { type: "text", key: "resumen", title: "Resumen ejecutivo", hint: "Estado general del programa y las correcciones más urgentes." },
+      {
+        type: "text",
+        key: "alcance",
+        title: "Alcance de la revisión",
+        hint: "Documentos recibidos, versión y fecha del programa revisado.",
+        defaultText:
+          "La revisión se realizó de forma documental sobre la información proporcionada por el cliente. Comprende el Programa Interno de Protección Civil y sus anexos: Unidad Interna de Protección Civil, análisis de riesgos, procedimientos de emergencia, planos, programa de capacitación y registro de simulacros.",
+      },
+      { type: "findings", title: "Observaciones", hint: "Un renglón por faltante, inconsistencia o documento vencido, con su gravedad." },
+      { type: "actions", title: "Recomendaciones", hint: "Corrección propuesta, prioridad y plazo." },
+      { type: "text", key: "conclusiones", title: "Conclusiones", hint: CONCLUSIONES_HINT },
+    ],
+  },
+  {
+    id: "protocolo-seguridad",
+    serviceCode: "STR-01.4",
+    folioPrefix: "PROT",
+    name: "Protocolo de Seguridad",
+    description: "Protocolo de actuación a la medida: extorsión, fraude, amenazas, incidentes o violencia laboral.",
+    blocks: [
+      { type: "text", key: "objetivo", title: "Objetivo", hint: "Qué situación atiende el protocolo y qué busca proteger." },
+      { type: "text", key: "alcance", title: "Alcance", hint: "Instalaciones, áreas y personal a quienes aplica." },
+      { type: "text", key: "definiciones", title: "Definiciones", hint: "Términos clave para que todo el personal los entienda igual." },
+      { type: "text", key: "responsables", title: "Responsables y funciones", hint: "Quién coordina, quién decide y quién ejecuta cada paso." },
+      { type: "text", key: "procedimiento", title: "Procedimiento de actuación", hint: "Pasos numerados: cómo reconocer la situación, qué hacer y qué no hacer." },
+      { type: "text", key: "comunicacion", title: "Comunicación y escalamiento", hint: "A quién avisar, en qué orden y por qué medio." },
+      { type: "text", key: "registro", title: "Registro y seguimiento", hint: "Qué se documenta después del incidente y cómo se revisa el protocolo." },
+      { type: "actions", title: "Recomendaciones de implementación", hint: "Difusión, capacitación y fechas de revisión." },
+    ],
+  },
 ];
 
 export const findTemplate = (id: string) => {

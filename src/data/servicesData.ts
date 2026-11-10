@@ -467,6 +467,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
       },
     ],
+    modalidades: "Presencial · A distancia (videollamada, planos y recorrido por video)",
     gancho:
       "Sin un PIPC registrado, tu organización opera fuera de la ley y expuesta a sanciones. Lo diseñamos, lo documentamos y te acompañamos en el registro ante las autoridades competentes.",
     cta: "Solicitar diseño de PIPC",
@@ -957,6 +958,206 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         "continuidad operativa institucional",
         "plan emergencia empresarial",
         "plan continuidad operaciones Morelos",
+      ],
+    },
+  },
+
+  // ── S9 · Revisión de Programa Interno (servicio de entrada, a distancia) ──
+  "revision-programa-interno": {
+    slug: "revision-programa-interno",
+    numero: "02.3",
+    titulo: "Revisión de Programa Interno de Protección Civil",
+    descripcionCorta: "Revisión documental de tu programa para saber qué falta antes de una inspección.",
+    href: "/servicios/revision-programa-interno",
+    heroImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1920&q=80",
+    breadcrumb: "Revisión de Programa Interno",
+    parentBreadcrumb: "Protección Civil y Gestión de Riesgos",
+    parentHref: "/servicios/proteccion-civil",
+    h1: "Revisión de tu Programa Interno de Protección Civil",
+    lead: "¿Tienes tu Programa Interno de Protección Civil, pero no sabes si está completo o actualizado? Revisamos tu documentación y te entregamos un reporte claro con lo que falta, lo que está vencido y lo que conviene corregir antes de una inspección.",
+    intro: "Es la forma más rápida de saber dónde estás: trabajamos con los documentos que ya tienes, sin visitas y sin interrumpir tu operación.",
+    blocks: [
+      {
+        h2: "Revisión documental completa",
+        p: "Analizamos el programa y sus anexos: Unidad Interna de Protección Civil, análisis de riesgos, procedimientos de emergencia, planos, programa de capacitación y registro de simulacros.",
+        blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Faltantes e inconsistencias",
+        p: "Identificamos documentos ausentes, datos que ya no corresponden a tu inmueble, responsables que dejaron la organización y procedimientos que no responden a tus riesgos reales.",
+        blockImage: "https://images.unsplash.com/photo-1643962577583-a4c880a109ae?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Vigencias y vencimientos",
+        p: "Revisamos las fechas de capacitaciones, simulacros, mantenimiento de equipos y constancias para que sepas qué está vencido y qué está por vencer.",
+        blockImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Reporte con prioridades",
+        p: "Recibes un reporte de observaciones ordenado por urgencia, con recomendaciones concretas para actualizar tu programa, y lo revisamos contigo en una videollamada.",
+        blockImage: "https://images.unsplash.com/photo-1573871906629-f5c700caf507?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+    modalidades: "A distancia · Documentos digitales y videollamada de resultados",
+    gancho: "Una inspección no es el momento de descubrir que tu programa está incompleto. Revísalo antes.",
+    cta: "Solicitar revisión de mi programa",
+    ragSnippet: {
+      h2: "¿Tu Programa Interno de Protección Civil resistiría una inspección hoy?",
+      p: "La revisión de STRATEC analiza tu Programa Interno de Protección Civil y sus anexos, identifica faltantes, inconsistencias y vencimientos, y te entrega un reporte de observaciones con recomendaciones priorizadas. Se realiza a distancia con los documentos que ya tienes.",
+    },
+    deliverables: [
+      { fase: "1 · Recepción",  entregable: "Lista de documentos a enviar",                     queResuelve: "Sabes exactamente qué compartir y en qué formato" },
+      { fase: "2 · Revisión",   entregable: "Análisis del programa y sus anexos",               queResuelve: "Detecta faltantes, inconsistencias y vencimientos" },
+      { fase: "3 · Reporte",    entregable: "Reporte de observaciones priorizadas",             queResuelve: "Ordena las correcciones por urgencia" },
+      { fase: "4 · Resultados", entregable: "Videollamada de explicación de resultados",        queResuelve: "Resuelve dudas y define los siguientes pasos" },
+    ],
+    seo: {
+      title: "Revisión de Programa Interno de Protección Civil | STRATEC",
+      description:
+        "Revisión documental de tu Programa Interno de Protección Civil: faltantes, inconsistencias y vencimientos, con reporte de observaciones antes de una inspección. Servicio a distancia.",
+      keywords: [
+        "revisión programa interno de protección civil",
+        "revisar programa interno protección civil",
+        "actualizar programa interno de protección civil",
+        "programa interno protección civil inspección",
+        "requisitos programa interno protección civil",
+        "consultoría protección civil a distancia",
+      ],
+    },
+  },
+
+  // ── S10 · Acompañamiento mensual (ingreso recurrente, a distancia) ──────
+  "acompanamiento-mensual": {
+    slug: "acompanamiento-mensual",
+    numero: "02.4",
+    titulo: "Acompañamiento Mensual en Seguridad y Prevención",
+    descripcionCorta: "Seguimiento continuo de tu documentación, vencimientos y acciones preventivas.",
+    href: "/servicios/acompanamiento-mensual",
+    heroImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=1920&q=80",
+    breadcrumb: "Acompañamiento Mensual",
+    parentBreadcrumb: "Protección Civil y Gestión de Riesgos",
+    parentHref: "/servicios/proteccion-civil",
+    h1: "Acompañamiento mensual en seguridad y prevención",
+    lead: "No tienes que esperar una inspección o una emergencia para atender la seguridad de tu organización. Te acompañamos todo el año para mantener al día tu documentación, tus vencimientos y tus acciones preventivas, sin que necesites un departamento especializado.",
+    intro: "La prevención no es un trámite anual: es una agenda que alguien tiene que llevar. Nosotros la llevamos contigo.",
+    blocks: [
+      {
+        h2: "Reunión mensual de seguimiento",
+        p: "Una videollamada al mes con el responsable de tu organización para revisar avances, pendientes y prioridades.",
+        blockImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Calendario preventivo y vencimientos",
+        p: "Programamos capacitaciones, simulacros, mantenimientos y renovaciones, y te avisamos antes de cada vencimiento.",
+        blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Orientación ante observaciones y riesgos",
+        p: "Si recibes un requerimiento o una observación, o enfrentas una situación de riesgo, te orientamos para atenderla en tiempo y forma.",
+        blockImage: "https://images.unsplash.com/photo-1573871906629-f5c700caf507?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Reporte mensual de avances",
+        p: "Cada mes recibes un reporte breve con lo realizado, lo pendiente y las recomendaciones de mejora.",
+        blockImage: "https://images.unsplash.com/photo-1643962577583-a4c880a109ae?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+    modalidades: "A distancia · Videollamada y comunicación digital · Lunes a viernes de 9:00 a 18:00 h",
+    gancho: "Tu agenda de seguridad al día, todos los meses, sin contratar un departamento.",
+    cta: "Conocer el acompañamiento mensual",
+    ragSnippet: {
+      h2: "¿Quién lleva la agenda de seguridad y protección civil de tu empresa?",
+      p: "El acompañamiento mensual de STRATEC mantiene al día la documentación, los vencimientos y las acciones preventivas de tu organización: una reunión mensual, calendario de actividades, orientación ante observaciones y un reporte de avances. Se presta a distancia.",
+    },
+    deliverablesListTitle: "¿Qué incluye cada mes?",
+    deliverablesList: [
+      "Una reunión virtual de seguimiento",
+      "Revisión de pendientes y documentación",
+      "Calendario de actividades preventivas",
+      "Seguimiento de vigencias y vencimientos",
+      "Orientación ante observaciones o requerimientos",
+      "Reporte mensual de avances y recomendaciones",
+    ],
+    seo: {
+      title: "Acompañamiento Mensual en Seguridad y Protección Civil | STRATEC",
+      description:
+        "Asesoría mensual en seguridad y protección civil para empresas: seguimiento de documentación, vencimientos, calendario preventivo y orientación ante observaciones. Servicio a distancia.",
+      keywords: [
+        "asesoría mensual protección civil",
+        "asesoría protección civil empresas",
+        "consultor externo protección civil",
+        "seguimiento programa interno protección civil",
+        "asesoría seguridad empresarial",
+        "iguala protección civil",
+      ],
+    },
+  },
+
+  // ── S11 · Protocolos de seguridad (especialidad, a distancia) ───────────
+  "protocolos-seguridad": {
+    slug: "protocolos-seguridad",
+    numero: "01.4",
+    titulo: "Protocolos de Seguridad y Prevención de Extorsión",
+    descripcionCorta: "Protocolos de actuación ante extorsión, fraude, amenazas e incidentes de seguridad.",
+    href: "/servicios/protocolos-seguridad",
+    heroImage: "https://images.unsplash.com/photo-1616873354936-b9e21b744c54?auto=format&fit=crop&w=1920&q=80",
+    breadcrumb: "Protocolos de Seguridad",
+    parentBreadcrumb: "Consultoría en Seguridad",
+    parentHref: "/servicios/consultoria-seguridad",
+    h1: "Protocolos de seguridad y prevención de extorsión",
+    lead: "¿Tu equipo sabe qué hacer cuando recibe una llamada de extorsión, detecta un intento de fraude o enfrenta una amenaza? Diseñamos protocolos de actuación a la medida de tu organización para que cada colaborador sepa cómo reconocer el riesgo, a quién avisar y qué hacer.",
+    intro: "La extorsión es uno de los delitos más frecuentes contra las empresas en México. Un protocolo claro reduce el margen de error en los primeros minutos, que son los que más importan.",
+    blocks: [
+      {
+        h2: "Extorsión telefónica y amenazas",
+        p: "Cómo reconocer una llamada de extorsión, qué responder y qué no, cómo verificar la situación y a quién informar dentro de la organización.",
+        blockImage: "https://images.unsplash.com/photo-1573871906629-f5c700caf507?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Fraude e ingeniería social",
+        p: "Medidas para que tu personal identifique solicitudes falsas de pago, suplantación de proveedores o directivos y engaños para obtener información.",
+        blockImage: "https://images.unsplash.com/photo-1616873354936-b9e21b744c54?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Accesos, visitantes e incidentes",
+        p: "Reglas de control de accesos, atención de personas agresivas o conflictivas y registro de incidentes de seguridad.",
+        blockImage: "https://images.unsplash.com/photo-1758404958502-44f156617bae?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Prevención de violencia laboral",
+        p: "Protocolo para prevenir, atender y dar seguimiento a situaciones de violencia en el trabajo, como parte de la política de prevención que exige la NOM-035-STPS-2018.",
+        blockImage: "https://images.unsplash.com/photo-1529747598642-d0b4e3667314?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Comunicación y coordinación en crisis",
+        p: "Responsables, líneas de comunicación y pasos a seguir para coordinar la respuesta y proteger a colaboradores y directivos.",
+        blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+    modalidades: "A distancia · Entrevistas virtuales y entrega documental",
+    gancho: "En una extorsión, los primeros minutos deciden. Que tu equipo no tenga que improvisarlos.",
+    cta: "Solicitar protocolos para mi organización",
+    ragSnippet: {
+      h2: "¿Tu personal sabe qué hacer ante una llamada de extorsión?",
+      p: "STRATEC diseña protocolos de actuación a la medida ante extorsión telefónica, fraude e ingeniería social, amenazas, incidentes de seguridad y violencia laboral. Cada protocolo define cómo reconocer el riesgo, a quién informar y qué acciones seguir. Se elabora a distancia.",
+    },
+    deliverables: [
+      { fase: "1 · Diagnóstico",     entregable: "Entrevistas y diagnóstico de necesidades",        queResuelve: "Identifica a qué riesgos está expuesto tu personal" },
+      { fase: "2 · Protocolo",       entregable: "Documento de protocolo personalizado",            queResuelve: "Define qué hacer en cada situación" },
+      { fase: "3 · Responsables",    entregable: "Funciones, responsables y líneas de comunicación", queResuelve: "Cada persona sabe a quién avisar" },
+      { fase: "4 · Implementación",  entregable: "Recomendaciones de implementación y difusión",    queResuelve: "El protocolo se conoce y se aplica" },
+    ],
+    seo: {
+      title: "Protocolos de Seguridad y Prevención de Extorsión para Empresas | STRATEC",
+      description:
+        "Protocolos de actuación para empresas ante extorsión telefónica, fraude e ingeniería social, amenazas, incidentes de seguridad y violencia laboral. Diseño a la medida y a distancia.",
+      keywords: [
+        "protocolo de extorsión telefónica empresa",
+        "prevención de extorsión empresas",
+        "protocolo de seguridad empresarial",
+        "protocolo fraude ingeniería social",
+        "protocolo violencia laboral NOM-035",
+        "protocolos de actuación seguridad",
       ],
     },
   },

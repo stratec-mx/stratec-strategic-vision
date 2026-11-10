@@ -17,6 +17,9 @@ import { describeDbError } from "@/lib/dbErrors";
 import { withClientContacts } from "@/lib/contacts";
 import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib/quoteCatalog";
 import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
+import { ClientClassifier } from "@/components/app/ClientClassifier";
+import { RatesDialog } from "@/components/app/RatesDialog";
+import { classify, suggestPrice, internalAlerts, QUOTE_SCOPE, DEFAULT_PROFILE, type ClientProfile, type ServiceRate } from "@/lib/pricing";
 
 const itemSchema = z.object({
   code: z.string().trim().min(1, "Selecciona un servicio en cada concepto").max(20),
@@ -39,7 +42,8 @@ const newClientSchema = z.object({
   contact_email: z.string().trim().email("Correo del cliente inválido").max(255).optional().or(z.literal("")),
 });
 
-type Item = { code: string; title: string; description: string; qty: number; unit_price: number };
+/** auto: el precio sigue la tarifa sugerida hasta que se edita a mano. No se guarda. */
+type Item = { code: string; title: string; description: string; qty: number; unit_price: number; auto?: boolean };
 type ClientRow = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null };
 
 const NEW_CLIENT = "__new__";
@@ -70,6 +74,7 @@ type Draft = {
   newClient: { name: string; contact_name: string; contact_email: string };
   items: Item[];
   taxRate: number;
+  profile?: ClientProfile;
 };
 const readDraft = (): Draft | null => {
   try {
@@ -98,14 +103,34 @@ const Quotes = () => {
   const [newClient, setNewClient] = useState(draft?.newClient ?? { name: "", contact_name: "", contact_email: "" });
   const [items, setItems] = useState<Item[]>(draft?.items?.length ? draft.items : [emptyItem()]);
   const [taxRate, setTaxRate] = useState(draft?.taxRate ?? 16);
+  const [profile, setProfile] = useState<ClientProfile>({ ...DEFAULT_PROFILE, ...(draft?.profile ?? {}) });
+  const [rates, setRates] = useState<Record<string, ServiceRate>>({});
+  const classification = useMemo(() => classify(profile), [profile]);
+  const alerts = useMemo(() => internalAlerts(items.map((i) => i.code), profile), [items, profile]);
+  const suggestionFor = (code: string) => suggestPrice(code, rates, classification, profile.sites);
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, clientId, newClient, items, taxRate } satisfies Draft));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, clientId, newClient, items, taxRate, profile } satisfies Draft));
     } catch {
       /* almacenamiento lleno o bloqueado: el borrador solo vive en memoria */
     }
-  }, [form, clientId, newClient, items, taxRate]);
+  }, [form, clientId, newClient, items, taxRate, profile]);
+
+  // Los conceptos con precio automático se recalculan al cambiar la clasificación o las tarifas
+  useEffect(() => {
+    setItems((prev) => {
+      let changed = false;
+      const next = prev.map((it) => {
+        if (!it.auto || !it.code) return it;
+        const sug = suggestPrice(it.code, rates, classification, profile.sites);
+        if (!sug || sug.price === it.unit_price) return it;
+        changed = true;
+        return { ...it, unit_price: sug.price };
+      });
+      return changed ? next : prev;
+    });
+  }, [rates, classification, profile.sites]);
 
   const closePreview = () => {
     if (preview) URL.revokeObjectURL(preview.url);
@@ -117,11 +142,14 @@ const Quotes = () => {
   const total = subtotal + tax;
 
   const load = async () => {
-    const [q, c] = await Promise.all([
+    const [q, c, r] = await Promise.all([
       supabase.from("quotes").select("*, clients(name, contact_name)").order("created_at", { ascending: false }),
       // Correo y teléfono vienen de la vista client_contacts (no de la tabla)
       supabase.from("clients").select("id, name, contact_name").order("name"),
+      // Si la tabla aún no existe (03-tarifas.sql pendiente) simplemente no hay sugerencias
+      supabase.from("service_rates").select("code, price_low, price_medium, price_high, extra_site_pct"),
     ]);
+    setRates(Object.fromEntries(((r.data ?? []) as ServiceRate[]).map((x) => [x.code, x])));
     setList(q.data ?? []);
     setClients((await withClientContacts((c.data ?? []) as { id: string; name: string; contact_name: string | null }[])) as ClientRow[]);
   };
@@ -146,6 +174,7 @@ const Quotes = () => {
     setNewClient({ name: "", contact_name: "", contact_email: "" });
     setItems([emptyItem()]);
     setTaxRate(16);
+    setProfile(DEFAULT_PROFILE);
   };
 
   const onOpenChange = (v: boolean) => {
@@ -163,11 +192,17 @@ const Quotes = () => {
     const prevSvc = findService(prev.code);
     // Solo sobrescribe la descripción si el usuario no la había personalizado
     const keepDesc = prev.description && prev.description !== prevSvc?.summary;
+    const sug = suggestionFor(code);
     updateItem(i, {
       code,
       title: code === CUSTOM_CODE ? (prev.code === CUSTOM_CODE ? prev.title : "") : svc?.title ?? "",
       description: keepDesc ? prev.description : svc?.summary ?? "",
+      auto: true,
+      ...(sug ? { unit_price: sug.price } : {}),
     });
+    // El alcance del servicio va en la propuesta (no en la página web)
+    const scope = QUOTE_SCOPE[code];
+    if (scope && !form.notes.includes(scope)) setForm((f) => ({ ...f, notes: f.notes.trim() ? `${f.notes.trim()}\n${scope}` : scope }));
   };
 
   /** Cliente en el formato que usa el PDF, a partir de la selección actual. */
@@ -312,6 +347,7 @@ const Quotes = () => {
     setNewClient({ name: "", contact_name: "", contact_email: "" });
     setItems([emptyItem()]);
     setTaxRate(16);
+    setProfile(DEFAULT_PROFILE);
     setForm({ number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
   };
 
@@ -372,6 +408,8 @@ const Quotes = () => {
         title="Cotizaciones"
         description="Generación y seguimiento de propuestas económicas institucionales."
         actions={
+          <div className="flex gap-2">
+          <RatesDialog rates={rates} onSaved={load} />
           <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetTrigger asChild>
               <Button className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
@@ -419,6 +457,8 @@ const Quotes = () => {
                     </div>
                   )}
                 </div>
+
+                <ClientClassifier profile={profile} onChange={setProfile} result={classification} alerts={alerts} />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -487,12 +527,24 @@ const Quotes = () => {
                           </div>
                           <div className="col-span-5 space-y-1">
                             <Label className="text-[10px] uppercase tracking-wider text-steel">Precio unitario</Label>
-                            <Input className="rounded-none bg-background" type="number" min={0} step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: Number(e.target.value) })} />
+                            <Input className="rounded-none bg-background" type="number" min={0} step="0.01" value={it.unit_price} onChange={(e) => updateItem(i, { unit_price: Number(e.target.value), auto: false })} />
                           </div>
                           <div className="col-span-4 text-right text-sm text-navy pb-2">
                             {formatMoney(it.qty * it.unit_price, form.currency)}
                           </div>
                         </div>
+                        {it.code && it.code !== CUSTOM_CODE && (() => {
+                          const sug = suggestionFor(it.code);
+                          if (!sug) return <p className="text-[11px] text-steel">Sin tarifa capturada para este servicio y nivel.</p>;
+                          return (
+                            <p className="text-[11px] text-steel flex items-center gap-2 flex-wrap">
+                              <span>Sugerido: <span className="text-navy">{formatMoney(sug.price, form.currency)}</span> · {sug.detail}</span>
+                              {it.auto ? <span className="text-olive">(automático)</span> : (
+                                <button type="button" className="underline text-navy" onClick={() => updateItem(i, { unit_price: sug.price, auto: true })}>Usar sugerido</button>
+                              )}
+                            </p>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -538,6 +590,7 @@ const Quotes = () => {
               </div>
             </SheetContent>
           </Sheet>
+          </div>
         }
       />
 
