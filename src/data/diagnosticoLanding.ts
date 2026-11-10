@@ -1,12 +1,12 @@
 // Textos de la landing de /diagnostico. Los usan la página y el prerender.
 
 export const AREAS_TEXT = [
-  { title: "Coordinación y reporte", text: "Si hay un responsable de emergencias y si tu personal sabe a quién avisar ante una amenaza." },
-  { title: "Protección civil", text: "Rutas de evacuación, señalización, extintores y números de emergencia visibles." },
-  { title: "Extorsión y amenazas", text: "Si existe un procedimiento para actuar ante extorsiones, fraudes o amenazas externas." },
-  { title: "Capacitación", text: "Si tu equipo recibió capacitación en seguridad o emergencias en el último año." },
-  { title: "Videovigilancia y accesos", text: "Si tus cámaras y controles de acceso funcionan y alguien los monitorea." },
-  { title: "Información y continuidad", text: "Respaldos verificados y un plan para seguir operando después de una interrupción." },
+  { title: "Quién se encarga", text: "Si hay alguien a cargo en una emergencia y si tu personal sabe a quién avisar." },
+  { title: "Protección civil", text: "Salidas de emergencia libres y señalizadas, extintores al día y teléfonos de emergencia a la vista." },
+  { title: "Extorsión y amenazas", text: "Si sabes qué hacer ante una llamada de extorsión, un intento de estafa o una amenaza." },
+  { title: "Capacitación", text: "Si tu personal tomó algún curso de primeros auxilios, evacuación o seguridad en el último año." },
+  { title: "Cámaras y entradas", text: "Si tus cámaras y el control de quién entra funcionan, y si alguien los revisa." },
+  { title: "Tu información y tu operación", text: "Si guardas copias de tu información y tienes un plan para seguir trabajando tras una emergencia." },
 ];
 
 export const INCLUDES = [

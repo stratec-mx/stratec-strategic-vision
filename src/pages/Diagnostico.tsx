@@ -4,10 +4,10 @@
 // El perfil (giro, personas, superficie, estado) viaja en las notas del lead
 // para que la cotización se arme ya clasificada en el dashboard.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ShieldCheck, MapPin, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Lock, CheckCircle2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ShieldCheck, MapPin, ArrowLeft, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Lock, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { SecurityMap } from "@/components/security-map/SecurityMap";
@@ -49,17 +49,19 @@ interface Question {
   riesgo: string;
 }
 
+// Redactadas para que cualquier persona las entienda, sin términos técnicos.
+// "short" aparece en el resultado, el PDF y la nota del lead.
 const QUESTIONS: Question[] = [
-  { id: 1, text: "¿Existe una persona responsable de coordinar emergencias dentro de la organización?", short: "Coordinador de emergencias designado", services: ["consultoria"], riesgo: "Sin coordinador designado, cualquier incidente escala sin control y puede generar responsabilidad legal directa para la dirección." },
-  { id: 2, text: "¿Todos los colaboradores saben a quién reportar una amenaza, incidente o situación de riesgo?", short: "Cadena de reporte definida", services: ["protocolos", "consultoria"], riesgo: "La ausencia de cadena de reporte provoca respuestas tardías y contradictorias. Los primeros minutos determinan el impacto final." },
-  { id: 3, text: "¿Los números de contacto de emergencia están visibles y actualizados en las instalaciones?", short: "Números de emergencia visibles", services: ["revision", "proteccion"], riesgo: "Los primeros 3 minutos de una emergencia son decisivos. Sin datos de contacto visibles, ese tiempo crítico se pierde." },
-  { id: 4, text: "¿Las rutas de evacuación están señalizadas y permanecen libres de obstáculos?", short: "Señalización de rutas de evacuación", services: ["revision", "proteccion"], riesgo: "Incumplimiento directo de la NOM-003-SEGOB. En una evacuación real puede ser determinante para la integridad del personal." },
-  { id: 5, text: "¿Los extintores son visibles, accesibles y cuentan con mantenimiento vigente?", short: "Extintores operativos y accesibles", services: ["revision", "proteccion"], riesgo: "Extintores vencidos o bloqueados son inoperantes ante un incendio y representan infracción con multa y posible cierre temporal." },
-  { id: 6, text: "¿Existe un procedimiento documentado para actuar ante extorsiones, fraudes o amenazas externas?", short: "Protocolo ante extorsión y amenazas", services: ["protocolos", "consultoria"], riesgo: "Sin protocolo, la organización cede el control al agresor desde el primer momento, incrementando el daño económico y legal." },
-  { id: 7, text: "¿El personal ha recibido capacitación en seguridad o gestión de emergencias durante el último año?", short: "Capacitación periódica en seguridad", services: ["capacitacion"], riesgo: "El factor humano sin entrenamiento es el principal amplificador de incidentes. Los protocolos no se aplican sin capacitación verificable." },
-  { id: 8, text: "¿Los sistemas de videovigilancia y control de acceso funcionan correctamente y están monitoreados?", short: "CCTV y control de acceso operativos", services: ["tecnologia"], riesgo: "Un sistema inoperante o sin monitoreo solo documenta daños después del hecho. No previene, no disuade, no alerta." },
-  { id: 9, text: "¿Se realiza respaldo periódico y verificado de la información crítica de la organización?", short: "Respaldos de información verificados", services: ["tecnologia"], riesgo: "Sin respaldos verificados la organización es altamente vulnerable ante ransomware, fallas o desastres. La recuperación puede ser imposible." },
-  { id: 10, text: "¿Existe un plan para continuar operaciones después de una emergencia o interrupción significativa?", short: "Plan de continuidad operativa (BCP)", services: ["tecnologia", "consultoria"], riesgo: "Sin plan de continuidad, un incidente de 48 horas puede paralizar la organización por semanas, con pérdidas operativas y de reputación." },
+  { id: 1, text: "¿Hay una persona encargada de organizar a todos si pasa una emergencia, como un sismo, un incendio o un robo?", short: "Una persona a cargo en emergencias", services: ["consultoria"], riesgo: "Si nadie está a cargo, cada quien hace lo que cree y el problema crece. Además, la responsabilidad recae en el dueño o en la dirección." },
+  { id: 2, text: "¿Tu personal sabe a quién avisar si ve algo raro, recibe una amenaza o hay un accidente?", short: "Saber a quién avisar", services: ["protocolos", "consultoria"], riesgo: "Si nadie sabe a quién avisar, se pierde tiempo y se toman decisiones encontradas. Los primeros minutos son los que más cuentan." },
+  { id: 3, text: "¿Tienes a la vista los teléfonos de emergencia (bomberos, Cruz Roja, policía) y están actualizados?", short: "Teléfonos de emergencia a la vista", services: ["revision", "proteccion"], riesgo: "En una emergencia nadie tiene tiempo de buscar números. Tenerlos a la mano ahorra minutos que pueden salvar vidas." },
+  { id: 4, text: "¿Las salidas de emergencia tienen señales y están libres, sin cajas ni muebles que estorben?", short: "Salidas señalizadas y libres", services: ["revision", "proteccion"], riesgo: "Una salida tapada o sin señal puede atrapar a las personas en un incendio o un sismo. Es de lo primero que revisa Protección Civil en una inspección." },
+  { id: 5, text: "¿Tienes extintores fáciles de ver y de alcanzar, con su recarga al día?", short: "Extintores listos para usarse", services: ["revision", "proteccion"], riesgo: "Un extintor vencido o tapado no sirve cuando hay fuego. Además puede costarte una multa o una suspensión." },
+  { id: 6, text: "¿Sabes qué hacer si alguien llama para extorsionarte, intenta estafarte o te amenaza?", short: "Saber qué hacer ante extorsión o amenazas", services: ["protocolos", "consultoria"], riesgo: "Sin un plan, quien extorsiona toma el control desde la primera llamada y el daño económico crece." },
+  { id: 7, text: "¿Tu personal ha tomado algún curso de primeros auxilios, evacuación o seguridad en el último año?", short: "Personal con curso reciente", services: ["capacitacion"], riesgo: "Sin práctica, las personas se paralizan o se equivocan en una emergencia. Un plan solo funciona si la gente sabe aplicarlo." },
+  { id: 8, text: "¿Tus cámaras y el control de quién entra funcionan bien, y alguien las revisa?", short: "Cámaras y control de entradas funcionando", services: ["tecnologia"], riesgo: "Si nadie revisa las cámaras, solo sirven para ver lo que ya pasó: no evitan el problema ni avisan a tiempo." },
+  { id: 9, text: "¿Guardas copias de tu información importante (clientes, facturas, contabilidad) y has comprobado que sí se pueden recuperar?", short: "Copias de tu información importante", services: ["tecnologia"], riesgo: "Sin copias, un virus, el robo de una computadora o una falla pueden borrar tu información para siempre." },
+  { id: 10, text: "¿Tienes un plan para seguir trabajando si tu negocio tuviera que cerrar unos días por una emergencia?", short: "Plan para seguir trabajando", services: ["tecnologia", "consultoria"], riesgo: "Sin un plan, un problema de dos días puede detener tu negocio por semanas y costarte clientes." },
 ];
 
 // Rangos que ve el visitante → valor representativo para la clasificación interna
@@ -72,7 +74,7 @@ const PERSONAS = [
 ];
 const SUPERFICIE = [
   { id: "ns", label: "No lo sé", value: 0 },
-  { id: "500", label: "Hasta 500 m²", value: 300 },
+  { id: "500", label: "De 10 a 500 m²", value: 300 },
   { id: "1500", label: "De 500 a 1,500 m²", value: 1000 },
   { id: "5000", label: "De 1,500 a 5,000 m²", value: 3000 },
   { id: "5000+", label: "Más de 5,000 m²", value: 8000 },
@@ -92,6 +94,21 @@ export default function Diagnostico() {
   const [org, setOrg] = useState({ giro: "", personas: "", superficie: "ns", estado: "" });
   const [form, setForm] = useState({ name: "", org: "", email: "", tel: "", contact: false, hp: "" });
 
+  // Paso del cuestionario: 0..9 = preguntas, 10 = datos del negocio
+  const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
+  const stepRef = useRef<HTMLDivElement>(null);
+  const advanceTimer = useRef<number | undefined>(undefined);
+  const moved = useRef(false);
+  const reduceMotion = useReducedMotion();
+  const onData = step >= QUESTIONS.length;
+  const current = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+  const slide = {
+    enter: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * 48 }),
+    center: { opacity: 1, x: 0 },
+    exit: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * -48 }),
+  };
+
   const answeredCount = Object.keys(answers).length;
   const profileReady = !!(org.giro && org.personas && org.estado);
   const ready = answeredCount === QUESTIONS.length && profileReady;
@@ -103,12 +120,12 @@ export default function Diagnostico() {
   );
 
   const level = useMemo(() => {
-    if (score >= 8) return { key: "bajo", label: "Vulnerabilidad baja", color: "#2E7D32", badge: "Preparación básica adecuada",
-      body: "Tu organización cumple con los elementos fundamentales. Mantén actualizados procedimientos, equipos y capacitación, y considera una auditoría periódica." };
-    if (score >= 5) return { key: "medio", label: "Vulnerabilidad media", color: "#C4A04A", badge: "Vulnerabilidades identificadas",
-      body: "Tienes una base, pero las áreas señaladas pueden amplificar el impacto de un incidente real. El plan prioriza las correcciones por urgencia." };
-    return { key: "alto", label: "Vulnerabilidad alta", color: "#C0392B", badge: "Riesgo elevado",
-      body: "Los resultados indican múltiples brechas en protocolos, protección civil, capacitación y tecnología. Se recomienda una evaluación integral." };
+    if (score >= 8) return { key: "bajo", label: "Vulnerabilidad baja", color: "#2E7D32", badge: "Vas bien",
+      body: "Tienes lo básico en orden. Mantén al día tus equipos, tus planes y los cursos de tu personal, y revisa todo al menos una vez al año." };
+    if (score >= 5) return { key: "medio", label: "Vulnerabilidad media", color: "#C4A04A", badge: "Hay puntos por atender",
+      body: "Tienes una base, pero los puntos señalados pueden hacer que un problema sea mucho más grave. El plan te dice qué atender primero." };
+    return { key: "alto", label: "Vulnerabilidad alta", color: "#C0392B", badge: "Riesgo alto",
+      body: "Hay varios puntos sin atender en emergencias, seguridad, capacitación y manejo de información. Conviene revisarlo con un especialista." };
   }, [score]);
 
   const failed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "no" || answers[q.id] === "ns"), [answers]);
@@ -119,7 +136,31 @@ export default function Diagnostico() {
   const personasLabel = PERSONAS.find((p) => p.id === org.personas)?.label ?? "";
   const superficieLabel = SUPERFICIE.find((s) => s.id === org.superficie)?.label ?? "";
 
-  const setAnswer = (id: number, val: Answer) => setAnswers((a) => ({ ...a, [id]: val }));
+  const goTo = (to: number) => {
+    window.clearTimeout(advanceTimer.current);
+    const next = Math.max(0, Math.min(QUESTIONS.length, to));
+    setDir(next >= step ? 1 : -1);
+    moved.current = true;
+    setStep(next);
+  };
+  // Responder marca la opción y, tras un instante para verla, pasa a la siguiente
+  const answerAndNext = (val: Answer) => {
+    const from = step;
+    setAnswers((a) => ({ ...a, [current.id]: val }));
+    window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      setDir(1);
+      moved.current = true;
+      setStep((s) => (s === from ? from + 1 : s));
+    }, reduceMotion ? 150 : 350);
+  };
+  useEffect(() => () => window.clearTimeout(advanceTimer.current), []);
+  // En móvil, si la tarjeta quedó arriba de la pantalla, la vuelve a mostrar
+  useEffect(() => {
+    if (!moved.current) return;
+    const el = stepRef.current;
+    if (el && el.getBoundingClientRect().top < 64) el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+  }, [step, reduceMotion]);
   const top = () => window.scrollTo({ top: 0, behavior: "smooth" });
   const startQuiz = () => {
     track.ctaClick("diagnostico_comenzar");
@@ -241,55 +282,88 @@ export default function Diagnostico() {
               <div className="container-wide max-w-3xl mx-auto px-4">
               <div className="eyebrow mb-3">— Tu diagnóstico</div>
               <h2 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-3">
-                Empieza: 10 preguntas sobre tu organización
+                Empieza: 10 preguntas sobre tu negocio
               </h2>
               <p className="text-steel text-sm md:text-base leading-relaxed mb-10">
                 Contesta con lo que sabes hoy. Si no estás seguro, elige "No estoy seguro": también cuenta para tu resultado.
               </p>
 
-              {/* 1 · Cuestionario */}
-              <section className="mb-10">
-                <h3 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-[#C4A04A]" /> 1 · Responde el cuestionario
-                </h3>
-                <p className="text-sm text-steel mb-4">{answeredCount} de {QUESTIONS.length} respondidas.</p>
-                <div className="h-1 bg-steel/15 mb-6">
-                  <div className="h-full bg-[#C4A04A] transition-all" style={{ width: `${(answeredCount / QUESTIONS.length) * 100}%` }} />
-                </div>
+              {/* Avance: un segmento por pregunta y uno para los datos del negocio */}
+              <div className="flex items-center justify-between text-xs text-steel mb-2">
+                <span>{onData ? "Último paso: sobre tu negocio" : `Pregunta ${step + 1} de ${QUESTIONS.length}`}</span>
+                <span>{answeredCount} de {QUESTIONS.length} respondidas</span>
+              </div>
+              <div className="flex gap-1 mb-6" aria-hidden>
+                {[...QUESTIONS.map((q) => !!answers[q.id]), profileReady].map((done, i) => (
+                  <div key={i} className={`h-1.5 flex-1 transition-colors duration-300 ${i === step ? "bg-navy" : done ? "bg-[#C4A04A]" : "bg-steel/15"}`} />
+                ))}
+              </div>
 
-                <div className="space-y-4">
-                  {QUESTIONS.map((q) => (
-                    <div key={q.id} className="border border-steel/20 bg-white p-5">
-                      <div className="flex gap-3 mb-4">
-                        <span className="font-display text-xl text-[#C4A04A]/40 leading-none">{String(q.id).padStart(2, "0")}</span>
-                        <p className="text-sm text-navy leading-snug">{q.text}</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {([["si", "Sí"], ["no", "No"], ["ns", "No estoy seguro"]] as [Answer, string][]).map(([val, lbl]) => {
-                          const sel = answers[q.id] === val;
-                          // min-h 44px: objetivo táctil mínimo para el pulgar en móvil.
-                          const base = "min-h-[44px] text-xs sm:text-sm leading-tight px-2 py-2 border rounded-none transition-all ";
-                          const styles = sel
-                            ? val === "si" ? "border-green-600 bg-green-50 text-green-800"
-                            : val === "no" ? "border-red-500 bg-red-50 text-red-700"
-                            : "border-[#C4A04A] bg-[#C4A04A]/10 text-[#9a7d2f]"
-                            : "border-steel/25 bg-white text-steel hover:border-steel/50";
-                          return (
-                            <button key={val} type="button" onClick={() => setAnswer(q.id, val)} className={base + styles}>
-                              {lbl}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* 2 · Datos de la organización */}
-              <section className="mb-10 border border-steel/20 bg-white p-5">
+              <div ref={stepRef} className="scroll-mt-24 overflow-hidden">
+              <AnimatePresence mode="wait" custom={dir} initial={false}>
+              {!onData ? (
+                <motion.div
+                  key={`q-${step}`}
+                  custom={dir}
+                  variants={slide}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
+                  className="border border-steel/20 bg-white p-6 md:p-8"
+                >
+                  <div className="flex items-center gap-2 text-[#C4A04A] mb-4">
+                    <ShieldCheck className="h-5 w-5" />
+                    <span className="font-display text-2xl leading-none">{String(current.id).padStart(2, "0")}</span>
+                  </div>
+                  <p className="font-display text-xl md:text-2xl text-navy leading-snug mb-6" aria-live="polite">{current.text}</p>
+                  <div className="grid sm:grid-cols-3 gap-2">
+                    {([["si", "Sí"], ["no", "No"], ["ns", "No estoy seguro"]] as [Answer, string][]).map(([val, lbl]) => {
+                      const sel = answers[current.id] === val;
+                      // min-h 52px: objetivo táctil cómodo para el pulgar en móvil.
+                      const base = "min-h-[52px] text-sm md:text-base px-3 py-2 border rounded-none transition-all ";
+                      const styles = sel
+                        ? val === "si" ? "border-green-600 bg-green-50 text-green-800"
+                        : val === "no" ? "border-red-500 bg-red-50 text-red-700"
+                        : "border-[#C4A04A] bg-[#C4A04A]/10 text-[#9a7d2f]"
+                        : "border-steel/25 bg-white text-navy hover:border-navy/50";
+                      return (
+                        <button key={val} type="button" onClick={() => answerAndNext(val)} className={base + styles} aria-pressed={sel}>
+                          {lbl}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between mt-6">
+                    <button
+                      type="button"
+                      onClick={() => goTo(step - 1)}
+                      disabled={step === 0}
+                      className="inline-flex items-center gap-1 text-sm text-steel hover:text-navy disabled:invisible"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> Anterior
+                    </button>
+                    {answers[current.id] && (
+                      <button type="button" onClick={() => goTo(step + 1)} className="inline-flex items-center gap-1 text-sm text-navy hover:underline">
+                        Siguiente <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+              <motion.div
+                key="datos"
+                custom={dir}
+                variants={slide}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
+              >
+              {/* Datos del negocio */}
+              <section className="mb-6 border border-steel/20 bg-white p-5">
                 <h3 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#C4A04A]" /> 2 · Sobre tu organización
+                  <Building2 className="h-5 w-5 text-[#C4A04A]" /> Sobre tu negocio
                 </h3>
                 <p className="text-sm text-steel mb-4">Para adaptar las recomendaciones a tu tipo de inmueble.</p>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -334,7 +408,7 @@ export default function Diagnostico() {
                   <span className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-[#C4A04A] shrink-0" />
                     <span>
-                      <span className="font-display text-lg text-navy">3 · Marca tu predio</span>
+                      <span className="font-display text-lg text-navy">Marca tu predio</span>
                       <span className="block text-xs text-steel">
                         Opcional · {markers.length > 0
                           ? `${markers.length} marcador${markers.length !== 1 ? "es" : ""} colocado${markers.length !== 1 ? "s" : ""}`
@@ -364,6 +438,13 @@ export default function Diagnostico() {
               >
                 Generar mi diagnóstico <ArrowRight className="h-4 w-4" />
               </button>
+              <button type="button" onClick={() => goTo(QUESTIONS.length - 1)} className="mt-4 inline-flex items-center gap-1 text-sm text-steel hover:text-navy">
+                <ArrowLeft className="h-4 w-4" /> Volver a las preguntas
+              </button>
+              </motion.div>
+              )}
+              </AnimatePresence>
+              </div>
               </div>
               </section>
               <DiagnosticoFaq onStart={startQuiz} />

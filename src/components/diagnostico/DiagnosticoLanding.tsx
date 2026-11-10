@@ -29,7 +29,7 @@ const PdfMock = () => (
         </div>
         <div>
           <div className="text-[9px] tracking-[0.2em] text-navy font-semibold mb-2">ÁREAS A ATENDER</div>
-          {["Protocolo ante extorsión", "Cadena de reporte", "Plan de continuidad"].map((t) => (
+          {["Qué hacer ante extorsión", "Saber a quién avisar", "Plan para seguir trabajando"].map((t) => (
             <div key={t} className="flex items-center justify-between py-1.5 border-b border-steel/10">
               <span className="text-xs text-navy">{t}</span>
               <span className="h-1.5 w-10 bg-[#C4A04A]/40" />
