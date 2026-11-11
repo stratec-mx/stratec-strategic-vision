@@ -11,11 +11,25 @@ const OCULTO_EN = [/^\/app(\/|$)/, /^\/auth(\/|$)/];
 // En el diagnóstico no se muestra el aviso: no debe distraer del cuestionario
 const SIN_AVISO_EN = [/^\/diagnostico(\/|$)/];
 const AVISO_VISTO = "stratec_chat_aviso";
+const URL_CHAT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-agent`;
+
+// El botón aparece solo si la función del chat ya existe en Supabase
+// (antes de crearla, el visitante vería un error al escribir).
+let disponibleCache: Promise<boolean> | null = null;
+const chatDisponible = () =>
+  (disponibleCache ??= fetch(URL_CHAT, { method: "OPTIONS" }).then((r) => r.ok).catch(() => false));
 
 export const ChatLauncher = () => {
   const { pathname } = useLocation();
   const [abierto, setAbierto] = useState(false);
   const [aviso, setAviso] = useState(false);
+  const [disponible, setDisponible] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    chatDisponible().then((ok) => vivo && setDisponible(ok));
+    return () => { vivo = false; };
+  }, []);
 
   // Mensaje "Resuelve tus dudas ahora mismo" una vez por sesión, a los 8 s
   useEffect(() => {
@@ -36,7 +50,7 @@ export const ChatLauncher = () => {
     track.chatOpen(origen);
   };
 
-  if (OCULTO_EN.some((r) => r.test(pathname))) return null;
+  if (!disponible || OCULTO_EN.some((r) => r.test(pathname))) return null;
 
   return (
     <>
