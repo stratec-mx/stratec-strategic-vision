@@ -29,6 +29,9 @@ const CON_FALLBACK = /^claude-(opus|sonnet|fable)-/.test(MODEL);
 const MSG_MAX = 40; // mensajes por hora
 const LEAD_MAX = 3; // contactos registrados por hora
 const HORA_MS = 60 * 60 * 1000;
+// Tope de gasto: mensajes de todo el sitio en 24 h (cada uno cuesta centavos).
+// Cambiable sin tocar código con el secret CHAT_TOPE_DIARIO.
+const TOPE_DIARIO = Number(Deno.env.get("CHAT_TOPE_DIARIO") ?? "") || 1500;
 // Límites de la conversación que manda el navegador
 const HIST_MAX = 30;
 const CHARS_MSG = 1500;
@@ -103,6 +106,16 @@ async function excedeLimite(ip: string, accion: string, max: number): Promise<bo
   if ((count ?? 0) >= max) return true;
   await supabase.from("rate_limits").insert({ ip, action: accion });
   return false;
+}
+
+/** true si el sitio ya llegó al tope de mensajes de las últimas 24 h (todas las conexiones). */
+async function topeDiarioAlcanzado(): Promise<boolean> {
+  const desde = new Date(Date.now() - 24 * HORA_MS).toISOString();
+  const { count, error } = await supabase
+    .from("rate_limits").select("*", { count: "exact", head: true })
+    .eq("action", "chat_message").gte("created_at", desde);
+  if (error) return false;
+  return (count ?? 0) > TOPE_DIARIO;
 }
 
 /** Valida los datos, guarda el lead y avisa a Telegram. Devuelve el texto del tool_result. */
@@ -213,6 +226,10 @@ Deno.serve(async (req: Request) => {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
   if (await excedeLimite(ip, "chat_message", MSG_MAX)) {
     return json({ reply: "Hemos recibido muchos mensajes desde su conexión. Por favor escríbanos por WhatsApp al +52 220 648 8688 o a contacto@stratecsecurity.com." });
+  }
+  if (await topeDiarioAlcanzado()) {
+    console.error("[chat-agent] tope diario de mensajes alcanzado");
+    return json({ reply: "En este momento el asistente no está disponible. Por favor escríbanos por WhatsApp al +52 220 648 8688 o a contacto@stratecsecurity.com, o agende en https://www.stratecsecurity.com/schedule" });
   }
 
   // La hora va en un mensaje del sistema al final: el prompt grande queda fijo y en caché.
