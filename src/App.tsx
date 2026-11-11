@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,7 +16,6 @@ import Privacidad from "./pages/Privacidad.tsx";
 import Terminos from "./pages/Terminos.tsx";
 import Confidentiality from "./pages/Confidentiality.tsx";
 import Auth from "./pages/Auth.tsx";
-import MapaDemo from "./pages/MapaDemo.tsx";
 import Diagnostico from "./pages/Diagnostico.tsx";
 import CoverageIndex from "./pages/coverage/CoverageIndex.tsx";
 import CoverageLocality from "./pages/coverage/CoverageLocality.tsx";
@@ -37,17 +37,25 @@ import RevisionProgramaInterno from "./pages/services/RevisionProgramaInterno.ts
 import AcompanamientoMensual from "./pages/services/AcompanamientoMensual.tsx";
 import ProtocolosSeguridad from "./pages/services/ProtocolosSeguridad.tsx";
 import Nom035ViolenciaLaboral from "./pages/services/Nom035ViolenciaLaboral.tsx";
-import { AppShell } from "./components/app/AppShell.tsx";
-import { RequireAccess } from "./components/app/RequireAccess.tsx";
-import Dashboard from "./pages/app/Dashboard.tsx";
-import Leads from "./pages/app/Leads.tsx";
-import Clients from "./pages/app/Clients.tsx";
-import Pipeline from "./pages/app/Pipeline.tsx";
-import Quotes from "./pages/app/Quotes.tsx";
-import { DocumentsList, DocumentEditor } from "./pages/app/Documents.tsx";
-import Agenda from "./pages/app/Agenda.tsx";
-import Analytics from "./pages/app/Analytics.tsx";
-import { Messaging, Settings } from "./pages/app/Placeholders.tsx";
+// Panel interno: se descarga solo al entrar a /app (el visitante del sitio no lo carga)
+const AppShell = lazy(() => import("./components/app/AppShell.tsx").then((m) => ({ default: m.AppShell })));
+const RequireAccess = lazy(() => import("./components/app/RequireAccess.tsx").then((m) => ({ default: m.RequireAccess })));
+const Dashboard = lazy(() => import("./pages/app/Dashboard.tsx"));
+const Leads = lazy(() => import("./pages/app/Leads.tsx"));
+const Clients = lazy(() => import("./pages/app/Clients.tsx"));
+const Pipeline = lazy(() => import("./pages/app/Pipeline.tsx"));
+const Quotes = lazy(() => import("./pages/app/Quotes.tsx"));
+const DocumentsList = lazy(() => import("./pages/app/Documents.tsx").then((m) => ({ default: m.DocumentsList })));
+const DocumentEditor = lazy(() => import("./pages/app/Documents.tsx").then((m) => ({ default: m.DocumentEditor })));
+const Agenda = lazy(() => import("./pages/app/Agenda.tsx"));
+const Analytics = lazy(() => import("./pages/app/Analytics.tsx"));
+const Messaging = lazy(() => import("./pages/app/Placeholders.tsx").then((m) => ({ default: m.Messaging })));
+const Settings = lazy(() => import("./pages/app/Placeholders.tsx").then((m) => ({ default: m.Settings })));
+const MapaDemo = lazy(() => import("./pages/MapaDemo.tsx"));
+
+const CargandoPanel = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background text-sm text-muted-foreground">Cargando…</div>
+);
 
 const queryClient = new QueryClient();
 
@@ -64,7 +72,7 @@ const AppRoutes = () => {
         <Route path="/terminos" element={<Terminos />} />
         <Route path="/confidentiality" element={<Confidentiality />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/mapa-demo" element={<MapaDemo />} />
+        <Route path="/mapa-demo" element={<Suspense fallback={<CargandoPanel />}><MapaDemo /></Suspense>} />
         <Route path="/diagnostico" element={<Diagnostico />} />
 
         {/* Coverage routes */}
@@ -96,7 +104,7 @@ const AppRoutes = () => {
         <Route path="/servicios/determinacion-seguridad" element={<Navigate to="/servicios/dictamen-seguridad" replace />} />
 
         {/* App routes */}
-        <Route path="/app" element={<AppShell />}>
+        <Route path="/app" element={<Suspense fallback={<CargandoPanel />}><AppShell /></Suspense>}>
           <Route index element={<Dashboard />} />
           <Route path="leads" element={<RequireAccess resource="leads"><Leads /></RequireAccess>} />
           <Route path="clients" element={<RequireAccess resource="clients"><Clients /></RequireAccess>} />
@@ -132,5 +140,3 @@ const App = () => (
 );
 
 export default App;
-// Webhook test: Tue May 26 16:03:28     2026
-// Fresh webhook test: Tue May 26 16:06:15     2026

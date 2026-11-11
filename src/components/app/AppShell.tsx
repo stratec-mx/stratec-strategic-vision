@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -111,7 +111,7 @@ export const AppShell = ({ children }: { children?: ReactNode }) => {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
           className="flex-1 p-6 lg:p-10 overflow-auto"
         >
-          {children ?? <Outlet />}
+          {children ?? <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Cargando…</div>}><Outlet /></Suspense>}
         </motion.main>
       </div>
     </div>
