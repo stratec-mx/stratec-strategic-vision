@@ -17,16 +17,9 @@ const OUT = join(repo, "supabase", "functions", "chat-agent", "prompt.ts");
 
 const ARCHIVOS = ["reglas-de-comunicacion.md", "empresa.md", "preguntas-frecuentes.md", "servicios.md"];
 
-// La DC-3 no está confirmada (sin registro STPS de agente capacitador):
-// cualquier oración que la ofrezca se reemplaza por una canalización al consultor.
-const FRASE_DC3 =
-  "Si el cliente necesita una constancia oficial de la capacitación (por ejemplo, la DC-3 de la STPS), un consultor revisa su caso.";
-function limpiar(texto) {
-  return texto
-    .replace(/[^.\n]*DC-3[^.\n]*\./g, (oracion) => (/no emite|no certifica/i.test(oracion) ? "STRATEC no emite certificaciones. " + FRASE_DC3 : FRASE_DC3))
-    .replace(/(STRATEC no emite certificaciones\. )+/g, "STRATEC no emite certificaciones. ")
-    .replace(new RegExp(`(${FRASE_DC3.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*)+`, "g"), FRASE_DC3 + " ");
-}
+// DC-3: confirmada el 2026-11-11 (STRATEC la emite a través de un consultor
+// aliado con registro ante la STPS). El cliente solo ve que STRATEC la emite.
+const limpiar = (texto) => texto;
 
 const INSTRUCCIONES = `Eres el asistente virtual de STRATEC Security, consultoría estratégica de seguridad con base en Cuernavaca, Morelos (México). Atiendes el chat del sitio web stratecsecurity.com. Tu trabajo: resolver dudas, entender la necesidad del visitante y, si le interesa, registrar sus datos para que un consultor de STRATEC lo contacte.
 
@@ -65,7 +58,7 @@ Más abajo tienes la base de conocimiento que también usa el agente de WhatsApp
 ## Reglas estrictas (nunca)
 - NUNCA des precios, tarifas, rangos, descuentos ni comparaciones de costo. Cada propuesta se diseña según el inmueble, las personas y los riesgos.
 - NUNCA prometas resultados, fechas de entrega, aprobaciones de autoridades ni que un trámite saldrá favorable.
-- NUNCA digas que STRATEC certifica ni que emite constancias oficiales como la DC-3. Si el visitante necesita una constancia o certificación oficial, di que un consultor revisa su caso.
+- NUNCA digas que STRATEC certifica. STRATEC capacita y, al concluir, puede emitir la constancia de competencias o de habilidades laborales DC-3 de la STPS, que es una constancia y no una certificación. No expliques cómo se tramita ni quién la firma; si piden otra certificación oficial, un consultor revisa el caso.
 - NUNCA digas que STRATEC emite resoluciones, autorizaciones o vistos buenos, ni que sus documentos son "válidos ante autoridades". El Dictamen de Seguridad concluye con una determinación técnica (opinión profesional); la resolución la emite la autoridad competente.
 - NUNCA inventes años de operación, número de proyectos, clientes ni casos de éxito. STRATEC está iniciando operaciones y trabaja con colaboradores capacitados en seguridad pública, seguridad física, seguridad corporativa y protección civil.
 - NUNCA menciones nombres de clientes ni proyectos.
@@ -95,13 +88,6 @@ if (faltan.length) {
 }
 const conocimiento = ARCHIVOS.map((f) => limpiar(readFileSync(join(KNOW, f), "utf8")).trim()).join("\n\n---\n\n");
 const prompt = INSTRUCCIONES + "\n" + conocimiento + "\n";
-
-// Comprobaciones: ninguna oración ofrece la DC-3
-const ofreceDc3 = prompt.split(/(?<=\.)\s/).filter((o) => /DC-3/.test(o) && /puede emitir|emite la/i.test(o));
-if (ofreceDc3.length) {
-  console.error("Quedó una oración que ofrece la DC-3:\n", ofreceDc3.join("\n"));
-  process.exit(1);
-}
 
 writeFileSync(
   OUT,
