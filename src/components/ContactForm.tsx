@@ -74,16 +74,9 @@ export const ContactForm = () => {
     try {
       const params = buildTemplateParams(data);
 
-      // Notificaciones internas + confirmación al cliente
-      const [res] = await Promise.all([
-        sendEmailJS(params, "contacto@stratecsecurity.com"),
-        sendEmailJS(params, "coordinacion@stratecsecurity.com").catch(() => null),
-        sendEmailJS(params, data.email, EMAILJS_CONFIRM_TEMPLATE).catch(() => null),
-      ]);
-      if (!res.ok) throw new Error("Error al enviar");
-
-      // Guardar lead en CRM y disparar notificación Telegram (fire-and-forget)
-      fetch(
+      // 1 · Guardar el lead en el CRM (y aviso a Telegram). Es lo principal:
+      // antes el lead se perdía si el correo de EmailJS fallaba.
+      const lead = fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-lead`,
         {
           method: "POST",
@@ -101,7 +94,18 @@ export const ContactForm = () => {
             servicio:     data.servicio,
           }),
         }
-      ).catch(() => null);
+      ).then((r) => r.ok).catch(() => false);
+
+      // 2 · Correos (aviso interno y confirmación al cliente), en paralelo
+      const correo = Promise.all([
+        sendEmailJS(params, "contacto@stratecsecurity.com").then((r) => r.ok).catch(() => false),
+        sendEmailJS(params, "coordinacion@stratecsecurity.com").catch(() => null),
+        sendEmailJS(params, data.email, EMAILJS_CONFIRM_TEMPLATE).catch(() => null),
+      ]).then(([ok]) => ok);
+
+      // Basta con que llegue por una de las dos vías
+      const [leadOk, correoOk] = await Promise.all([lead, correo]);
+      if (!leadOk && !correoOk) throw new Error("Error al enviar");
 
       setSubmitted(true);
       track.formSubmit(selectedService);
