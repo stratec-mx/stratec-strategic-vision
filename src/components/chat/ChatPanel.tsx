@@ -5,6 +5,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Send, X, ShieldCheck } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { sugerenciasPara } from "./sugerencias";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -18,12 +19,6 @@ const BIENVENIDA: Msg = {
   content:
     "Hola, soy el asistente virtual de STRATEC. Resuelve tus dudas ahora mismo sobre protección civil, análisis de riesgos, capacitación o seguridad. ¿En qué le puedo ayudar?",
 };
-const SUGERENCIAS = [
-  "Necesito mi Programa Interno de Protección Civil",
-  "Quiero capacitar a mis brigadas",
-  "Tengo una inspección próxima",
-  "Quiero que me contacte un consultor",
-];
 
 function cargar(): Msg[] {
   try {
@@ -60,7 +55,8 @@ function Texto({ texto }: { texto: string }) {
   );
 }
 
-export default function ChatPanel({ onClose }: { onClose: () => void }) {
+export default function ChatPanel({ onClose, pathname }: { onClose: () => void; pathname: string }) {
+  const sugerencias = sugerenciasPara(pathname);
   const [msgs, setMsgs] = useState<Msg[]>(cargar);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -132,7 +128,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
         </span>
         <div className="flex-1 min-w-0 leading-tight">
           <div className="text-sm font-semibold">Asistente virtual STRATEC</div>
-          <div className="text-[11px] text-[#C4A04A]">En línea · Disponible las 24 hrs.</div>
+          <div className="text-[11px] text-[#C4A04A]">En línea · Disponible las 24 h</div>
         </div>
         {!soloBienvenida && (
           <button type="button" onClick={reiniciar} className="text-[11px] text-smoke/60 hover:text-smoke underline underline-offset-2">
@@ -161,7 +157,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
 
         {soloBienvenida && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {SUGERENCIAS.map((s) => (
+            {sugerencias.map((s) => (
               <button
                 key={s}
                 type="button"

@@ -96,10 +96,11 @@ export const ContactForm = () => {
         }
       ).then((r) => r.ok).catch(() => false);
 
-      // 2 · Correos (aviso interno y confirmación al cliente), en paralelo
+      // 2 · Correos (aviso interno y confirmación al cliente), en paralelo.
+      // Un solo aviso interno: contacto@ y coordinacion@ se reenvían al mismo
+      // Gmail. La plantilla interna debe tener su destinatario fijo en EmailJS.
       const correo = Promise.all([
         sendEmailJS(params, "contacto@stratecsecurity.com").then((r) => r.ok).catch(() => false),
-        sendEmailJS(params, "coordinacion@stratecsecurity.com").catch(() => null),
         sendEmailJS(params, data.email, EMAILJS_CONFIRM_TEMPLATE).catch(() => null),
       ]).then(([ok]) => ok);
 
