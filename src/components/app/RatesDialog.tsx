@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
 import { SERVICE_CATALOG } from "@/lib/quoteCatalog";
-import { basisOf, type ServiceRate } from "@/lib/pricing";
+import type { ServiceRate } from "@/lib/pricing";
 
 type Row = { price_low: string; price_medium: string; price_high: string; extra_site_pct: string };
 const toRow = (r?: ServiceRate): Row => ({
@@ -84,17 +84,17 @@ export const RatesDialog = ({ rates, onSaved }: { rates: Record<string, ServiceR
           <DialogTitle className="font-display text-navy">Tarifas por servicio</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-steel -mt-2">
-          Precio antes de IVA por nivel. Protección civil y dictamen usan el nivel de riesgo del cliente; los demás servicios, su tamaño.
-          Deja vacío lo que no quieras sugerir. "% por inmueble" se suma por cada inmueble adicional.
+          Precio antes de IVA del primer inmueble, según la complejidad del trabajo. El nivel de riesgo no cambia el precio.
+          Deja vacío lo que no quieras sugerir. "% por inmueble" se suma una vez por cada inmueble adicional.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-steel text-left">
                 <th className="py-2 pr-2 font-normal">Servicio</th>
-                <th className="py-2 px-1 font-normal text-right">Bajo / pequeña</th>
-                <th className="py-2 px-1 font-normal text-right">Medio / mediana</th>
-                <th className="py-2 px-1 font-normal text-right">Alto / grande</th>
+                <th className="py-2 px-1 font-normal text-right">Básica</th>
+                <th className="py-2 px-1 font-normal text-right">Intermedia</th>
+                <th className="py-2 px-1 font-normal text-right">Avanzada</th>
                 <th className="py-2 pl-1 font-normal text-right">% por inmueble</th>
               </tr>
             </thead>
@@ -106,7 +106,6 @@ export const RatesDialog = ({ rates, onSaved }: { rates: Record<string, ServiceR
                     <td className="py-2 pr-2">
                       <span className="font-mono text-[11px] text-olive mr-2">{s.code}</span>
                       <span className="text-navy">{s.title}</span>
-                      <span className="block text-[10px] text-steel">Por {basisOf(s.code)}</span>
                     </td>
                     {(["price_low", "price_medium", "price_high"] as const).map((k) => (
                       <td key={k} className="py-2 px-1 w-32">
