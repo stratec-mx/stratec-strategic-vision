@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Instrucciones del agente del chat (incluyen condiciones internas; el repo es público)
+supabase/functions/chat-agent/prompt.ts

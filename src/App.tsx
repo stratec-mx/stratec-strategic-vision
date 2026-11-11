@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { useSEO } from "@/hooks/useSEO";
 import { CookieBanner } from "@/components/CookieBanner";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+import { ChatLauncher } from "@/components/chat/ChatLauncher";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Schedule from "./pages/Schedule.tsx";
@@ -124,6 +125,7 @@ const App = () => (
       <WhatsAppFloat />
       <BrowserRouter>
         <AppRoutes />
+        <ChatLauncher />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

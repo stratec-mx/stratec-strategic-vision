@@ -167,6 +167,15 @@ export const track = {
       value: 1,
     }),
 
+  /** Chat del agente en línea: apertura, mensaje enviado y contacto registrado */
+  chatOpen: (origen: string = "boton") =>
+    trackEvent("chat_open", { category: "engagement", label: origen, value: 1 }),
+  chatMessage: () =>
+    trackEvent("chat_message", { category: "engagement", value: 1 }),
+  chatLead: () => {
+    trackEvent("chat_lead", { category: "conversion", value: 1 });
+  },
+
   /**
    * Visualización de sección específica
    * @param section Nombre de la sección (ej: "servicios", "metodología", "casos")
