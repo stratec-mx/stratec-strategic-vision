@@ -20,7 +20,10 @@ import { SERVICE_CATALOG, CUSTOM_SERVICE, CUSTOM_CODE, findService } from "@/lib
 import { previewQuotePdf, saveBlob, formatMoney, type QuotePdfData } from "@/lib/quotePdf";
 import { ClientClassifier } from "@/components/app/ClientClassifier";
 import { RatesDialog } from "@/components/app/RatesDialog";
-import { classify, suggestPrice, internalAlerts, parseLeadProfile, QUOTE_SCOPE, DEFAULT_PROFILE, type ClientProfile, type ServiceRate } from "@/lib/pricing";
+import {
+  classify, suggestPrice, internalAlerts, parseLeadProfile, priceDeviation, quoteTraceSummary, QUOTE_SCOPE, DEFAULT_PROFILE, PRICE_RANGE,
+  type ClientProfile, type ServiceRate, type PriceTrace,
+} from "@/lib/pricing";
 
 const itemSchema = z.object({
   code: z.string().trim().min(1, "Selecciona un servicio en cada concepto").max(20),
@@ -46,7 +49,7 @@ const newClientSchema = z.object({
 });
 
 /** auto: el precio sigue la tarifa sugerida hasta que se edita a mano. No se guarda. */
-type Item = { code: string; title: string; description: string; qty: number; unit_price: number; hours?: number; auto?: boolean };
+type Item = { code: string; title: string; description: string; qty: number; unit_price: number; hours?: number; auto?: boolean; reason?: string };
 type ClientRow = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null };
 
 const NEW_CLIENT = "__new__";
@@ -73,6 +76,14 @@ const normalizeItems = (raw: unknown): Item[] =>
 
 /** Horas estimadas de una cotización guardada (suma de sus conceptos). */
 const estimatedHours = (raw: unknown) => normalizeItems(raw).reduce((s, i) => s + (i.hours ?? 0), 0);
+
+/** Fecha local de Cuernavaca en formato AAAA-MM-DD (para filtrar el registro por día, mes o año). */
+const fechaMx = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+type Periodo = "todo" | "anio" | "mes" | "dia";
+const csvCell = (v: unknown) => {
+  const t = v == null ? "" : String(v);
+  return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
 
 const DRAFT_KEY = "stratec.quoteDraft.v1";
 type Draft = {
@@ -102,6 +113,10 @@ const Quotes = () => {
   const [pdfBusy, setPdfBusy] = useState<string | null>(null);
 
   const [preview, setPreview] = useState<{ url: string; fileName: string; blob: Blob } | null>(null);
+  const hoy = fechaMx(new Date().toISOString());
+  const [periodo, setPeriodo] = useState<Periodo>("todo");
+  const [fechaFiltro, setFechaFiltro] = useState(hoy);
+  const [busqueda, setBusqueda] = useState("");
 
   // El borrador se conserva aunque se cierre el panel o se recargue la página
   const draft = useMemo(readDraft, []);
@@ -114,7 +129,7 @@ const Quotes = () => {
   const [rates, setRates] = useState<Record<string, ServiceRate>>({});
   const classification = useMemo(() => classify(profile), [profile]);
   const alerts = useMemo(() => internalAlerts(items.map((i) => i.code), profile), [items, profile]);
-  const suggestionFor = (code: string) => suggestPrice(code, rates, classification, profile.sites);
+  const suggestionFor = (code: string) => suggestPrice(code, rates, classification);
 
   useEffect(() => {
     try {
@@ -130,14 +145,14 @@ const Quotes = () => {
       let changed = false;
       const next = prev.map((it) => {
         if (!it.auto || !it.code) return it;
-        const sug = suggestPrice(it.code, rates, classification, profile.sites);
+        const sug = suggestPrice(it.code, rates, classification);
         if (!sug || sug.price === it.unit_price) return it;
         changed = true;
         return { ...it, unit_price: sug.price };
       });
       return changed ? next : prev;
     });
-  }, [rates, classification, profile.sites]);
+  }, [rates, classification]);
 
   const closePreview = () => {
     if (preview) URL.revokeObjectURL(preview.url);
@@ -234,6 +249,9 @@ const Quotes = () => {
   };
 
   const addItem = () => setItems([...items, emptyItem()]);
+  /** Viáticos o terceros: concepto especial con nombre ya puesto; el precio lo captura el consultor. */
+  const addSpecial = (title: string, description: string) =>
+    setItems([...items.filter((it) => it.code || it.title || it.unit_price), { code: CUSTOM_CODE, title, description, qty: 1, unit_price: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const updateItem = (i: number, patch: Partial<Item>) => setItems(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
 
@@ -272,6 +290,18 @@ const Quotes = () => {
     const parsed = quoteSchema.safeParse({ ...form, number: form.number.trim() || suggestedNumber, taxRate, items });
     if (!parsed.success) {
       toast({ title: "Datos inválidos", description: parsed.error.issues[0].message, variant: "destructive" });
+      return null;
+    }
+    const sinJustificar = items.find((it) => {
+      const sug = it.code ? suggestionFor(it.code) : null;
+      return priceDeviation(it.unit_price, sug?.price).outOfRange && (it.reason ?? "").trim().length < 10;
+    });
+    if (sinJustificar) {
+      toast({
+        title: "Falta justificar un precio",
+        description: `«${sinJustificar.title || sinJustificar.code}» está fuera del rango (−${PRICE_RANGE.belowPct}% / +${PRICE_RANGE.abovePct}% del sugerido). Escribe el motivo (mínimo 10 caracteres).`,
+        variant: "destructive",
+      });
       return null;
     }
     if (!clientId) {
@@ -352,13 +382,35 @@ const Quotes = () => {
     const safeTotal = safeSubtotal + safeTax;
     const client = currentClient();
 
+    // Registro del precio dentro de cada concepto (no se imprime en el PDF)
+    const at = new Date().toISOString();
+    const savedItems = data.items.map((it, idx) => {
+      const sug = it.code && it.code !== CUSTOM_CODE ? suggestionFor(it.code) : null;
+      const dev = priceDeviation(it.unit_price, sug?.price);
+      const pricing: PriceTrace = {
+        suggested: sug?.price ?? null,
+        basis: sug?.detail ?? (it.code === CUSTOM_CODE ? "Concepto especial (sin tarifa)" : "Sin tarifa capturada"),
+        risk: classification.risk,
+        complexity: classification.complexity,
+        complexity_manual: profile.complexity != null,
+        scope: classification.scope,
+        sites: classification.sites,
+        deviation_pct: dev.pct,
+        out_of_range: dev.outOfRange,
+        reason: (items[idx]?.reason ?? "").trim(),
+        by: user?.email ?? null,
+        at,
+      };
+      return { ...it, pricing };
+    });
+
     const { error } = await supabase.from("quotes").insert({
       number: data.number,
       client_id: finalClientId,
       currency: data.currency,
       notes: data.notes || null,
       valid_until: data.valid_until || null,
-      items: data.items as any,
+      items: savedItems as any,
       subtotal: safeSubtotal,
       tax: safeTax,
       total: safeTotal,
@@ -447,6 +499,37 @@ const Quotes = () => {
       return;
     }
     load();
+  };
+
+  // ─── Registro de cotizaciones generadas ──────────────────────────────────
+  const registro = useMemo(() => {
+    const b = busqueda.trim().toLowerCase();
+    const prefijo = periodo === "anio" ? fechaFiltro.slice(0, 4) : periodo === "mes" ? fechaFiltro.slice(0, 7) : periodo === "dia" ? fechaFiltro : "";
+    return list.filter((q) => {
+      if (prefijo && !fechaMx(q.created_at).startsWith(prefijo)) return false;
+      if (b && !`${q.number} ${q.clients?.name ?? ""}`.toLowerCase().includes(b)) return false;
+      return true;
+    });
+  }, [list, periodo, fechaFiltro, busqueda]);
+
+  const totalesPorMoneda = useMemo(
+    () => registro.reduce<Record<string, number>>((acc, q) => ({ ...acc, [q.currency]: (acc[q.currency] ?? 0) + (Number(q.total) || 0) }), {}),
+    [registro],
+  );
+
+  const exportarCsv = () => {
+    const encabezado = ["Fecha", "Folio", "Cliente", "Estado", "Moneda", "Subtotal", "IVA", "Total", "Sugerido", "Diferencia %", "Requiere revisión", "Horas estimadas", "Horas reales", "Elaboró", "Vigencia"];
+    const filas = registro.map((q) => {
+      const tr = quoteTraceSummary(q.items);
+      return [
+        fechaMx(q.created_at), q.number, q.clients?.name ?? "", STATUS_LABEL[q.status] ?? q.status, q.currency,
+        Number(q.subtotal) || 0, Number(q.tax) || 0, Number(q.total) || 0,
+        tr ? tr.suggested : "", tr?.deviationPct ?? "", tr ? (tr.review ? "Sí" : "No") : "",
+        estimatedHours(q.items) || "", q.hours_actual ?? "", tr?.by ?? "", q.valid_until ?? "",
+      ];
+    });
+    const csv = "\uFEFF" + [encabezado, ...filas].map((f) => f.map(csvCell).join(",")).join("\r\n");
+    saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `registro-cotizaciones-${periodo === "todo" ? "completo" : fechaFiltro.slice(0, periodo === "anio" ? 4 : periodo === "mes" ? 7 : 10)}.csv`);
   };
 
   const parents = SERVICE_CATALOG.filter((s) => !s.parentCode);
@@ -544,7 +627,11 @@ const Quotes = () => {
                 <div className="border-t border-border pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <Label className="text-xs uppercase tracking-wider text-steel">Conceptos</Label>
-                    <Button type="button" size="sm" variant="ghost" onClick={addItem} className="rounded-none text-xs h-8"><Plus className="h-3 w-3 mr-1" />Agregar</Button>
+                    <div className="flex gap-1">
+                      <Button type="button" size="sm" variant="ghost" onClick={() => addSpecial("Viáticos y traslados", "Traslado, hospedaje y alimentación del equipo consultor.")} className="rounded-none text-xs h-8"><Plus className="h-3 w-3 mr-1" />Viáticos</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => addSpecial("Servicios de terceros", "Especialistas o laboratorios externos requeridos por el alcance.")} className="rounded-none text-xs h-8"><Plus className="h-3 w-3 mr-1" />Terceros</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={addItem} className="rounded-none text-xs h-8"><Plus className="h-3 w-3 mr-1" />Concepto</Button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {items.map((it, i) => (
@@ -609,14 +696,33 @@ const Quotes = () => {
                         </div>
                         {it.code && it.code !== CUSTOM_CODE && (() => {
                           const sug = suggestionFor(it.code);
-                          if (!sug) return <p className="text-[11px] text-steel">Sin tarifa capturada para este servicio y nivel.</p>;
+                          if (!sug) return <p className="text-[11px] text-steel">Sin tarifa capturada para este servicio y complejidad.</p>;
+                          const dev = priceDeviation(it.unit_price, sug.price);
+                          const ajustado = !it.auto && dev.pct != null && dev.pct !== 0;
                           return (
-                            <p className="text-[11px] text-steel flex items-center gap-2 flex-wrap">
-                              <span>Sugerido: <span className="text-navy">{formatMoney(sug.price, form.currency)}</span> · {sug.detail}</span>
-                              {it.auto ? <span className="text-olive">(automático)</span> : (
-                                <button type="button" className="underline text-navy" onClick={() => updateItem(i, { unit_price: sug.price, auto: true })}>Usar sugerido</button>
+                            <div className="space-y-1.5">
+                              <p className="text-[11px] text-steel flex items-center gap-2 flex-wrap">
+                                <span>Sugerido: <span className="text-navy">{formatMoney(sug.price, form.currency)}</span> · {sug.detail}</span>
+                                {it.auto ? <span className="text-olive">(automático)</span> : (
+                                  <>
+                                    {ajustado && (
+                                      <span className={dev.outOfRange ? "text-red-700 font-medium" : "text-navy"}>
+                                        Final {dev.pct! > 0 ? "+" : ""}{dev.pct}% ({it.unit_price < sug.price ? "−" : "+"}{formatMoney(Math.abs(it.unit_price - sug.price), form.currency)})
+                                      </span>
+                                    )}
+                                    <button type="button" className="underline text-navy" onClick={() => updateItem(i, { unit_price: sug.price, auto: true, reason: "" })}>Usar sugerido</button>
+                                  </>
+                                )}
+                              </p>
+                              {ajustado && (
+                                <Input
+                                  className={`rounded-none bg-background h-8 text-xs ${dev.outOfRange && (it.reason ?? "").trim().length < 10 ? "border-red-400" : ""}`}
+                                  placeholder={dev.outOfRange ? `Obligatorio: motivo del ajuste (fuera de −${PRICE_RANGE.belowPct}% / +${PRICE_RANGE.abovePct}%)` : "Motivo del ajuste (opcional)"}
+                                  value={it.reason ?? ""}
+                                  onChange={(e) => updateItem(i, { reason: e.target.value })}
+                                />
                               )}
-                            </p>
+                            </div>
                           );
                         })()}
                       </div>
@@ -676,34 +782,94 @@ const Quotes = () => {
 
       {!open && previewDialog}
 
-      <div className="border border-border bg-card">
-        {list.length === 0 ? (
+      <div className="flex flex-wrap items-end gap-3 mb-3">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-wider text-steel">Periodo</Label>
+          <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
+            <SelectTrigger className="rounded-none h-9 w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todo">Todo</SelectItem>
+              <SelectItem value="anio">Año</SelectItem>
+              <SelectItem value="mes">Mes</SelectItem>
+              <SelectItem value="dia">Día</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {periodo === "anio" && (
+          <Select value={fechaFiltro.slice(0, 4)} onValueChange={(v) => setFechaFiltro(`${v}${fechaFiltro.slice(4)}`)}>
+            <SelectTrigger className="rounded-none h-9 w-28" aria-label="Año"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Array.from(new Set([hoy.slice(0, 4), ...list.map((q) => fechaMx(q.created_at).slice(0, 4))])).sort().reverse().map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {periodo === "mes" && (
+          <Input type="month" aria-label="Mes" className="rounded-none h-9 w-44" value={fechaFiltro.slice(0, 7)} onChange={(e) => e.target.value && setFechaFiltro(`${e.target.value}-01`)} />
+        )}
+        {periodo === "dia" && (
+          <Input type="date" aria-label="Día" className="rounded-none h-9 w-44" value={fechaFiltro} onChange={(e) => e.target.value && setFechaFiltro(e.target.value)} />
+        )}
+        <Input placeholder="Buscar folio o cliente" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="rounded-none h-9 w-56" />
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-steel">
+            {registro.length} cotizacion{registro.length === 1 ? "" : "es"} · {Object.entries(totalesPorMoneda).map(([m, t]) => `${formatMoney(t, m)} ${m}`).join(" · ") || "—"}
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={exportarCsv} disabled={!registro.length} className="rounded-none h-9 text-xs uppercase tracking-wider border-navy text-navy">
+            <FileDown className="h-4 w-4 mr-2" /> CSV
+          </Button>
+        </div>
+      </div>
+
+      <div className="border border-border bg-card overflow-x-auto">
+        {registro.length === 0 ? (
           <div className="p-16 text-center">
             <FileText className="h-8 w-8 text-olive mx-auto mb-3" />
-            <div className="text-navy font-display text-lg">Sin cotizaciones</div>
-            <p className="text-sm text-steel mt-1">Cree la primera propuesta económica.</p>
+            <div className="text-navy font-display text-lg">{list.length ? "Sin cotizaciones en este periodo" : "Sin cotizaciones"}</div>
+            <p className="text-sm text-steel mt-1">{list.length ? "Cambia el periodo o la búsqueda." : "Cree la primera propuesta económica."}</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="border-border">
+                <TableHead className="text-xs uppercase tracking-wider text-steel">Creada</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Folio</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Cliente</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel" title="Suma de precios sugeridos y diferencia del precio final (antes de IVA)">Sugerido / dif.</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Total</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Vigencia</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel" title="Horas estimadas / horas reales (interno)">Horas est. / reales</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Estado</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-steel">Creada</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel text-right">PDF</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.map((q) => (
+              {registro.map((q) => {
+                const tr = quoteTraceSummary(q.items);
+                return (
                 <TableRow key={q.id} className="border-border">
-                  <TableCell className="font-medium text-navy">{q.number}</TableCell>
+                  <TableCell className="text-steel text-sm whitespace-nowrap">
+                    {new Date(q.created_at).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "2-digit", month: "short", year: "numeric" })}
+                    {tr?.by && <span className="block text-[10px] text-steel/80">{tr.by}</span>}
+                  </TableCell>
+                  <TableCell className="font-medium text-navy whitespace-nowrap">{q.number}</TableCell>
                   <TableCell className="text-steel text-sm">{q.clients?.name ?? "—"}</TableCell>
-                  <TableCell className="text-navy">{formatMoney(Number(q.total), q.currency)} {q.currency}</TableCell>
-                  <TableCell className="text-steel text-sm">{q.valid_until ?? "—"}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {!tr ? (
+                      <span className="text-[11px] text-steel" title="Creada antes del registro de precios">Sin registro</span>
+                    ) : (
+                      <>
+                        <span className="text-steel">{tr.suggested ? formatMoney(tr.suggested, q.currency) : "Sin tarifa"}</span>
+                        {tr.deviationPct != null && tr.deviationPct !== 0 && (
+                          <span className={`ml-2 text-[11px] ${tr.review ? "text-red-700" : "text-navy"}`}>{tr.deviationPct > 0 ? "+" : ""}{tr.deviationPct}%</span>
+                        )}
+                        {tr.review && <span className="ml-2 text-[10px] uppercase tracking-wider px-1.5 py-0.5 border border-red-200 bg-red-50 text-red-800" title="Precio fuera de rango, con justificación">Revisar</span>}
+                      </>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-navy whitespace-nowrap">{formatMoney(Number(q.total), q.currency)} {q.currency}</TableCell>
+                  <TableCell className="text-steel text-sm whitespace-nowrap">{q.valid_until ?? "—"}</TableCell>
                   <TableCell className="text-sm">
                     {(() => {
                       const est = estimatedHours(q.items);
@@ -738,14 +904,14 @@ const Quotes = () => {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-steel text-sm">{new Date(q.created_at).toLocaleDateString("es")}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => downloadSaved(q)} disabled={pdfBusy === q.id} aria-label={`Ver PDF de ${q.number}`}>
                       {pdfBusy === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         )}

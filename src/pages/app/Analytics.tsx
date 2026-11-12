@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app/PageHeader";
 import { KpiCard } from "@/components/app/KpiCard";
+import { Historico } from "@/components/app/Historico";
+import type { FilaCotizacion, FilaFecha } from "@/lib/historico";
 import { TrendingUp, Target, DollarSign, Percent } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
@@ -27,16 +29,19 @@ const Analytics = () => {
   const [byStage, setByStage] = useState<{ name: string; v: number; amt: number }[]>([]);
   const [bySource, setBySource] = useState<{ name: string; v: number }[]>([]);
   const [kpi, setKpi] = useState({ totalLeads: 0, totalPipeline: 0, conv: 0, avgDeal: 0 });
+  const [historico, setHistorico] = useState<{ leads: FilaFecha[]; cotizaciones: FilaCotizacion[] }>({ leads: [], cotizaciones: [] });
 
   useEffect(() => {
     (async () => {
-      const [{ data: leads }, { data: deals }] = await Promise.all([
-        supabase.from("leads").select("status, source"),
+      const [{ data: leads }, { data: deals }, { data: quotes }] = await Promise.all([
+        supabase.from("leads").select("status, source, created_at"),
         supabase.from("deals").select("stage, value_amount"),
+        supabase.from("quotes").select("created_at, total, currency, status"),
       ]);
 
       const ls = leads ?? [];
       const ds = deals ?? [];
+      setHistorico({ leads: ls, cotizaciones: (quotes ?? []) as FilaCotizacion[] });
 
       const fnOrder = ["new", "contacted", "qualified", "converted"];
       setFunnel(fnOrder.map(s => ({ name: STATUS_LABEL[s], v: ls.filter(l => l.status === s).length })));
@@ -67,7 +72,7 @@ const Analytics = () => {
       <PageHeader
         eyebrow="Inteligencia"
         title="Analítica corporativa"
-        description="Funnel de conversión, distribución por etapa y origen de la demanda."
+        description="Histórico por día, mes y año; funnel de conversión, etapas y origen de la demanda."
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
@@ -76,6 +81,8 @@ const Analytics = () => {
         <KpiCard label="Conversión" value={`${kpi.conv}%`} icon={Percent} hint="leads → convertidos" />
         <KpiCard label="Ticket promedio" value={`$${Math.round(kpi.avgDeal).toLocaleString("en-US")}`} icon={TrendingUp} hint="deals cerrados" />
       </div>
+
+      <Historico leads={historico.leads} cotizaciones={historico.cotizaciones} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="border border-border bg-card p-6">
