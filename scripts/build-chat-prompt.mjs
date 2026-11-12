@@ -17,8 +17,21 @@ const OUT = join(repo, "supabase", "functions", "chat-agent", "prompt.ts");
 
 const ARCHIVOS = ["reglas-de-comunicacion.md", "empresa.md", "preguntas-frecuentes.md", "servicios.md"];
 
-// El conocimiento se usa tal cual (DC-3 confirmada por el titular el 2026-11-11).
-const limpiar = (texto) => texto;
+// Ajustes al conocimiento solo para el chat del sitio (los archivos de origen
+// son del agente de WhatsApp y no se tocan aquí):
+// · DC-3: "se entrega", nunca "STRATEC puede emitir" (no afirmar registro ante la STPS).
+// · Se quita lo que STRATEC aún no puede respaldar: foros, organismos, red de
+//   proveedores certificados y "consultor senior".
+const limpiar = (texto) =>
+  texto
+    .replace(/Al concluir, STRATEC puede emitir la constancia/g, "Al concluir, se entrega la constancia")
+    .replace(/,? ?pero puede emitir la constancia/g, "; al concluir la capacitación se entrega la constancia")
+    .replace(/capacita y puede emitir la constancia/g, "capacita y, al concluir, se entrega la constancia")
+    .replace(/puede emitir la constancia/g, "se entrega la constancia")
+    .replace(/\n## Respaldo institucional\n(?:- .*\n)+/g, "\n")
+    .replace(/consultor senior/g, "consultor");
+
+const RESIDUOS = [/puede emitir/i, /foros de seguridad/i, /proveedores tecnol[oó]gicos certificados/i, /consultor senior/i];
 
 const INSTRUCCIONES = `Eres el asistente virtual de STRATEC Security, consultoría estratégica de seguridad con base en Cuernavaca, Morelos (México). Atiendes el chat del sitio web stratecsecurity.com. Tu trabajo: resolver dudas, entender la necesidad del visitante y, si le interesa, registrar sus datos para que un consultor de STRATEC lo contacte.
 
@@ -86,6 +99,11 @@ if (faltan.length) {
   process.exit(1);
 }
 const conocimiento = ARCHIVOS.map((f) => limpiar(readFileSync(join(KNOW, f), "utf8")).trim()).join("\n\n---\n\n");
+const residuos = RESIDUOS.filter((r) => r.test(conocimiento));
+if (residuos.length) {
+  console.error("El conocimiento todavía contiene frases que no deben llegar al chat:", residuos.map(String).join(", "));
+  process.exit(1);
+}
 const prompt = INSTRUCCIONES + "\n" + conocimiento + "\n";
 
 writeFileSync(

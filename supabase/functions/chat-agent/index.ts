@@ -25,6 +25,8 @@ const SITE = "https://www.stratecsecurity.com";
 const MODEL = Deno.env.get("CHAT_MODEL") || "claude-opus-5-5";
 // Respaldo del servidor si el modelo declina por seguridad (no existe para Haiku)
 const CON_FALLBACK = /^claude-(opus|sonnet|fable)-/.test(MODEL);
+/** Modelos que aceptan mensajes con rol "system" dentro de la conversación */
+const SYSTEM_EN_CONVERSACION = /^claude-(opus-5|opus-4-8|fable-5|mythos-5|sonnet-5-5|haiku-5-5)/.test(MODEL);
 
 // Límites por IP
 const MSG_MAX = 40; // mensajes por hora
@@ -237,10 +239,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // La hora va en un mensaje del sistema al final: el prompt grande queda fijo y en caché.
-  const messages: Anthropic.MessageParam[] = [
-    ...historial,
-    { role: "system", content: `Fecha y hora actual en Cuernavaca: ${horaCuernavaca()}.` } as unknown as Anthropic.MessageParam,
-  ];
+  // Los mensajes con rol "system" dentro de la conversación solo los aceptan algunos
+  // modelos (Opus 5/5.5, Opus 4.8, Fable, Mythos, Sonnet 5.5, Haiku 5.5). Con otro
+  // CHAT_MODEL, la hora va como nota al final del último mensaje del visitante.
+  const hora = `Fecha y hora actual en Cuernavaca: ${horaCuernavaca()}.`;
+  const messages: Anthropic.MessageParam[] = SYSTEM_EN_CONVERSACION
+    ? [...historial, { role: "system", content: hora } as unknown as Anthropic.MessageParam]
+    : historial.map((m, i) =>
+        i === historial.length - 1 && typeof m.content === "string" ? { ...m, content: `${m.content}\n\n[${hora}]` } : m,
+      );
   const conversacion = historial.slice(-8).map((m) => `${m.role === "user" ? "Visitante" : "Agente"}: ${m.content}`).join("\n");
 
   let registrado = false;
