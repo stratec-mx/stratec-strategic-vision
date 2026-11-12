@@ -4,7 +4,8 @@
 // registrar_contacto: se guarda el lead en el CRM y llega un aviso a Telegram.
 //
 // Secrets en Supabase (Edge Functions → Secrets):
-//   ANTHROPIC_API_KEY   (obligatorio)
+//   ANTHROPIC_API_KEY_CHAT_ONLINE_STRATECSECURITY (obligatorio; llave exclusiva del chat)
+//     o, si no existe, ANTHROPIC_API_KEY
 //   CHAT_MODEL          (opcional; por defecto claude-opus-5-5)
 //   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (los mismos que usa submit-lead)
 // "Verify JWT" desactivado: el chat es público; tiene límite por IP.
@@ -40,7 +41,10 @@ const VUELTAS_HERRAMIENTA = 3;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
-const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
+// Llave propia del chat: su gasto se ve por separado y se puede revocar sin tocar otros servicios
+const API_KEY = Deno.env.get("ANTHROPIC_API_KEY_CHAT_ONLINE_STRATECSECURITY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
+if (!API_KEY) console.error("[chat-agent] falta el secret ANTHROPIC_API_KEY_CHAT_ONLINE_STRATECSECURITY");
+const anthropic = new Anthropic({ apiKey: API_KEY });
 const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
 const HERRAMIENTAS: Anthropic.Tool[] = [
