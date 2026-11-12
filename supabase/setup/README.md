@@ -15,12 +15,12 @@ Situación al 6 de noviembre de 2026:
 | `00-revisar-estado.sql` | Muestra tablas, tipos, funciones, políticas, columnas de cotizaciones y conteos de roles, incluido lo que 02 cambiaría. | No, solo lectura |
 | `00b-respaldo.sql` | Copia roles, reglas de acceso, perfiles y la definición de las políticas al esquema privado `respaldo`. | Solo crea copias; no toca las originales |
 | `01-tipos.sql` | Crea los tipos (roles, estados) que falten y agrega valores de rol faltantes. | No |
-| `02-tablas-y-permisos.sql` | Crea tablas, funciones y vistas que falten. **Reemplaza todas las políticas** de roles, perfiles, reglas y CRM. **Borra asignaciones de rol repetidas** (queda una de cada una). **Si no hay ningún admin, da admin a todas las cuentas.** Quita la lectura directa de correo y teléfono. | Sí: políticas y roles. No borra leads, clientes ni cotizaciones |
+| `02-tablas-y-permisos.sql` | Crea tablas, funciones y vistas que falten. **Reemplaza todas las políticas** de roles, perfiles, reglas y CRM. **Borra asignaciones de rol repetidas** (queda una de cada una). **Si no hay ningún admin, da admin solo a la cuenta cuyo correo escribas al inicio del script**; si ese correo falta o no es de una cuenta existente, se detiene sin cambiar nada. Si ya hay un admin, no cambia roles. Quita la lectura directa de correo y teléfono. | Sí: políticas y roles. No borra leads, clientes ni cotizaciones |
 | `03-tarifas.sql` | Crea la tabla de tarifas con sus validaciones y la columna vacía de horas reales en cotizaciones. Solo reemplaza sus 4 políticas propias. | Solo estructura nueva |
 | `04-verificar-tarifas.sql` | Prueba permisos y validaciones de tarifas con usuarios simulados. Crea y borra 2 tarifas de prueba. | No deja cambios |
 | `05-verificar-contactos.sql` | Prueba que solo quien tiene permiso vea correos y teléfonos. | No, solo lectura |
 
-Orden: **00 → 00b → 01 → 02 → 03 → 04 → 05**, cada uno en una consulta nueva. Antes de 02, revisa en el resultado de 00 las filas "02 cambiaría": si "cuentas que recibirían admin" no es 0, confirma que todas esas cuentas deben ser admin.
+Orden: **00 → 00b → 01 → 02 → 03 → 04 → 05**, cada uno en una consulta nueva. Antes de 02, revisa en el resultado de 00 las filas "02 cambiaría": si "correo del primer administrador" dice OBLIGATORIO, todavía no hay ningún admin y tienes que escribir tu correo en 02 antes de ejecutarlo (paso 2). Solo esa cuenta recibe admin.
 
 ## Paso 1 · Tipos (1 minuto)
 1. Supabase → **SQL Editor** → **New query**.
@@ -30,8 +30,12 @@ Orden: **00 → 00b → 01 → 02 → 03 → 04 → 05**, cada uno en una consul
 ## Paso 2 · Tablas, permisos y tu rol de administrador (1 minuto)
 1. Abre una consulta **nueva** (**New query**). No la ejecutes en la misma consulta del paso 1.
 2. Pega el contenido de [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql).
-3. Presiona **Run**. La última tabla del resultado muestra a los usuarios con su rol.
-   En una base sin ningún administrador, todos los usuarios existentes reciben **admin** para poder entrar. Si ya hay un admin, el script no cambia ningún rol. Los usuarios nuevos **no** reciben rol automáticamente.
+3. **Escribe el correo del primer administrador.** Casi al inicio del script está la línea `set stratec.admin_email = '';`. Escribe tu correo entre las comillas, por ejemplo `set stratec.admin_email = 'tu-correo@ejemplo.com';`. Debe ser el correo de una cuenta que ya exista en **Authentication → Users**; si todavía no la tienes, créala ahí primero. Escríbelo solo en el SQL Editor: no guardes el archivo con tu correo.
+4. Presiona **Run** con el script completo, sin seleccionar solo una parte del texto. La última tabla del resultado muestra a los usuarios con su rol.
+   - Si la base no tiene ningún administrador, **solo la cuenta de ese correo** recibe **admin**. Las demás cuentas quedan sin rol hasta que se lo asignes desde el dashboard.
+   - Si el correo falta o no coincide con una cuenta, el script se detiene con un mensaje de error y no cambia nada. Corrige el correo y ejecútalo completo otra vez.
+   - Si ya hay un admin, el script ignora el correo (puede quedar vacío) y no cambia ningún rol.
+   - Los usuarios nuevos **no** reciben rol automáticamente.
 
 Puedes ejecutar los dos scripts más de una vez. No borran leads, clientes ni cotizaciones, pero 02 sí reemplaza políticas y limpia roles repetidos (ver la tabla de arriba).
 
@@ -70,7 +74,7 @@ Los leads que llegaron antes del cambio de proyecto están en el proyecto anteri
 
 ## Paso 5 · Niveles de acceso y alta de usuarios desde el dashboard
 Requiere que el sitio ya tenga la versión con **Ajustes → Niveles de acceso**.
-1. **SQL Editor → New query:** vuelve a ejecutar [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql) completo. Crea la tabla `access_rules` con los valores iniciales (Cotizaciones, Documentos y Datos de contacto solo para admin), las reglas por módulo y las vistas `lead_contacts` y `client_contacts`. Si lo vuelves a correr después, **no** borra los cambios que hagas desde el dashboard.
+1. **SQL Editor → New query:** vuelve a ejecutar [`02-tablas-y-permisos.sql`](02-tablas-y-permisos.sql) completo. Como ya hay un admin, no hace falta escribir el correo. Crea la tabla `access_rules` con los valores iniciales (Cotizaciones, Documentos y Datos de contacto solo para admin), las reglas por módulo y las vistas `lead_contacts` y `client_contacts`. Si lo vuelves a correr después, **no** borra los cambios que hagas desde el dashboard.
 2. **Edge Functions → Deploy a new function → Via Editor:** nómbrala `admin-create-user`, pega el código de [`../functions/admin-create-user/index.ts`](../functions/admin-create-user/index.ts) y presiona **Deploy**. Deja **Verify JWT activado**: solo responde a usuarios con sesión, y además verifica que quien la llama sea admin.
 3. Recarga el dashboard. En **Ajustes** verás **Agregar usuario** (crea la cuenta ya confirmada) y la tabla **Niveles de acceso**, donde marcas Ver / Editar por rol y módulo.
 

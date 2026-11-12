@@ -8,17 +8,62 @@
 --     las 7 tablas del CRM por las de este script (00 las lista antes).
 --   · Borra asignaciones de rol repetidas (mismo usuario y mismo rol dos
 --     veces). No se pierde ningún permiso: queda una de cada una.
---   · Si NO existe ningún admin, da rol admin a todas las cuentas de
---     auth.users (00 muestra cuántas serían). Si ya hay admin, no cambia roles.
+--   · Si NO existe ningún admin, da rol admin SOLO a la cuenta cuyo correo
+--     escribas abajo (línea "set stratec.admin_email"), nunca a todas. Si ese
+--     correo falta o no es de una cuenta existente, el script se detiene con
+--     un error y no cambia nada. Si ya hay admin, ignora el correo y no
+--     cambia roles.
 --   · Quita a anon y authenticated la lectura directa de correo y teléfono
 --     de leads y clients (se leen por las vistas lead_contacts/client_contacts).
 -- No borra leads, clientes, cotizaciones ni ningún otro registro del CRM.
--- Se puede ejecutar más de una vez.
+-- Se puede ejecutar más de una vez. Ejecútalo siempre completo, de una sola
+-- vez (sin seleccionar solo una parte del texto).
 --
 -- Equivale a todas las migraciones de supabase/migrations/ en su estado
 -- final, y además corrige la política recursiva de user_roles
 -- ("infinite recursion detected in policy for relation user_roles").
 -- ═══════════════════════════════════════════════════════════════════════════
+
+-- ── CORREO DEL PRIMER ADMINISTRADOR · escríbelo aquí antes de ejecutar ─────
+-- Escribe entre las comillas de la línea de abajo el correo de la cuenta que
+-- será el primer administrador (por ejemplo 'tu-correo@ejemplo.com').
+--   · La cuenta ya debe existir en Supabase → Authentication → Users.
+--   · Solo se usa cuando la base todavía no tiene ningún administrador. Si ya
+--     hay uno, puede quedar vacío: el script lo ignora y no cambia roles.
+--   · Escríbelo solo en el SQL Editor; no guardes este archivo con tu correo.
+set stratec.admin_email = '';
+
+-- ── Revisión previa: se detiene aquí, antes de cambiar nada ────────────────
+-- Si no hay ningún administrador (o todavía no existe la tabla de roles) y el
+-- correo de arriba falta o no corresponde a una sola cuenta, el script termina
+-- con un error y no modifica nada. Debe ser la primera instrucción después
+-- del correo: no muevas ni agregues nada antes de este bloque.
+do $$
+declare
+  correo_admin constant text := lower(btrim(coalesce(current_setting('stratec.admin_email', true), ''), E' \t\r\n'));
+  hay_admin boolean := false;
+  coincidencias int;
+begin
+  -- Sin tabla de roles todavía no puede haber ningún administrador.
+  if to_regclass('public.user_roles') is not null then
+    -- role::text: sirve igual si la columna todavía es texto o ya es el enum.
+    execute 'select exists (select 1 from public.user_roles where role::text = ''admin'')' into hay_admin;
+  end if;
+  if hay_admin then
+    return;  -- ya hay administrador: el correo no se usa y no se cambia ningún rol
+  end if;
+
+  if correo_admin = '' then
+    raise exception 'Falta el correo del primer administrador. Esta base de datos todavía no tiene ningún administrador. Al inicio de este script, en la línea que empieza con "set stratec.admin_email", escribe entre las comillas el correo de tu cuenta y ejecuta el script completo otra vez. No se modificó nada.';
+  end if;
+
+  select count(*) into coincidencias from auth.users where lower(email) = correo_admin;
+  if coincidencias = 0 then
+    raise exception 'No hay ninguna cuenta con el correo "%". Revisa que esté bien escrito en la línea que empieza con "set stratec.admin_email", al inicio de este script, y que la cuenta exista en Supabase > Authentication > Users. Después ejecuta el script completo otra vez. No se modificó nada.', correo_admin;
+  elsif coincidencias > 1 then
+    raise exception 'Hay % cuentas con el correo "%" y el rol de administrador se da a una sola. Revisa en Supabase > Authentication > Users cuál debe quedar y ejecuta el script completo otra vez. No se modificó nada.', coincidencias, correo_admin;
+  end if;
+end $$;
 
 -- ── Perfiles y roles ───────────────────────────────────────────────────────
 create table if not exists public.profiles (
@@ -388,13 +433,36 @@ grant select, insert, update, delete on public.profiles, public.user_roles to au
 grant all on public.profiles, public.user_roles, public.rate_limits to service_role;
 
 -- ── Primer administrador (solo en una base sin ningún admin) ───────────────
--- En una instalación nueva, todos los usuarios existentes reciben admin para
--- poder entrar. Si ya hay al menos un admin, no cambia nada: volver a correr
--- este script nunca vuelve a dar admin a todos.
-insert into public.user_roles (user_id, role)
-select id, 'admin' from auth.users
-where not exists (select 1 from public.user_roles where role = 'admin')
-on conflict (user_id, role) do nothing;
+-- Da rol admin ÚNICAMENTE a la cuenta del correo escrito al inicio del script;
+-- nunca a todas las cuentas. Si ya hay al menos un admin, no cambia ningún
+-- rol, así que volver a correr el script no da admin a nadie más.
+-- Repite la revisión del inicio a propósito: aunque alguien ejecute este
+-- bloque suelto, o las instrucciones corran una por una, solo puede dar admin
+-- a esa cuenta; si el correo falta o no es de una sola cuenta, no da ninguno.
+do $$
+declare
+  correo_admin constant text := lower(btrim(coalesce(current_setting('stratec.admin_email', true), ''), E' \t\r\n'));
+  cuentas uuid[];
+begin
+  if exists (select 1 from public.user_roles where role = 'admin') then
+    return;  -- ya hay administrador: no se cambia ningún rol
+  end if;
+
+  if correo_admin <> '' then
+    select array_agg(id) into cuentas from auth.users where lower(email) = correo_admin;
+  end if;
+  if coalesce(cardinality(cuentas), 0) <> 1 then
+    raise exception 'No se asignó el primer administrador: el correo de la línea que empieza con "set stratec.admin_email", al inicio de este script, falta o no corresponde a una sola cuenta de Supabase > Authentication > Users. Corrígelo y ejecuta el script completo otra vez.';
+  end if;
+
+  -- Una sola fila, para una sola cuenta.
+  insert into public.user_roles (user_id, role)
+  values (cuentas[1], 'admin')
+  on conflict (user_id, role) do nothing;
+end $$;
+
+-- El correo ya no se necesita: se quita de la sesión.
+reset stratec.admin_email;
 
 -- Recarga el esquema de la API para que vea las vistas nuevas
 notify pgrst, 'reload schema';

@@ -13,20 +13,20 @@ const Confidentiality = () => (
       },
       {
         title: "Acuerdo de confidencialidad",
-        body: "Previo a cualquier diagnóstico, evaluación o intercambio sustantivo de información, STRATEC suscribe Acuerdos de Confidencialidad bilaterales (NDA) que delimitan el universo de información protegida, los usos permitidos, los plazos de reserva y las consecuencias contractuales del incumplimiento.",
+        body: "Cuando el cliente lo solicita, se firma un acuerdo de confidencialidad antes de iniciar el trabajo.",
       },
       {
         title: "Controles operativos",
         body: [
           "Segmentación de equipos por proyecto bajo modelo need-to-know.",
-          "Repositorios cifrados con doble factor de autenticación y bitácora de accesos.",
+          "La información de cada proyecto se comparte únicamente con el personal asignado a ese proyecto.",
           "Canales seguros para intercambio de información sensible (S/MIME, repositorios privados).",
           "Sanitización y destrucción certificada de documentación al cierre de proyectos.",
         ],
       },
       {
         title: "Cumplimiento normativo",
-        body: "Nuestros protocolos se alinean a marcos internacionales ISO/IEC 27001, NIST SP 800-53, así como a normativa local de protección de datos. Realizamos auditorías internas periódicas y mantenemos un programa de mejora continua sobre nuestros controles de seguridad de la información.",
+        body: "Atendemos la normativa mexicana de protección de datos personales y aplicamos medidas administrativas, técnicas y físicas proporcionales a la información que manejamos.",
       },
       {
         title: "Conducta profesional",

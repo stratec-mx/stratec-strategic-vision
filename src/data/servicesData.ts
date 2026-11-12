@@ -108,6 +108,11 @@ export const SERVICIOS_INDEX: Pick<ServiceData, "numero" | "titulo" | "descripci
   },
 ];
 
+// Constancia que se entrega al concluir una capacitación. Es una constancia, no
+// una certificación; la redacción es la misma en todas las páginas de capacitación.
+const NOTA_CONSTANCIA_DC3 =
+  "Al concluir, se entrega la constancia de competencias o de habilidades laborales DC-3 de la STPS.";
+
 // ─── Datos completos por servicio ─────────────────────────────────────────
 export const SERVICES_DATA: Record<string, ServiceData> = {
 
@@ -271,6 +276,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       },
     ],
     modalidades: "Presencial · Virtual · In Company",
+    nota: NOTA_CONSTANCIA_DC3,
     gancho:
       "La seguridad depende de quienes la ejecutan. Formamos a tu personal con los protocolos, herramientas y criterios necesarios para actuar con eficacia frente a los riesgos reales de su entorno.",
     cta: "Solicitar programa de capacitación",
@@ -554,6 +560,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       },
     ],
     modalidades: "Presencial · In Company · Sesiones intensivas de 4–8 horas",
+    nota: NOTA_CONSTANCIA_DC3,
     gancho:
       "Una brigada sin entrenamiento real es solo un nombre en un organigrama. Formamos a tu equipo para que sepa exactamente qué hacer, cómo hacerlo y cuándo actuar.",
     cta: "Solicitar programa de brigadas",

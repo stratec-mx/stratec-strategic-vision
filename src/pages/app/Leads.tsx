@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Filter, FileText } from "lucide-react";
+import { Plus, Filter, FileText, Trash2, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { parseLeadProfile } from "@/lib/pricing";
 
@@ -16,6 +16,7 @@ import { parseLeadProfile } from "@/lib/pricing";
 const WANTS_CONTACT = "DESEA QUE UN ASESOR LO CONTACTE";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { describeDbError } from "@/lib/dbErrors";
 import { withLeadContacts } from "@/lib/contacts";
 import { z } from "zod";
 
@@ -31,13 +32,15 @@ const schema = z.object({
 
 const Leads = () => {
   const { toast } = useToast();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const showContact = can("contactos");
   const canQuote = can("quotes", "write");
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Id del lead que se está eliminando; mientras tanto se bloquean los botones de eliminar
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
     // Correo y teléfono no se leen de la tabla: vienen de lead_contacts si hay permiso
@@ -65,6 +68,38 @@ const Leads = () => {
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from("leads").update({ status: status as any }).eq("id", id);
+    load();
+  };
+
+  // Eliminar es exclusivo del administrador (así lo exige también la base de datos).
+  const onDelete = async (lead: { id: string; full_name: string }) => {
+    if (deletingId) return;
+    if (!window.confirm(`¿Eliminar el lead "${lead.full_name}"? También se borra su historial de actividades, y sus cotizaciones, negocios y citas quedan sin lead ligado. Esta acción no se puede deshacer.`)) return;
+    setDeletingId(lead.id);
+    const { data, error } = await supabase.from("leads").delete().eq("id", lead.id).select("id");
+    setDeletingId(null);
+    if (error) {
+      console.error("[Leads.delete]", error?.code ?? "error");
+      toast({
+        title: "No se pudo eliminar el lead",
+        description: error.code === "23503"
+          ? 'Este lead tiene otros registros ligados y por eso no se puede eliminar. Mejor cambia su estado a "Descartado".'
+          : describeDbError(error, "Intenta de nuevo."),
+        variant: "destructive",
+      });
+      return;
+    }
+    // Sin permiso, la base de datos no marca error: simplemente no borra nada.
+    if (!data || data.length === 0) {
+      toast({
+        title: "No se eliminó el lead",
+        description: 'Tu usuario no tiene permiso para eliminar leads. Mejor cambia su estado a "Descartado".',
+        variant: "destructive",
+      });
+      load();
+      return;
+    }
+    toast({ title: "Lead eliminado", description: lead.full_name });
     load();
   };
 
@@ -139,10 +174,11 @@ const Leads = () => {
               <th className="py-3 px-4 font-medium">Estado</th>
               <th className="py-3 px-4 font-medium">Score</th>
               <th className="py-3 px-4 font-medium">Fecha</th>
+              {isAdmin && <th className="py-3 px-4 font-medium"><span className="sr-only">Acciones</span></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-steel">Sin leads registrados.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-steel">Sin leads registrados.</td></tr>}
             {rows.map((l) => (
               <tr key={l.id} className="hover:bg-secondary/30 transition">
                 <td className="py-3 px-4">
@@ -170,7 +206,7 @@ const Leads = () => {
                 <td className="py-3 px-4 text-steel">{showContact ? l.email ?? "—" : <span className="text-xs italic">Restringido</span>}</td>
                 <td className="py-3 px-4 text-steel">{l.role_title ?? "—"}</td>
                 <td className="py-3 px-4 text-steel">{l.organization ?? "—"}</td>
-                <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{({ web: "Web", referral: "Referido", event: "Evento", outbound: "Prospección", partner: "Aliado", other: "Otro" } as Record<string, string>)[l.source] ?? l.source}</td>
+                <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{({ web: "Web", referral: "Referido", event: "Evento", outbound: "Prospección", partner: "Aliado", other: "Otro", whatsapp: "WhatsApp" } as Record<string, string>)[l.source] ?? l.source}</td>
                 <td className="py-3 px-4">
                   <Select value={l.status} onValueChange={(v) => updateStatus(l.id, v)}>
                     <SelectTrigger className="h-7 rounded-none border-transparent bg-transparent p-0 [&>svg]:hidden"><StatusBadge status={l.status} /></SelectTrigger>
@@ -183,6 +219,22 @@ const Leads = () => {
                 <td className="py-3 px-4 text-steel text-xs whitespace-nowrap">
                   {new Date(l.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" })}
                 </td>
+                {isAdmin && (
+                  <td className="py-3 px-2 text-right">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-none"
+                      onClick={() => onDelete(l)}
+                      disabled={deletingId !== null}
+                      aria-label={`Eliminar el lead ${l.full_name}`}
+                      title="Eliminar lead"
+                    >
+                      {deletingId === l.id ? <Loader2 className="h-4 w-4 animate-spin text-steel" /> : <Trash2 className="h-4 w-4 text-steel" />}
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

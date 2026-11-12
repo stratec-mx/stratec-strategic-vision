@@ -1,7 +1,8 @@
 -- STRATEC · Revisión del estado actual de la base de datos. SOLO LECTURA:
 -- no crea, modifica ni borra nada, y no muestra datos personales (solo conteos).
 -- Ejecútalo antes de 01, 02 y 03, y comparte el resultado con quien revise.
--- En el resultado, el tipo "02 cambiaría" resume lo que 02 haría con los roles.
+-- En el resultado, el tipo "02 cambiaría" resume lo que 02 haría con los roles,
+-- incluido si hace falta escribir en 02 el correo del primer administrador.
 
 select 'tabla' as tipo, t.name as objeto,
        case when to_regclass('public.' || t.name) is null then 'NO EXISTE' else 'existe' end as estado,
@@ -52,10 +53,20 @@ select '02 cambiaría', 'asignaciones repetidas que borraría', coalesce(sum(c -
        'mismo usuario y mismo rol más de una vez; queda una de cada una'
 from (select count(*) as c from public.user_roles group by user_id, role having count(*) > 1) d
 
+-- 02 ya no da admin a todas las cuentas. Sin ningún admin, exige el correo de
+-- una cuenta (línea "set stratec.admin_email" de 02) y da admin solo a esa.
+union all
+select '02 cambiaría', 'correo del primer administrador',
+       case when a.hay_admin then 'no hace falta' else 'OBLIGATORIO' end,
+       case when a.hay_admin then 'ya hay admin: 02 ignora el correo y no cambia ningún rol'
+            else 'hoy no hay admin: escríbelo al inicio de 02; si falta o no es de una cuenta existente, 02 se detiene sin cambiar nada' end
+from (select exists (select 1 from public.user_roles where role::text = 'admin') as hay_admin) a
+
 union all
 select '02 cambiaría', 'cuentas que recibirían admin',
-       case when exists (select 1 from public.user_roles where role::text = 'admin') then '0'
-            else (select count(*) from auth.users)::text end,
-       'solo ocurre si hoy no hay ningún admin'
+       case when a.hay_admin then '0' else '1' end,
+       case when a.hay_admin then 'ya hay admin: 02 no da admin a nadie'
+            else 'solo la cuenta del correo que escribas al inicio de 02; nunca todas' end
+from (select exists (select 1 from public.user_roles where role::text = 'admin') as hay_admin) a
 
 order by 1, 2;

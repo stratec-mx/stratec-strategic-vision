@@ -38,7 +38,7 @@ const Privacidad = () => (
         title: "Uso de cookies y tecnologías de rastreo",
         body: [
           "Este sitio utiliza cookies analíticas y de seguimiento únicamente CON TU CONSENTIMIENTO EXPLÍCITO. Ninguno de estos scripts se ejecuta sin que aceptes el banner de cookies.",
-          "Google Analytics 4 (ID: G-9SEKJR2MC6) — Análisis agregado y anónimo del comportamiento de visitantes para mejorar nuestros servicios.",
+          "Google Analytics 4 (ID: G-80TEXD0MCV) — Análisis agregado y anónimo del comportamiento de visitantes para mejorar nuestros servicios.",
           "Meta Pixel (ID: 978906281171528) — Seguimiento de conversiones y optimización de campañas publicitarias.",
           "Ambos servicios se cargan ÚNICAMENTE después de que hagas clic en 'Aceptar' en el banner de cookies. Si rechazas o ignoras el banner, NO se cargarán.",
           "Puedes revocar tu consentimiento en cualquier momento eliminando las cookies de tu navegador o contactando a contacto@stratecsecurity.com.",
@@ -46,7 +46,7 @@ const Privacidad = () => (
       },
       {
         title: "Medidas de seguridad",
-        body: "Implementamos controles administrativos, técnicos y físicos alineados a estándares ISO/IEC 27001 y NIST CSF para preservar la confidencialidad, integridad y disponibilidad de la información tratada, incluyendo cifrado en tránsito y en reposo, segmentación de accesos y bitácoras de auditoría.",
+        body: "Aplicamos medidas de seguridad administrativas, técnicas y físicas, proporcionales a la información que manejamos, para proteger los datos personales contra daño, pérdida, alteración, destrucción o uso, acceso o tratamiento no autorizado.",
       },
       {
         title: "Derechos ARCO",
