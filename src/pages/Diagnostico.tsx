@@ -279,7 +279,17 @@ export default function Diagnostico() {
     }
   };
 
-  const waText = encodeURIComponent(`Hola STRATEC, hice el diagnóstico básico (nivel: ${level.label}, ${fmt(score)}/10) y quiero agendar una evaluación.`);
+  // El bot de WhatsApp lee estos datos y solo pregunta lo que falte. Sin correo ni teléfono.
+  const waPerfil = [
+    giroLabel && `Giro: ${giroLabel}`,
+    personasLabel && `Personas: ${personasLabel.replace(/ personas$/, "")}`,
+    org.superficie !== "ns" && superficieLabel && `Superficie: ${superficieLabel.replace(/^De /, "")}`,
+    org.estado && `Estado: ${org.estado}`,
+  ].filter(Boolean).join(" · ");
+  const waText = encodeURIComponent(
+    `Hola STRATEC, hice el diagnóstico básico (nivel: ${level.label}, ${fmt(score)}/10) y quiero agendar una evaluación.` +
+      (waPerfil ? ` ${waPerfil}` : ""),
+  );
 
   return (
     <div className="min-h-screen bg-smoke">
