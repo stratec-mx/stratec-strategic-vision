@@ -12,9 +12,15 @@ const map: Record<string, string> = {
   expired: "bg-secondary text-steel border-border",
 };
 
+export const STATUS_LABEL: Record<string, string> = {
+  new: "Nuevo", contacted: "Contactado", qualified: "Calificado", unqualified: "Descartado", converted: "Convertido",
+  active: "Activo", inactive: "Inactivo", prospect: "Prospecto",
+  draft: "Borrador", sent: "Enviada", accepted: "Aceptada", rejected: "Rechazada", expired: "Expirada",
+};
+
 export const StatusBadge = ({ status }: { status: string }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] uppercase tracking-wider border ${map[status] ?? "bg-secondary text-steel border-border"}`}>
     <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
-    {status}
+    {STATUS_LABEL[status] ?? status}
   </span>
 );

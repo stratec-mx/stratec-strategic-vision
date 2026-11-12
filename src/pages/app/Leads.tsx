@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/app/PageHeader";
-import { StatusBadge } from "@/components/app/StatusBadge";
+import { StatusBadge, STATUS_LABEL } from "@/components/app/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -170,12 +170,12 @@ const Leads = () => {
                 <td className="py-3 px-4 text-steel">{showContact ? l.email ?? "—" : <span className="text-xs italic">Restringido</span>}</td>
                 <td className="py-3 px-4 text-steel">{l.role_title ?? "—"}</td>
                 <td className="py-3 px-4 text-steel">{l.organization ?? "—"}</td>
-                <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{l.source}</td>
+                <td className="py-3 px-4 text-steel uppercase text-xs tracking-wider">{({ web: "Web", referral: "Referido", event: "Evento", outbound: "Prospección", partner: "Aliado", other: "Otro" } as Record<string, string>)[l.source] ?? l.source}</td>
                 <td className="py-3 px-4">
                   <Select value={l.status} onValueChange={(v) => updateStatus(l.id, v)}>
                     <SelectTrigger className="h-7 rounded-none border-transparent bg-transparent p-0 [&>svg]:hidden"><StatusBadge status={l.status} /></SelectTrigger>
                     <SelectContent>
-                      {["new","contacted","qualified","unqualified","converted"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {["new","contacted","qualified","unqualified","converted"].map(s => <SelectItem key={s} value={s}>{STATUS_LABEL[s] ?? s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </td>

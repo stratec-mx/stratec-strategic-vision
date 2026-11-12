@@ -23,11 +23,11 @@ export const CookieBanner = () => {
    * Esto cumple con LFPDPPP (Ley Federal de Protección de Datos Personales en Posesión de los Particulares)
    */
   const loadAnalytics = () => {
-    // Google Analytics 4 — ID: G-9SEKJR2MC6
+    // Google Analytics 4 — ID: G-80TEXD0MCV
     if (typeof window !== "undefined" && !(window as any).gtag) {
       const script = document.createElement("script");
       script.async = true;
-      script.src = "https://www.googletagmanager.com/gtag/js?id=G-9SEKJR2MC6";
+      script.src = "https://www.googletagmanager.com/gtag/js?id=G-80TEXD0MCV";
       document.head.appendChild(script);
 
       const inlineScript = document.createElement("script");
@@ -35,7 +35,7 @@ export const CookieBanner = () => {
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-9SEKJR2MC6', { 'anonymize_ip': true });
+        gtag('config', 'G-80TEXD0MCV', { 'anonymize_ip': true });
       `;
       document.head.appendChild(inlineScript);
     }
