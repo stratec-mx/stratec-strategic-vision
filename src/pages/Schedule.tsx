@@ -25,7 +25,11 @@ const schema = z.object({
 //   → contacto@stratecsecurity.com
 // Configurar en Google Calendar (Appointment Schedule) y en el servicio de correo
 // transaccional (Resend / SMTP) como destinatario principal de avisos.
-const GOOGLE_BOOKING_URL = "https://calendar.app.google/uaWvE7ij7Z23Fpbp8";
+// Vacío mientras no haya agenda activa: la de Google dependía de la cuenta
+// Workspace suspendida y respondía "Appointment not found". Al crear una nueva
+// (por ejemplo, en el Gmail del negocio), pegar aquí su enlace.
+const GOOGLE_BOOKING_URL = "";
+const WHATSAPP_AGENDA = `https://wa.me/522206488688?text=${encodeURIComponent("Hola STRATEC, quiero agendar una sesión con un consultor.")}`;
 
 const Schedule = () => {
   const { toast } = useToast();
@@ -180,22 +184,20 @@ const Schedule = () => {
                   </div>
                   <div className="max-w-md">
                     <div className="font-display text-2xl text-navy leading-snug">
-                      Reserve directamente en la agenda institucional
+                      {GOOGLE_BOOKING_URL ? "Reserve directamente en la agenda" : "Elija su horario por WhatsApp"}
                     </div>
                     <p className="mt-3 text-sm text-steel leading-relaxed">
-                      Sincronizado con Google Workspace de STRATEC. Recibirá la confirmación
-                      y el enlace de la sesión en su correo institucional.
+                      {GOOGLE_BOOKING_URL
+                        ? "Recibirá la confirmación y el enlace de la sesión en su correo."
+                        : "Escríbanos y le respondemos con los horarios disponibles para su sesión. También puede dejarnos sus datos en el formulario."}
                     </p>
                   </div>
                   <Button asChild className="rounded-none bg-navy hover:bg-navy-deep text-smoke tracking-wider text-xs uppercase h-12 px-8 group">
-                    <a href={GOOGLE_BOOKING_URL} target="_blank" rel="noopener noreferrer">
-                      Abrir agenda y reservar
+                    <a href={GOOGLE_BOOKING_URL || WHATSAPP_AGENDA} target="_blank" rel="noopener noreferrer">
+                      {GOOGLE_BOOKING_URL ? "Abrir agenda y reservar" : "Agendar por WhatsApp"}
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </a>
                   </Button>
-                  <p className="text-[11px] text-steel/70">
-                    Confirmaciones enviadas a contacto@stratecsecurity.com
-                  </p>
                 </div>
               </div>
             </motion.div>
