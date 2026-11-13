@@ -41,7 +41,7 @@ const staticConfig: Record<string, PageSEO> = {
       "elaboración de PIPC", "elaborar PIPC", "PIPC Morelos", "PIPC CDMX", "PIPC empresa",
       "NOM-002-STPS", "NOM-030-STPS", "reglamento de protección civil",
       "cumplimiento NOM seguridad", "normatividad protección civil",
-      "trámite protección civil", "certificación protección civil",
+      "trámite protección civil",
       // Gestión de seguridad (variantes)
       "gestión de seguridad", "gestion de seguridad",
       "gestión integral de seguridad", "gestion integral de seguridad",

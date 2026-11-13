@@ -403,7 +403,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
       },
     ],
-    nota: "STRATEC opera con el sector público bajo acuerdos de confidencialidad institucional. Los detalles de cada intervención se presentan exclusivamente en propuesta dirigida.",
+    nota: "Cuando la institución lo solicita, se firma un acuerdo de confidencialidad. Los detalles de cada intervención se presentan exclusivamente en propuesta dirigida.",
     gancho:
       "La seguridad institucional requiere análisis técnico, planeación rigurosa y capacidad operativa sostenida. Acompañamos a dependencias y organismos en el fortalecimiento de sus modelos de seguridad con soluciones objetivas y auditables.",
     cta: "Solicitar propuesta dirigida",

@@ -4,8 +4,8 @@ const Confidentiality = () => (
   <LegalLayout
     eyebrow="Compromiso institucional"
     title="Confidencialidad Institucional"
-    updated="01 de mayo, 2026"
-    intro="La confidencialidad constituye un principio rector y un activo estratégico de STRATEC. Toda interacción con clientes, contrapartes, prospectos y autoridades se gestiona bajo estándares reforzados de discreción profesional, custodia documental y trazabilidad."
+    updated="13 de noviembre, 2026"
+    intro="La confidencialidad constituye un principio rector y un activo estratégico de STRATEC. Toda interacción con clientes, contrapartes, prospectos y autoridades se gestiona con discreción profesional y cuidado en el manejo de la documentación."
     sections={[
       {
         title: "Principio rector",
@@ -18,10 +18,7 @@ const Confidentiality = () => (
       {
         title: "Controles operativos",
         body: [
-          "Segmentación de equipos por proyecto bajo modelo need-to-know.",
           "La información de cada proyecto se comparte únicamente con el personal asignado a ese proyecto.",
-          "Canales seguros para intercambio de información sensible (S/MIME, repositorios privados).",
-          "Sanitización y destrucción certificada de documentación al cierre de proyectos.",
         ],
       },
       {

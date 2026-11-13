@@ -4,7 +4,7 @@ const Privacidad = () => (
   <LegalLayout
     eyebrow="Marco legal"
     title="Aviso de Privacidad"
-    updated="01 de mayo, 2026"
+    updated="13 de noviembre, 2026"
     intro="STRATEC Security, en su carácter de responsable del tratamiento de datos personales, establece el presente Aviso conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y sus mejores prácticas internacionales de manejo de información institucional sensible."
     sections={[
       {
