@@ -9,3 +9,8 @@ verify_jwt = false
 # Alta de usuarios desde el dashboard: exige sesión (la función además verifica rol admin)
 [functions.admin-create-user]
 verify_jwt = true
+
+# El bot de WhatsApp (Railway) avisa de prospectos. Se autentica con el header
+# X-Agente-Secret contra el secret WHATSAPP_LEAD_SECRET, no con sesión de usuario.
+[functions.whatsapp-lead]
+verify_jwt = false
