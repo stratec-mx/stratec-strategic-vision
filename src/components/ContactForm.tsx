@@ -19,12 +19,6 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// EmailJS
-const EMAILJS_SERVICE_ID       = "service_3wysprf";
-const EMAILJS_TEMPLATE_ID      = "template_dqu8jlc";   // notificación interna STRATEC
-const EMAILJS_CONFIRM_TEMPLATE = "template_iexzjcp";    // confirmación al cliente
-const EMAILJS_PUBLIC_KEY       = "QrsTojpa7iz8FVM-n";
-
 export const ContactForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -39,44 +33,14 @@ export const ContactForm = () => {
 
   const selectedService = watch("servicio");
 
-  const buildTemplateParams = (data: FormData) => ({
-    name:       data.nombre,
-    message:    `Servicio: ${data.servicio}. ${data.mensaje || ""}`.trim(),
-    time:       new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),
-    from_name:  data.nombre,
-    from_email: data.email,
-    empresa:    data.empresa,
-    cargo:      data.cargo    || "—",
-    telefono:   data.telefono || "—",
-    servicio:   data.servicio,
-    mensaje:    data.mensaje  || "—",
-  });
-
-  const sendEmailJS = (
-    templateParams: ReturnType<typeof buildTemplateParams>,
-    toEmail: string,
-    templateId = EMAILJS_TEMPLATE_ID,
-  ) =>
-    fetch("https://api.emailjs.com/api/v1.0/email/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        service_id:      EMAILJS_SERVICE_ID,
-        template_id:     templateId,
-        user_id:         EMAILJS_PUBLIC_KEY,
-        template_params: { ...templateParams, to_email: toEmail },
-      }),
-    });
-
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     setError("");
     try {
-      const params = buildTemplateParams(data);
-
-      // 1 · Guardar el lead en el CRM (y aviso a Telegram). Es lo principal:
-      // antes el lead se perdía si el correo de EmailJS fallaba.
-      const lead = fetch(
+      // Guarda el lead, avisa por Telegram y envía los correos (aviso interno y
+      // confirmación al cliente). Los correos los manda el servidor con la llave
+      // privada de EmailJS: el navegador ya no tiene acceso a EmailJS.
+      const leadOk = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-lead`,
         {
           method: "POST",
@@ -92,21 +56,13 @@ export const ContactForm = () => {
             message:      `${data.servicio}: ${data.mensaje || ""}`.trim(),
             telefono:     data.telefono,
             servicio:     data.servicio,
+            mensaje:      data.mensaje,
+            correo:       true,
           }),
         }
       ).then((r) => r.ok).catch(() => false);
 
-      // 2 · Correos (aviso interno y confirmación al cliente), en paralelo.
-      // Un solo aviso interno: contacto@ y coordinacion@ se reenvían al mismo
-      // Gmail. La plantilla interna debe tener su destinatario fijo en EmailJS.
-      const correo = Promise.all([
-        sendEmailJS(params, "contacto@stratecsecurity.com").then((r) => r.ok).catch(() => false),
-        sendEmailJS(params, data.email, EMAILJS_CONFIRM_TEMPLATE).catch(() => null),
-      ]).then(([ok]) => ok);
-
-      // Basta con que llegue por una de las dos vías
-      const [leadOk, correoOk] = await Promise.all([lead, correo]);
-      if (!leadOk && !correoOk) throw new Error("Error al enviar");
+      if (!leadOk) throw new Error("Error al enviar");
 
       setSubmitted(true);
       track.formSubmit(selectedService);

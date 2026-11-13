@@ -170,6 +170,70 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
   return { text: bloques.join("\n\n").substring(0, 4000), buttons: [fila1, fila2, fila3].filter((f) => f.length) };
 }
 
+// ── Correo (EmailJS desde el servidor) ─────────────────────────────────────
+// Antes el navegador llamaba a EmailJS con la llave pública y cualquiera podía
+// usarla. Ahora solo esta función envía, con la llave privada guardada en el
+// secret EMAILJS_PRIVATE_KEY, y después del límite por IP y del honeypot.
+// En EmailJS → Account → Security: "Allow EmailJS API for non-browser
+// applications" activado y "Use Private Key" activado.
+const EMAILJS = {
+  service: "service_3wysprf",
+  interno: "template_dqu8jlc", // aviso a STRATEC (destinatario fijo en la plantilla)
+  confirmacion: "template_iexzjcp", // confirmación al cliente
+  publicKey: "QrsTojpa7iz8FVM-n",
+};
+
+export interface DatosCorreo {
+  name: string;
+  email: string;
+  organization: string;
+  role?: string | null;
+  telefono?: string | null;
+  servicio?: string | null;
+  mensaje?: string | null;
+}
+
+/** Mismos parámetros que mandaba el formulario, para no cambiar las plantillas. */
+export function parametrosCorreo(d: DatosCorreo, hora: string): Record<string, string> {
+  const corto = (v: unknown, max: number) => String(v ?? "").trim().substring(0, max);
+  const servicio = corto(d.servicio, 150);
+  const mensaje = corto(d.mensaje, 1000);
+  return {
+    name: corto(d.name, 100),
+    message: `Servicio: ${servicio}. ${mensaje}`.trim(),
+    time: hora,
+    from_name: corto(d.name, 100),
+    from_email: corto(d.email, 255),
+    empresa: corto(d.organization, 150),
+    cargo: corto(d.role, 120) || "—",
+    telefono: corto(d.telefono, 40) || "—",
+    servicio,
+    mensaje: mensaje || "—",
+  };
+}
+
+async function enviarCorreo(plantilla: string, params: Record<string, string>, toEmail: string, privateKey: string) {
+  try {
+    const r = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: EMAILJS.service,
+        template_id: plantilla,
+        user_id: EMAILJS.publicKey,
+        accessToken: privateKey,
+        template_params: { ...params, to_email: toEmail },
+      }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!r.ok) console.warn("[submit-lead] EmailJS", plantilla, r.status, (await r.text()).substring(0, 200));
+    return r.ok;
+  } catch (e) {
+    console.warn("[submit-lead] EmailJS falló:", (e as Error).message);
+    return false;
+  }
+}
+
 // ── Función ────────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -187,7 +251,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const { name, email, organization, role, message, honeypot, telefono, servicio, diagnostico } = body;
+    const { name, email, organization, role, message, honeypot, telefono, servicio, diagnostico, correo, mensaje } = body;
 
     // Honeypot check (secondary server-side defence)
     if (honeypot) {
@@ -323,6 +387,22 @@ serve(async (req: Request) => {
       } catch (e) {
         console.warn("[submit-lead] Telegram notify failed:", (e as Error).message);
       }
+    }
+
+    // — 6. Correos del formulario de contacto (solo si lo pide: correo === true) ——
+    const privateKey = Deno.env.get("EMAILJS_PRIVATE_KEY");
+    if (correo === true && privateKey) {
+      const hora = new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" });
+      const params = parametrosCorreo(
+        { name: String(name), email: String(email), organization: String(organization), role, telefono, servicio, mensaje },
+        hora,
+      );
+      await Promise.all([
+        enviarCorreo(EMAILJS.interno, params, "contacto@stratecsecurity.com", privateKey),
+        enviarCorreo(EMAILJS.confirmacion, params, String(email), privateKey),
+      ]);
+    } else if (correo === true) {
+      console.warn("[submit-lead] falta EMAILJS_PRIVATE_KEY: no se enviaron correos");
     }
 
     return new Response(JSON.stringify({ ok: true }), {
