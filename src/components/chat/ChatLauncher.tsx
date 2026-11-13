@@ -15,9 +15,12 @@ const URL_CHAT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-agent`;
 
 // El botón aparece solo si la función del chat ya existe en Supabase
 // (antes de crearla, el visitante vería un error al escribir).
+// Se usa GET (petición simple, sin preflight): la función responde 405 con CORS
+// si existe y Supabase responde 404 si no. Con OPTIONS el navegador bloqueaba
+// la consulta y el botón nunca aparecía.
 let disponibleCache: Promise<boolean> | null = null;
 const chatDisponible = () =>
-  (disponibleCache ??= fetch(URL_CHAT, { method: "OPTIONS" }).then((r) => r.ok).catch(() => false));
+  (disponibleCache ??= fetch(URL_CHAT, { method: "GET" }).then((r) => r.status !== 404).catch(() => false));
 
 export const ChatLauncher = () => {
   const { pathname } = useLocation();
