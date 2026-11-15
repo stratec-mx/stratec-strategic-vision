@@ -5,12 +5,15 @@ import { KpiCard } from "@/components/app/KpiCard";
 import { StatusBadge } from "@/components/app/StatusBadge";
 import { Target, TrendingUp, CalendarCheck, Briefcase, Clock, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { GooglePublico } from "@/components/app/GooglePublico";
 import { Link } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
 } from "recharts";
 
 const Dashboard = () => {
+  const { isAdmin } = useAuth();
   const [kpi, setKpi] = useState({ leads: 0, pipeline: 0, conv: "0%", appts: 0 });
   const [recent, setRecent] = useState<any[]>([]);
   const [trend, setTrend] = useState<{ d: string; v: number }[]>([]);
@@ -25,6 +28,7 @@ const Dashboard = () => {
         supabase.from("leads").select("id, full_name, organization, status, created_at").order("created_at", { ascending: false }).limit(5),
         supabase.from("appointments").select("id, title, starts_at, ends_at, attendee_name, organization, location").gte("starts_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(5),
       ]);
+      const { data: leads14 } = await supabase.from("leads").select("created_at").gte("created_at", new Date(Date.now() - 15 * 86400000).toISOString());
       const pipelineValue = (deals ?? []).filter(d => !["cierre", "perdido"].includes(d.stage)).reduce((s, d) => s + Number(d.value_amount), 0);
       const closed = (deals ?? []).filter(d => d.stage === "cierre").length;
       const total = (deals ?? []).length;
@@ -36,10 +40,19 @@ const Dashboard = () => {
       });
       setRecent(leadsList ?? []);
       setUpcomingAppts(apptsList ?? []);
-      const t = Array.from({ length: 14 }, (_, i) => ({
-        d: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString("es", { day: "2-digit", month: "short" }),
-        v: Math.floor(Math.random() * 8) + 2,
-      }));
+      const diaMx = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+      const porDia = new Map<string, number>();
+      for (const l of leads14 ?? []) {
+        const k = diaMx(new Date(l.created_at));
+        porDia.set(k, (porDia.get(k) ?? 0) + 1);
+      }
+      const t = Array.from({ length: 14 }, (_, i) => {
+        const fecha = new Date(Date.now() - (13 - i) * 86400000);
+        return {
+          d: fecha.toLocaleDateString("es", { day: "2-digit", month: "short", timeZone: "America/Mexico_City" }),
+          v: porDia.get(diaMx(fecha)) ?? 0,
+        };
+      });
       setTrend(t);
     })();
   }, []);
@@ -73,9 +86,9 @@ const Dashboard = () => {
               <LineChart data={trend} margin={{ top: 5, right: 12, bottom: 5, left: -10 }}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="d" tick={{ fontSize: 11, fill: "hsl(var(--steel))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--steel))" }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--steel))" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 0, fontSize: 12 }} />
-                <Line type="monotone" dataKey="v" stroke="hsl(var(--navy))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--olive))" }} />
+                <Line type="monotone" dataKey="v" name="Leads" stroke="hsl(var(--navy))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--olive))" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -140,6 +153,8 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {isAdmin && <GooglePublico />}
     </div>
   );
 };

@@ -14,3 +14,8 @@ verify_jwt = true
 # X-Agente-Secret contra el secret WHATSAPP_LEAD_SECRET, no con sesión de usuario.
 [functions.whatsapp-lead]
 verify_jwt = false
+
+# Datos de Search Console y Analytics para el panel. Exige sesión; la función
+# además verifica rol admin. Credenciales en secrets (ver docs/google-insights.md).
+[functions.google-insights]
+verify_jwt = true
