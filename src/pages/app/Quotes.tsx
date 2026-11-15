@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw } from "lucide-react";
+import { Plus, Trash2, FileText, FileDown, Loader2, Eye, RotateCcw, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
@@ -49,7 +49,13 @@ const newClientSchema = z.object({
 });
 
 /** auto: el precio sigue la tarifa sugerida hasta que se edita a mano. No se guarda. */
-type Item = { code: string; title: string; description: string; qty: number; unit_price: number; hours?: number; auto?: boolean; reason?: string };
+type Item = {
+  code: string; title: string; description: string; qty: number; unit_price: number; hours?: number; auto?: boolean; reason?: string;
+  /** Solo al editar una cotización guardada: registro de precio original y con qué código/precio se guardó. */
+  prev?: PriceTrace | null; prevPrice?: number; prevCode?: string;
+};
+/** Concepto que no cambió desde que se guardó: conserva su registro de precio original. */
+const sinCambio = (it: Item | undefined) => !!it?.prev && it.prevPrice === it.unit_price && it.prevCode === it.code;
 type ClientRow = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null };
 
 const NEW_CLIENT = "__new__";
@@ -105,7 +111,7 @@ const readDraft = (): Draft | null => {
 
 const Quotes = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [list, setList] = useState<any[]>([]);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [open, setOpen] = useState(false);
@@ -127,17 +133,21 @@ const Quotes = () => {
   const [taxRate, setTaxRate] = useState(draft?.taxRate ?? 16);
   const [profile, setProfile] = useState<ClientProfile>({ ...DEFAULT_PROFILE, ...(draft?.profile ?? {}) });
   const [rates, setRates] = useState<Record<string, ServiceRate>>({});
+  /** Cotización guardada que se está editando (solo administradores). */
+  const [editing, setEditing] = useState<{ id: string; number: string; createdAt: string } | null>(null);
   const classification = useMemo(() => classify(profile), [profile]);
   const alerts = useMemo(() => internalAlerts(items.map((i) => i.code), profile), [items, profile]);
   const suggestionFor = (code: string) => suggestPrice(code, rates, classification);
 
   useEffect(() => {
+    // Al editar una cotización guardada no se toca el borrador de la cotización nueva
+    if (editing) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, clientId, newClient, items, taxRate, profile } satisfies Draft));
     } catch {
       /* almacenamiento lleno o bloqueado: el borrador solo vive en memoria */
     }
-  }, [form, clientId, newClient, items, taxRate, profile]);
+  }, [form, clientId, newClient, items, taxRate, profile, editing]);
 
   // Los conceptos con precio automático se recalculan al cambiar la clasificación o las tarifas
   useEffect(() => {
@@ -246,6 +256,40 @@ const Quotes = () => {
   const onOpenChange = (v: boolean) => {
     if (v && !form.number) setForm((f) => ({ ...f, number: suggestedNumber }));
     setOpen(v);
+    // Cerrar el panel durante una edición descarta los cambios no guardados
+    if (!v && editing) endEdit();
+  };
+
+  /** Abre una cotización guardada en el formulario para corregirla (solo administradores). */
+  const startEdit = (q: (typeof list)[number]) => {
+    if (!isAdmin) return;
+    const raw: Array<{ pricing?: PriceTrace; reason?: string } | null> = Array.isArray(q.items) ? q.items : [];
+    const sub = Number(q.subtotal) || 0;
+    setEditing({ id: q.id, number: q.number, createdAt: q.created_at });
+    setForm({ number: q.number ?? "", currency: q.currency ?? "MXN", notes: q.notes ?? "", valid_until: q.valid_until ?? "" });
+    setClientId(q.client_id ?? "");
+    setNewClient({ name: "", contact_name: "", contact_email: "" });
+    setItems(
+      normalizeItems(q.items).map((it, idx) => {
+        const prev = (raw[idx]?.pricing as PriceTrace | undefined) ?? null;
+        return { ...it, auto: false, reason: prev?.reason ?? raw[idx]?.reason ?? "", prev, prevPrice: it.unit_price, prevCode: it.code };
+      }),
+    );
+    setTaxRate(sub > 0 ? Math.round((Number(q.tax) / sub) * 10000) / 100 : 16);
+    setProfile(DEFAULT_PROFILE);
+    setOpen(true);
+  };
+
+  /** Sale del modo edición y recupera el borrador de la cotización nueva, si había uno. */
+  const endEdit = () => {
+    setEditing(null);
+    const d = readDraft();
+    setForm(d?.form ?? { number: "", currency: "MXN", notes: "", valid_until: isoInDays(30) });
+    setClientId(d?.clientId ?? "");
+    setNewClient(d?.newClient ?? { name: "", contact_name: "", contact_email: "" });
+    setItems(d?.items?.length ? d.items : [emptyItem()]);
+    setTaxRate(d?.taxRate ?? 16);
+    setProfile({ ...DEFAULT_PROFILE, ...(d?.profile ?? {}) });
   };
 
   const addItem = () => setItems([...items, emptyItem()]);
@@ -293,6 +337,7 @@ const Quotes = () => {
       return null;
     }
     const sinJustificar = items.find((it) => {
+      if (sinCambio(it)) return false;
       const sug = it.code ? suggestionFor(it.code) : null;
       return priceDeviation(it.unit_price, sug?.price).outOfRange && (it.reason ?? "").trim().length < 10;
     });
@@ -385,6 +430,7 @@ const Quotes = () => {
     // Registro del precio dentro de cada concepto (no se imprime en el PDF)
     const at = new Date().toISOString();
     const savedItems = data.items.map((it, idx) => {
+      if (sinCambio(items[idx])) return { ...it, pricing: items[idx].prev as PriceTrace };
       const sug = it.code && it.code !== CUSTOM_CODE ? suggestionFor(it.code) : null;
       const dev = priceDeviation(it.unit_price, sug?.price);
       const pricing: PriceTrace = {
@@ -404,7 +450,7 @@ const Quotes = () => {
       return { ...it, pricing };
     });
 
-    const { error } = await supabase.from("quotes").insert({
+    const payload = {
       number: data.number,
       client_id: finalClientId,
       currency: data.currency,
@@ -414,21 +460,28 @@ const Quotes = () => {
       subtotal: safeSubtotal,
       tax: safeTax,
       total: safeTotal,
-      owner_id: user?.id,
-    });
+    };
+    let error: { message: string; code?: string } | null = null;
+    if (editing) {
+      // .select() para detectar si la base rechazó el cambio por permisos: en ese caso no devuelve filas
+      const r = await supabase.from("quotes").update(payload).eq("id", editing.id).select("id");
+      error = r.error ?? (r.data?.length ? null : { message: "No tienes permiso para editar esta cotización." });
+    } else {
+      error = (await supabase.from("quotes").insert({ ...payload, owner_id: user?.id })).error;
+    }
     setSaving(false);
     if (error) {
-      console.error("[Quotes.insert]", error?.code ?? "error");
-      toast({ title: "No se pudo guardar la cotización", description: describeDbError(error, "Intenta de nuevo."), variant: "destructive" });
+      console.error(editing ? "[Quotes.update]" : "[Quotes.insert]", error?.code ?? "error");
+      toast({ title: "No se pudo guardar la cotización", description: describeDbError(error, error?.message ?? "Intenta de nuevo."), variant: "destructive" });
       return;
     }
-    toast({ title: "Cotización creada", description: `${data.number} · ${formatMoney(safeTotal, data.currency)} ${data.currency}` });
+    toast({ title: editing ? "Cotización actualizada" : "Cotización creada", description: `${data.number} · ${formatMoney(safeTotal, data.currency)} ${data.currency}` });
 
     if (withPdf && client) {
       await makePdf(
         {
           number: data.number,
-          issuedAt: new Date(),
+          issuedAt: editing ? new Date(editing.createdAt) : new Date(),
           validUntil: data.valid_until || null,
           currency: data.currency,
           taxRate: data.taxRate,
@@ -441,7 +494,8 @@ const Quotes = () => {
     }
     setOpen(false);
     await load();
-    resetFormAfterSave();
+    if (editing) endEdit();
+    else resetFormAfterSave();
   };
 
   // Se ejecuta tras recargar la lista para que el folio sugerido avance
@@ -570,7 +624,13 @@ const Quotes = () => {
               </Button>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
-              <SheetHeader><SheetTitle className="font-display text-navy">Nueva cotización</SheetTitle></SheetHeader>
+              <SheetHeader><SheetTitle className="font-display text-navy">{editing ? `Editar cotización ${editing.number}` : "Nueva cotización"}</SheetTitle></SheetHeader>
+              {editing && (
+                <p className="mt-2 text-xs text-steel border-l-2 border-[#C4A04A] pl-3">
+                  Estás corrigiendo una cotización ya guardada. Los cambios se aplican solo al pulsar guardar; si cierras el panel, se descartan.
+                  Los conceptos que no cambies conservan su precio y su registro original.
+                </p>
+              )}
               <div className="mt-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -753,24 +813,30 @@ const Quotes = () => {
                     Vista previa PDF
                   </Button>
                   <Button onClick={() => submit(true)} disabled={saving} className="rounded-none bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-xs h-12">
-                    {saving ? "Guardando…" : "Guardar y ver PDF"}
+                    {saving ? "Guardando…" : editing ? "Guardar cambios y ver PDF" : "Guardar y ver PDF"}
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Button type="button" variant="ghost" onClick={() => submit(false)} disabled={saving} className="rounded-none uppercase tracking-wider text-xs h-10 text-steel">
-                    Solo guardar
+                    {editing ? "Solo guardar cambios" : "Solo guardar"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={saving}
-                    onClick={() => { if (window.confirm("¿Borrar todos los datos de esta cotización en preparación?")) resetForm(); }}
-                    className="rounded-none uppercase tracking-wider text-xs h-10 text-steel"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 mr-2" /> Limpiar formulario
-                  </Button>
+                  {editing ? (
+                    <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)} className="rounded-none uppercase tracking-wider text-xs h-10 text-steel">
+                      Cancelar edición
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={saving}
+                      onClick={() => { if (window.confirm("¿Borrar todos los datos de esta cotización en preparación?")) resetForm(); }}
+                      className="rounded-none uppercase tracking-wider text-xs h-10 text-steel"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-2" /> Limpiar formulario
+                    </Button>
+                  )}
                 </div>
-                <p className="text-[11px] text-steel text-center">El borrador se guarda automáticamente en este navegador hasta que lo guardes o lo limpies.</p>
+                {!editing && <p className="text-[11px] text-steel text-center">El borrador se guarda automáticamente en este navegador hasta que lo guardes o lo limpies.</p>}
 
                 {open && previewDialog}
               </div>
@@ -841,7 +907,7 @@ const Quotes = () => {
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Vigencia</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel" title="Horas estimadas / horas reales (interno)">Horas est. / reales</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-steel">Estado</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-steel text-right">PDF</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-steel text-right">{isAdmin ? "Acciones" : "PDF"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -904,7 +970,12 @@ const Quotes = () => {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
+                    {isAdmin && (
+                      <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => startEdit(q)} aria-label={`Editar ${q.number}`} title="Editar (solo administradores)">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" className="rounded-none h-8 text-xs text-navy" onClick={() => downloadSaved(q)} disabled={pdfBusy === q.id} aria-label={`Ver PDF de ${q.number}`}>
                       {pdfBusy === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                     </Button>

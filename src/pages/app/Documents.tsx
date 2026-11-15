@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
-import { ArrowLeft, Eye, FilePlus2, FileStack, Loader2, Plus, Trash2, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Eye, FilePlus2, FileStack, Loader2, Plus, Trash2, Check, AlertTriangle, Pencil } from "lucide-react";
 import {
   DOCUMENT_TEMPLATES, findTemplate, emptyDocumentData, normalizeDocumentData,
   newFinding, newRisk, newAction, riskScore, riskLevel,
@@ -53,7 +53,7 @@ const MigrationNotice = () => (
 
 export const DocumentsList = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [list, setList] = useState<any[]>([]);
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -171,7 +171,7 @@ export const DocumentsList = () => {
                 <TableHead className={label}>Cliente</TableHead>
                 <TableHead className={label}>Estado</TableHead>
                 <TableHead className={label}>Actualizado</TableHead>
-                <TableHead className={`${label} text-right`}>PDF</TableHead>
+                <TableHead className={`${label} text-right`}>{isAdmin ? "Acciones" : "PDF"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -182,7 +182,12 @@ export const DocumentsList = () => {
                   <TableCell className="text-steel text-sm">{d.clients?.name ?? "—"}</TableCell>
                   <TableCell className="text-steel text-sm">{STATUS_LABEL[d.status] ?? d.status}</TableCell>
                   <TableCell className="text-steel text-sm">{new Date(d.updated_at).toLocaleDateString("es")}</TableCell>
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {isAdmin && (
+                      <Button size="sm" variant="ghost" className="rounded-none h-8 text-navy" onClick={() => navigate(`/app/documents/${d.id}`)} aria-label={`Editar ${d.folio}`} title="Editar (solo administradores)">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" className="rounded-none h-8 text-navy" onClick={() => viewPdf(d)} disabled={busy === d.id} aria-label={`Ver PDF de ${d.folio}`}>
                       {busy === d.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                     </Button>
