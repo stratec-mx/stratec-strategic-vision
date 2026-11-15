@@ -165,3 +165,35 @@
     opacity: 1;
   }
 }
+
+/* Botón del asistente: ojos que miran alrededor, parpadean y a ratos duermen (ciclo de 14 s) */
+.chat-bot-pupilas { animation: chat-mirar 14s ease-in-out infinite; }
+.chat-bot-ojos { transform-box: fill-box; transform-origin: center; animation: chat-parpadeo 14s ease-in-out infinite; }
+.chat-bot-zzz { opacity: 0; animation: chat-zzz 14s ease-in-out infinite; }
+.chat-bot:hover .chat-bot-pupilas,
+.chat-bot:hover .chat-bot-ojos,
+.chat-bot:focus-visible .chat-bot-pupilas,
+.chat-bot:focus-visible .chat-bot-ojos { animation: none; }
+.chat-bot:hover .chat-bot-zzz,
+.chat-bot:focus-visible .chat-bot-zzz { animation: none; opacity: 0; }
+
+@keyframes chat-mirar {
+  0%, 12%  { transform: translate(0, 0); }
+  16%, 28% { transform: translate(-1.4px, 0.2px); }
+  32%, 42% { transform: translate(0.8px, -1.5px); }
+  46%, 56% { transform: translate(1.4px, 0.2px); }
+  60%, 94% { transform: translate(0, 0.9px); }
+  100%     { transform: translate(0, 0); }
+}
+@keyframes chat-parpadeo {
+  0%, 7%, 9.5%, 38%, 40.5%, 60%  { transform: scaleY(1); }
+  8.2%, 39.2%                     { transform: scaleY(0.1); }
+  66%, 90%                        { transform: scaleY(0.12); }
+  93%, 100%                       { transform: scaleY(1); }
+}
+@keyframes chat-zzz {
+  0%, 68%  { opacity: 0; transform: translate(0, 2px); }
+  72%      { opacity: 1; transform: translate(0, 0); }
+  80%      { opacity: 0.9; transform: translate(1.5px, -2.5px); }
+  88%, 100%{ opacity: 0; transform: translate(3px, -5px); }
+}

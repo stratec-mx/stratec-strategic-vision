@@ -2,7 +2,7 @@
 // carga solo cuando el visitante la abre. No aparece en el panel interno.
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { MessageCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { track } from "@/lib/analytics";
 
 const ChatPanel = lazy(() => import("./ChatPanel"));
@@ -64,7 +64,7 @@ export const ChatLauncher = () => {
       )}
 
       {!abierto && (
-        <div className="fixed right-4 sm:right-7 bottom-[96px] z-[810] flex flex-col items-end gap-2">
+        <div className="fixed right-[28px] bottom-[96px] z-[810] flex flex-col items-end gap-2">
           {aviso && !SIN_AVISO_EN.some((r) => r.test(pathname)) && (
             <div className="relative max-w-[240px] bg-white border border-navy/15 shadow-lg px-4 py-3 pr-8 text-sm text-navy animate-in fade-in slide-in-from-bottom-2">
               <button type="button" onClick={cerrarAviso} aria-label="Cerrar aviso" className="absolute top-1.5 right-1.5 p-1 text-steel hover:text-navy">
@@ -80,19 +80,31 @@ export const ChatLauncher = () => {
             type="button"
             onClick={() => abrir("boton")}
             aria-label="Habla con nuestro asistente en línea, disponible las 24 horas"
-            className="group flex items-center gap-3 bg-navy-deep hover:bg-navy text-smoke shadow-[0_4px_20px_rgba(11,31,58,0.35)] border border-[#C4A04A]/60 rounded-full pl-3 pr-3 sm:pr-5 h-14 transition-colors"
+            title="Habla con nuestro asistente en línea · 24 h"
+            className="chat-bot relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#DDBB63] to-[#B48D36] text-navy-deep ring-2 ring-white/70 shadow-[0_4px_20px_rgba(180,141,54,0.45)] transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-navy/40"
           >
-            <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#C4A04A] text-navy">
-              <MessageCircle className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-navy-deep" aria-hidden />
-            </span>
-            <span className="hidden sm:flex flex-col items-start leading-tight">
-              <span className="text-sm font-semibold">Habla con nuestro asistente en línea</span>
-              <span className="text-[11px] text-[#C4A04A]">Disponible las 24 h</span>
-            </span>
+            <CaraChat />
+            <span className="absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-white" aria-hidden />
           </button>
         </div>
       )}
     </>
   );
 };
+
+// Globo de chat con ojos: miran a los lados, parpadean y a ratos "duermen" (Zzz).
+// Las animaciones están en index.css (.chat-bot); al pasar el mouse se despierta.
+const CaraChat = () => (
+  <svg viewBox="0 0 32 32" className="h-9 w-9 overflow-visible" aria-hidden>
+    <path d="M10 5h12a6.5 6.5 0 0 1 6.5 6.5v5A6.5 6.5 0 0 1 22 23h-8.5l-5.2 4.3a.7.7 0 0 1-1.15-.55V22.6A6.5 6.5 0 0 1 3.5 16.5v-5A6.5 6.5 0 0 1 10 5Z" fill="currentColor" />
+    <g className="chat-bot-ojos">
+      <ellipse cx="12" cy="14" rx="3.1" ry="3.5" fill="#fff" />
+      <ellipse cx="20" cy="14" rx="3.1" ry="3.5" fill="#fff" />
+      <g className="chat-bot-pupilas" fill="currentColor">
+        <circle cx="12" cy="14.3" r="1.55" />
+        <circle cx="20" cy="14.3" r="1.55" />
+      </g>
+    </g>
+    <text x="25.5" y="5" className="chat-bot-zzz" fill="currentColor" fontSize="6" fontWeight="700" fontFamily="sans-serif">z</text>
+  </svg>
+);
