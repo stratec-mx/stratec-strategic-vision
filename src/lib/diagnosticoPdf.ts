@@ -26,8 +26,13 @@ export interface DiagnosticoPdfData {
   date: Date;
   name?: string;
   org?: string;
+  /** Giro del negocio o, en casa y evento, sus datos principales */
   giro?: string;
   estado?: string;
+  /** "tu negocio", "tu casa", "tu evento". Por omisión, "tu organización". */
+  sujeto?: string;
+  /** Textos que cambian según el tipo de diagnóstico */
+  textos?: { titulo: string; paraQuien: string; revisar: string; mantener: string };
   score: string;
   levelLabel: string;
   levelBody: string;
@@ -44,6 +49,13 @@ const hexToRgb = (hex: string): RGB => {
 
 export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<void> {
   const jsPDF = await loadJsPdf();
+  const tx = d.textos ?? {
+    titulo: "DIAGNÓSTICO BÁSICO DE SEGURIDAD",
+    paraQuien: "Organización participante",
+    revisar: "Documenta lo realizado y revísalo al menos una vez al año o cuando cambie el inmueble o el personal.",
+    mantener: "Mantén al día procedimientos, equipos y capacitación, y revisa tus condiciones de seguridad al menos una vez al año.",
+  };
+  const sujeto = d.sujeto ?? "tu organización";
   const mark = await loadImageDataUrl("/brand/stratec-mark-white.png");
   const doc = new jsPDF({ unit: "pt", format: "letter", compress: true });
   const W = doc.internal.pageSize.getWidth();
@@ -78,7 +90,7 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
       color(GOLD);
       doc.text("SECURITY", M + 57, 66, { charSpace: 2.6 });
       font("bold", 7.5);
-      textRight("DIAGNÓSTICO BÁSICO DE SEGURIDAD", W - M, 48, 1.6);
+      textRight(tx.titulo, W - M, 48, 1.6);
       font("normal", 17, "times");
       color([255, 255, 255]);
       textRight("Autoevaluación gratuita", W - M, 72);
@@ -92,7 +104,7 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
       doc.text("STRATEC", M + 26, 23, { charSpace: 2 });
       font("normal", 7.5);
       color(MUTED);
-      textRight("DIAGNÓSTICO BÁSICO DE SEGURIDAD", W - M, 23, 1);
+      textRight(tx.titulo, W - M, 23, 1);
     }
   };
   const ensure = (h: number) => {
@@ -135,7 +147,7 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
   y += 17;
   font("bold", 14, "times");
   color(NAVY);
-  doc.text((doc.splitTextToSize(who || "Organización participante", CW) as string[]).slice(0, 2), M, y);
+  doc.text((doc.splitTextToSize(who || tx.paraQuien, CW) as string[]).slice(0, 2), M, y);
   y += who.length > 70 ? 32 : 16;
   if (meta) {
     font("normal", 9);
@@ -217,17 +229,19 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
   // Las preguntas van en orden de prioridad: las primeras áreas fallidas son las más urgentes
   // Minúscula inicial salvo siglas ("CCTV y control…")
   const names = d.failed.map((f) => (/^[A-ZÁÉÍÓÚ][a-záéíóúñ]/.test(f.short) ? f.short.charAt(0).toLowerCase() + f.short.slice(1) : f.short));
-  const joinEs = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}` : xs[0]);
+  // "y" pasa a "e" antes de una palabra que empieza con i o hi ("e instalación"), salvo "hie-"
+  const conj = (w: string) => (/^(i|hi(?!e))/i.test(w) ? "e" : "y");
+  const joinEs = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} ${conj(xs[xs.length - 1])} ${xs[xs.length - 1]}` : xs[0]);
   const steps = d.failed.length
     ? [
         `Atiende primero: ${joinEs(names.slice(0, 3))}.`,
         ...(names.length > 3 ? [`Después: ${joinEs(names.slice(3))}.`] : []),
         "Asigna un responsable y una fecha a cada acción, y verifica que se cumpla.",
-        "Documenta lo realizado y revísalo al menos una vez al año o cuando cambie el inmueble o el personal.",
+        tx.revisar,
       ]
     : [
-        "Mantén al día procedimientos, equipos y capacitación, y revisa tus condiciones de seguridad al menos una vez al año.",
-        "Una auditoría periódica ayuda a detectar riesgos que una autoevaluación no alcanza a ver.",
+        tx.mantener,
+        "Una revisión con un especialista ayuda a detectar riesgos que una autoevaluación no alcanza a ver.",
       ];
   steps.forEach((s, i) => {
     font("normal", 8.8);
@@ -263,7 +277,7 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
   // ── Alcance del diagnóstico ──
   font("normal", 7.8);
   const scope =
-    "Alcance. Este es un diagnóstico básico generado automáticamente a partir de tus respuestas. Sirve como punto de partida: no sustituye una evaluación en sitio ni la revisión de la autoridad competente. Para un análisis completo de tu organización, agenda una evaluación con STRATEC.";
+    "Alcance. Este es un diagnóstico básico generado automáticamente a partir de tus respuestas. Sirve como punto de partida: no sustituye una evaluación en sitio ni la revisión de la autoridad competente. Para un análisis completo de " + sujeto + ", agenda una evaluación con STRATEC.";
   const scopeLines: string[] = doc.splitTextToSize(scope, CW - 26);
   const sh = scopeLines.length * 10.5 + 22;
   ensure(sh + 60);

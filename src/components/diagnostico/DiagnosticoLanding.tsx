@@ -3,7 +3,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, FileDown, Users, Flame, PhoneOff, GraduationCap, Cctv, RefreshCw, ClipboardList, Mail, Download, CheckCircle2, ChevronDown } from "lucide-react";
 import hero from "@/assets/hero-stratec.jpg";
-import { AREAS_TEXT, INCLUDES, FAQ } from "@/data/diagnosticoLanding";
+import { AREAS_TEXT, INCLUDES, FAQ, OTROS_DIAGNOSTICOS } from "@/data/diagnosticoLanding";
 
 type StartProps = { onStart: () => void };
 
@@ -48,7 +48,8 @@ const PdfMock = () => (
   </div>
 );
 
-export const DiagnosticoHero = ({ onStart }: StartProps) => (
+/** `sujeto` ("tu casa", "tu evento") llega cuando se abrió un enlace directo a ese diagnóstico. */
+export const DiagnosticoHero = ({ onStart, sujeto }: StartProps & { sujeto?: string }) => (
   <section className="relative bg-navy-deep text-smoke overflow-hidden pt-28 pb-20 md:pt-36 md:pb-28">
     <div className="absolute inset-0">
       <img src={hero} alt="" className="w-full h-full object-cover opacity-25" width={1920} height={1080} />
@@ -66,7 +67,7 @@ export const DiagnosticoHero = ({ onStart }: StartProps) => (
           Genera y descarga tu diagnóstico de seguridad en PDF, <span style={{ color: GOLD }}>GRATIS</span>
         </h1>
         <p className="mt-6 text-lg text-smoke/75 max-w-xl leading-relaxed">
-          Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción
+          Responde 10 preguntas sobre {sujeto ?? "tu empresa o institución, tu casa o tu evento"} y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción
           priorizado. Basado en la metodología ISO 31000 de gestión de riesgos.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
@@ -98,7 +99,7 @@ const AREA_ICONS = [Users, Flame, PhoneOff, GraduationCap, Cctv, RefreshCw];
 const AREAS = AREAS_TEXT.map((a, i) => ({ ...a, icon: AREA_ICONS[i] }));
 
 const STEPS = [
-  { icon: ClipboardList, title: "Responde", text: "10 preguntas de sí o no y algunos datos generales de tu organización." },
+  { icon: ClipboardList, title: "Responde", text: "Elige qué quieres revisar (negocio, casa o evento) y contesta 10 preguntas de sí o no." },
   { icon: Mail, title: "Deja tu contacto", text: "Un correo y un teléfono para entregarte el resultado." },
   { icon: Download, title: "Descarga tu PDF", text: "Ves tu resultado en pantalla y descargas el reporte." },
 ];
@@ -111,6 +112,7 @@ export const DiagnosticoInfo = ({ onStart }: StartProps) => (
         <div className="max-w-2xl mb-12">
           <div className="eyebrow mb-3">— Qué evalúa</div>
           <h2 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight">Seis áreas que deciden cómo responde tu organización ante un incidente</h2>
+          <p className="mt-4 text-sm text-steel leading-relaxed">{OTROS_DIAGNOSTICOS}</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-steel/15 border border-steel/15">
           {AREAS.map(({ icon: Icon, title, text }) => (

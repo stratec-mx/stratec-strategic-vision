@@ -268,13 +268,20 @@ export const QUOTE_SCOPE: Record<string, string> = {
 // que la cotización se arme ya clasificada. Formato: [perfil] k=v; k=v
 const PROFILE_TAG = "[perfil]";
 
+/** Tipo de diagnóstico del que viene el lead (el sitio tiene tres cuestionarios). */
+export type LeadTipo = "negocio" | "casa" | "evento";
+const LEAD_TIPOS: LeadTipo[] = ["negocio", "casa", "evento"];
+
 export interface LeadProfile {
   profile: Partial<ClientProfile>;
   codes: string[];
+  /** Ausente en leads anteriores a los diagnósticos de casa y evento (eran de negocio). */
+  tipo?: LeadTipo;
 }
 
-export function encodeLeadProfile(p: Partial<ClientProfile>, codes: string[]): string {
+export function encodeLeadProfile(p: Partial<ClientProfile>, codes: string[], tipo?: LeadTipo): string {
   const kv: string[] = [];
+  if (tipo) kv.push(`tipo=${tipo}`);
   if (p.giro) kv.push(`giro=${p.giro}`);
   if (p.people) kv.push(`personas=${p.people}`);
   if (p.area) kv.push(`m2=${p.area}`);
@@ -295,5 +302,6 @@ export function parseLeadProfile(notes: string | null | undefined): LeadProfile 
   if (Number(kv.m2) > 0) profile.area = Number(kv.m2);
   if (kv.morelos) profile.morelos = kv.morelos === "si";
   const codes = (kv.servicios ?? "").split(",").map((c) => c.trim()).filter((c) => /^STR-\d{2}(\.\d)?$/.test(c));
-  return { profile, codes };
+  const tipo = LEAD_TIPOS.find((t) => t === kv.tipo);
+  return tipo ? { profile, codes, tipo } : { profile, codes };
 }

@@ -17,6 +17,10 @@ const SITE = "https://www.stratecsecurity.com";
 
 /** Datos del diagnóstico que manda /diagnostico (campo opcional "diagnostico"). */
 export interface LeadDiagnostico {
+  /** "negocio" | "casa" | "evento". Los avisos anteriores no lo traen (eran de negocio). */
+  tipo?: string;
+  /** Datos propios de casa o evento: pares [etiqueta, valor] */
+  datos?: unknown;
   puntaje?: string;
   nivel?: string;
   quiereContacto?: boolean;
@@ -75,11 +79,29 @@ function limpiarMensaje(m: unknown): string {
     .trim();
 }
 
+const TIPO_DIAGNOSTICO: Record<string, { nombre: string; de: string }> = {
+  negocio: { nombre: "Negocio", de: "" },
+  casa: { nombre: "Casa", de: " de tu casa" },
+  evento: { nombre: "Evento masivo", de: " de tu evento" },
+};
+
+/** Pares [etiqueta, valor] que manda el sitio, ya limpios y acotados. */
+export function datosDiagnostico(v: unknown): [string, string][] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((x): x is unknown[] => Array.isArray(x) && x.length === 2)
+    .map(([k, val]) => [String(k ?? "").trim().substring(0, 40), String(val ?? "").trim().substring(0, 120)] as [string, string])
+    .filter(([k, val]) => k && val)
+    .slice(0, 8);
+}
+
 const lineas = (pares: [string, unknown][]) =>
   pares.filter(([, v]) => v != null && String(v).trim() !== "" && v !== "No indicada").map(([k, v]) => `${k}: ${esc(v)}`).join("\n");
 
 export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: string): { text: string; buttons: Boton[][] } {
   const d = lead.diagnostico ?? null;
+  const tipo = d && typeof d.tipo === "string" ? TIPO_DIAGNOSTICO[d.tipo] ?? null : null;
+  const esEvento = d?.tipo === "evento";
   const nombre = nombreReal(lead.name);
   const saludo = nombre ? `Hola ${nombre.split(" ")[0]}` : "Hola";
   const wa = waNumber(lead.telefono);
@@ -88,7 +110,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
   // Encabezado
   if (d) {
     bloques.push(
-      `🔔 <b>Nuevo diagnóstico web</b>\n` +
+      `🔔 <b>Nuevo diagnóstico web${tipo ? ` · ${tipo.nombre}` : ""}</b>\n` +
         (d.quiereContacto ? `⭐ <b>Pidió que lo contacte un asesor</b>` : `ℹ️ Solo descargó su diagnóstico; no pidió contacto`),
     );
   } else {
@@ -100,7 +122,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
     `👤 <b>Contacto</b>\n` +
       lineas([
         ["Nombre", nombre || "No lo indicó"],
-        ["Empresa", lead.organization],
+        [esEvento ? "Evento u organizador" : "Empresa", lead.organization],
         [d ? "Giro" : "Cargo", d ? d.giro : lead.role],
         ["Teléfono", lead.telefono ? telLegible(lead.telefono) : ""],
         ["Correo", lead.email],
@@ -113,6 +135,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
         lineas([
           ["Personas", d.personas],
           ["Superficie", d.superficie],
+          ...datosDiagnostico(d.datos),
           ["Estado", d.estado],
           ["Marcó su predio en el mapa", d.marcadores ? `${d.marcadores} punto${d.marcadores === 1 ? "" : "s"}` : ""],
         ]),
@@ -141,7 +164,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
 
   // Botones
   const waTexto = d
-    ? `${saludo}, te escribe STRATEC Security. Vimos tu diagnóstico de seguridad (${d.puntaje ?? ""}/10). ¿Te parece si platicamos unos minutos para revisar los puntos a atender?`
+    ? `${saludo}, te escribe STRATEC Security. Vimos el diagnóstico de seguridad${tipo?.de ?? ""} que hiciste en nuestro sitio (${d.puntaje ?? ""}/10). ¿Te parece si platicamos unos minutos para revisar los puntos a atender?`
     : `${saludo}, te escribe STRATEC Security. Recibimos tu mensaje en stratecsecurity.com${lead.servicio ? ` sobre ${lead.servicio}` : ""}. ¿Cuándo te viene bien que platiquemos?`;
   const asunto = d ? "Tu diagnóstico de seguridad · STRATEC" : "Tu mensaje a STRATEC Security";
   const fila1: Boton[] = [];
@@ -157,7 +180,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
   fila2.push({ text: "📂 Ver en el panel", url: `${SITE}/app/leads` });
   // Reenviar a quien atiende ventas: abre la lista de chats de Telegram con un resumen
   const resumen = [
-    d ? `Lead de diagnóstico web (${d.puntaje ?? "?"}/10, ${d.nivel ?? ""})` : "Lead del sitio web",
+    d ? `Lead de diagnóstico web${tipo ? ` de ${tipo.nombre.toLowerCase()}` : ""} (${d.puntaje ?? "?"}/10, ${d.nivel ?? ""})` : "Lead del sitio web",
     nombre || null,
     lead.organization && lead.organization !== "No indicada" ? lead.organization : null,
     lead.telefono ? telLegible(lead.telefono) : null,

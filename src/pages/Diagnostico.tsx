@@ -1,20 +1,26 @@
 // Diagnóstico básico gratuito — entrada pública de clientes (lead magnet).
-// Flujo: cuestionario ISO 31000 + datos de la organización → correo y teléfono
-// (captura de lead, Supabase submit-lead) → resultado en pantalla y PDF.
-// El perfil (giro, personas, superficie, estado) viaja en las notas del lead
-// para que la cotización se arme ya clasificada en el dashboard.
+// Tres cuestionarios (src/data/diagnosticoPreguntas.ts): negocio o institución,
+// casa y evento masivo. Enlaces directos: /diagnostico?tipo=casa y ?tipo=evento.
+// Flujo: 10 preguntas + datos del último paso → correo y teléfono (captura de
+// lead, Supabase submit-lead) → resultado en pantalla y PDF.
+// El perfil viaja en las notas del lead para que la cotización se arme ya
+// clasificada en el dashboard (en casa y evento, sin giro: solo los servicios).
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ShieldCheck, MapPin, ArrowLeft, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Lock, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, MapPin, ArrowLeft, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Home, Users, Lock, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { SecurityMap } from "@/components/security-map/SecurityMap";
 import { SecurityMarker, DEFAULT_MARKER_KINDS } from "@/components/security-map/types";
 import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
-import { GIROS, encodeLeadProfile, type GiroId } from "@/lib/pricing";
+import { encodeLeadProfile, type GiroId } from "@/lib/pricing";
+import {
+  DIAGNOSTICOS, SERVICIOS, TIPOS, PERSONAS, SUPERFICIE, datosPerfil, perfilCompleto, perfilInicial, tipoDesdeParam,
+  type TipoDiagnostico,
+} from "@/data/diagnosticoPreguntas";
 import { DiagnosticoHero, DiagnosticoInfo, DiagnosticoFaq } from "@/components/diagnostico/DiagnosticoLanding";
 
 const SUPABASE_URL = "https://xtfsqdwkbsghkzszpisz.supabase.co";
@@ -23,78 +29,27 @@ const SUPABASE_KEY =
 
 type Answer = "si" | "no" | "ns";
 
-interface Service {
-  short: string;
-  url: string;
-  /** Código del cotizador */
-  code: string;
-  color: string;
-  bg: string;
-}
-
-const SERVICES: Record<string, Service> = {
-  consultoria:  { short: "Consultoría en Seguridad", url: "/servicios/consultoria-seguridad", code: "STR-01", color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
-  proteccion:   { short: "Programa Interno de Protección Civil", url: "/servicios/programa-interno-proteccion-civil", code: "STR-02.1", color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
-  capacitacion: { short: "Capacitación", url: "/servicios/capacitacion", code: "STR-03", color: "#5E646E", bg: "rgba(94,100,110,0.1)" },
-  revision:     { short: "Revisión de Programa Interno", url: "/servicios/revision-programa-interno", code: "STR-02.3", color: "#7B4A1E", bg: "rgba(123,74,30,0.08)" },
-  protocolos:   { short: "Protocolos de Seguridad", url: "/servicios/protocolos-seguridad", code: "STR-01.4", color: "#0B1F3A", bg: "rgba(11,31,58,0.08)" },
-  tecnologia:   { short: "Tecnología de Seguridad", url: "/servicios/integracion-tecnologica", code: "STR-04", color: "#9a7d2f", bg: "rgba(196,160,74,0.12)" },
-};
-
-interface Question {
-  id: number;
-  text: string;
-  short: string;
-  services: string[];
-  riesgo: string;
-}
-
-// Redactadas para que cualquier persona las entienda, sin términos técnicos.
-// "short" aparece en el resultado, el PDF y la nota del lead.
-const QUESTIONS: Question[] = [
-  { id: 1, text: "¿Hay una persona encargada de organizar a todos si pasa una emergencia, como un sismo, un incendio o un robo?", short: "Una persona a cargo en emergencias", services: ["consultoria"], riesgo: "Si nadie está a cargo, cada quien hace lo que cree y el problema crece. Además, la responsabilidad recae en el dueño o en la dirección." },
-  { id: 2, text: "¿Tu personal sabe a quién avisar si ve algo raro, recibe una amenaza o hay un accidente?", short: "Saber a quién avisar", services: ["protocolos", "consultoria"], riesgo: "Si nadie sabe a quién avisar, se pierde tiempo y se toman decisiones encontradas. Los primeros minutos son los que más cuentan." },
-  { id: 3, text: "¿Tienes a la vista los teléfonos de emergencia (bomberos, Cruz Roja, policía) y están actualizados?", short: "Teléfonos de emergencia a la vista", services: ["revision", "proteccion"], riesgo: "En una emergencia nadie tiene tiempo de buscar números. Tenerlos a la mano ahorra minutos que pueden salvar vidas." },
-  { id: 4, text: "¿Las salidas de emergencia tienen señales y están libres, sin cajas ni muebles que estorben?", short: "Salidas señalizadas y libres", services: ["revision", "proteccion"], riesgo: "Una salida tapada o sin señal puede atrapar a las personas en un incendio o un sismo. Es de lo primero que revisa Protección Civil en una inspección." },
-  { id: 5, text: "¿Tienes extintores fáciles de ver y de alcanzar, con su recarga al día?", short: "Extintores listos para usarse", services: ["revision", "proteccion"], riesgo: "Un extintor vencido o tapado no sirve cuando hay fuego. Además puede costarte una multa o una suspensión." },
-  { id: 6, text: "¿Sabes qué hacer si alguien llama para extorsionarte, intenta estafarte o te amenaza?", short: "Saber qué hacer ante extorsión o amenazas", services: ["protocolos", "consultoria"], riesgo: "Sin un plan, quien extorsiona toma el control desde la primera llamada y el daño económico crece." },
-  { id: 7, text: "¿Tu personal ha tomado algún curso de primeros auxilios, evacuación o seguridad en el último año?", short: "Personal con curso reciente", services: ["capacitacion"], riesgo: "Sin práctica, las personas se paralizan o se equivocan en una emergencia. Un plan solo funciona si la gente sabe aplicarlo." },
-  { id: 8, text: "¿Tus cámaras de seguridad están grabando bien en este momento? (Si no tienes cámaras, responde No.)", short: "Cámaras grabando bien", services: ["tecnologia"], riesgo: "Muchas cámaras dejan de grabar sin que nadie lo note. Si no graban, no ayudan a evitar un robo ni sirven como prueba." },
-  { id: 9, text: "¿Guardas copias de tu información importante (clientes, facturas, contabilidad) y has comprobado que sí se pueden recuperar?", short: "Copias de tu información importante", services: ["tecnologia"], riesgo: "Sin copias, un virus, el robo de una computadora o una falla pueden borrar tu información para siempre." },
-  { id: 10, text: "¿Tienes un plan para seguir trabajando si tu negocio tuviera que cerrar unos días por una emergencia?", short: "Plan para seguir trabajando", services: ["tecnologia", "consultoria"], riesgo: "Sin un plan, un problema de dos días puede detener tu negocio por semanas y costarte clientes." },
-];
-
-// Rangos que ve el visitante → valor representativo para la clasificación interna
-const PERSONAS = [
-  { id: "1-15", label: "1 a 15 personas", value: 10 },
-  { id: "16-50", label: "16 a 50 personas", value: 40 },
-  { id: "51-250", label: "51 a 250 personas", value: 150 },
-  { id: "251-1000", label: "251 a 1,000 personas", value: 600 },
-  { id: "1000+", label: "Más de 1,000 personas", value: 1500 },
-];
-const SUPERFICIE = [
-  { id: "ns", label: "No lo sé", value: 0 },
-  { id: "500", label: "De 10 a 500 m²", value: 300 },
-  { id: "1500", label: "De 500 a 1,500 m²", value: 1000 },
-  { id: "5000", label: "De 1,500 a 5,000 m²", value: 3000 },
-  { id: "5000+", label: "Más de 5,000 m²", value: 8000 },
-];
-const ESTADOS = ["Morelos", "Ciudad de México", "Estado de México", "Puebla", "Guerrero", "Otro estado"];
+const ICONO_TIPO = { negocio: Building2, casa: Home, evento: Users } as const;
 
 const inputCls = "h-11 px-3 border border-steel/25 bg-white text-sm text-navy focus:border-[#C4A04A] focus:outline-none w-full";
 
 export default function Diagnostico() {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tipoUrl = tipoDesdeParam(searchParams.get("tipo"));
+  const [tipo, setTipo] = useState<TipoDiagnostico>(tipoUrl);
+  const cfg = DIAGNOSTICOS[tipo];
+  const QUESTIONS = cfg.preguntas;
   const [markers, setMarkers] = useState<SecurityMarker[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
   const [phase, setPhase] = useState<"quiz" | "gate" | "result">("quiz");
   const [submitting, setSubmitting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [org, setOrg] = useState({ giro: "", personas: "", superficie: "ns", estado: "" });
+  const [perfil, setPerfil] = useState<Record<string, string>>(() => perfilInicial(tipoUrl));
   const [form, setForm] = useState({ name: "", org: "", email: "", tel: "", contact: false, hp: "" });
 
-  // Paso del cuestionario: 0..9 = preguntas, 10 = datos del negocio
+  // Paso del cuestionario: 0..9 = preguntas, 10 = datos del último paso
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const stepRef = useRef<HTMLDivElement>(null);
@@ -110,31 +65,59 @@ export default function Diagnostico() {
   };
 
   const answeredCount = Object.keys(answers).length;
-  const profileReady = !!(org.giro && org.personas && org.estado);
+  const profileReady = perfilCompleto(tipo, perfil);
   const ready = answeredCount === QUESTIONS.length && profileReady;
 
   // Score de preparación 0–10 (Sí=1, No estoy seguro=0.5, No=0). Mayor = menos vulnerable.
   const score = useMemo(
     () => QUESTIONS.reduce((s, q) => s + (answers[q.id] === "si" ? 1 : answers[q.id] === "ns" ? 0.5 : 0), 0),
-    [answers]
+    [answers, QUESTIONS]
   );
 
   const level = useMemo(() => {
-    if (score >= 8) return { key: "bajo", label: "Vulnerabilidad baja", color: "#2E7D32", badge: "Vas bien",
-      body: "Tienes lo básico en orden. Mantén al día tus equipos, tus planes y los cursos de tu personal, y revisa todo al menos una vez al año." };
-    if (score >= 5) return { key: "medio", label: "Vulnerabilidad media", color: "#C4A04A", badge: "Hay puntos por atender",
-      body: "Tienes una base, pero los puntos señalados pueden hacer que un problema sea mucho más grave. El plan te dice qué atender primero." };
-    return { key: "alto", label: "Vulnerabilidad alta", color: "#C0392B", badge: "Riesgo alto",
-      body: "Hay varios puntos sin atender en emergencias, seguridad, capacitación y manejo de información. Conviene revisarlo con un especialista." };
-  }, [score]);
+    if (score >= 8) return { key: "bajo", label: "Vulnerabilidad baja", color: "#2E7D32", badge: "Vas bien", body: cfg.niveles.bajo };
+    if (score >= 5) return { key: "medio", label: "Vulnerabilidad media", color: "#C4A04A", badge: "Hay puntos por atender", body: cfg.niveles.medio };
+    return { key: "alto", label: "Vulnerabilidad alta", color: "#C0392B", badge: "Riesgo alto", body: cfg.niveles.alto };
+  }, [score, cfg]);
 
-  const failed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "no" || answers[q.id] === "ns"), [answers]);
-  const passed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "si"), [answers]);
-  const recommended = useMemo(() => [...new Set(failed.flatMap((q) => q.services))].map((k) => SERVICES[k]), [failed]);
+  const failed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "no" || answers[q.id] === "ns"), [answers, QUESTIONS]);
+  const passed = useMemo(() => QUESTIONS.filter((q) => answers[q.id] === "si"), [answers, QUESTIONS]);
+  const recommended = useMemo(() => [...new Set(failed.flatMap((q) => q.services))].map((k) => SERVICIOS[k]), [failed]);
   const fmt = (n: number) => (n === Math.floor(n) ? n.toString() : n.toFixed(1));
-  const giroLabel = GIROS.find((g) => g.id === org.giro)?.label ?? "";
-  const personasLabel = PERSONAS.find((p) => p.id === org.personas)?.label ?? "";
-  const superficieLabel = SUPERFICIE.find((s) => s.id === org.superficie)?.label ?? "";
+  // Datos del último paso ya legibles: [etiqueta, valor]
+  const datos = useMemo(() => datosPerfil(tipo, perfil), [tipo, perfil]);
+  const etiqueta = (campo: string) => cfg.perfil.campos.find((c) => c.id === campo)?.options.find((o) => o.id === perfil[campo])?.label ?? "";
+  const esNegocio = tipo === "negocio";
+  const giroLabel = esNegocio ? etiqueta("giro") : "";
+  const personasLabel = esNegocio ? etiqueta("personas") : "";
+  const superficieLabel = esNegocio ? etiqueta("superficie") : "";
+  const estado = perfil.estado ?? "";
+
+  // Cambiar de cuestionario reinicia respuestas y datos (las preguntas son otras)
+  const aplicarTipo = (nuevo: TipoDiagnostico) => {
+    window.clearTimeout(advanceTimer.current);
+    setTipo(nuevo);
+    setAnswers({});
+    setPerfil(perfilInicial(nuevo));
+    setDir(-1);
+    setStep(0);
+  };
+  const cambiarTipo = (nuevo: TipoDiagnostico) => {
+    if (nuevo === tipo) return;
+    if (Object.keys(answers).length > 0 && !window.confirm("Al cambiar de diagnóstico se borran las respuestas que llevas. ¿Quieres cambiar?")) return;
+    aplicarTipo(nuevo);
+    track.ctaClick(`diagnostico_tipo_${nuevo}`);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (nuevo === "negocio") next.delete("tipo");
+      else next.set("tipo", nuevo);
+      return next;
+    }, { replace: true });
+  };
+  // Si la dirección cambia por fuera (un enlace a ?tipo=casa con la página abierta), se sigue
+  useEffect(() => {
+    if (tipoUrl !== tipo) aplicarTipo(tipoUrl);
+  }, [tipoUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goTo = (to: number) => {
     window.clearTimeout(advanceTimer.current);
@@ -174,10 +157,10 @@ export default function Diagnostico() {
 
   const goGate = () => {
     if (!ready) {
-      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos de tu organización.", variant: "destructive" });
+      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos del último paso.", variant: "destructive" });
       return;
     }
-    track.diagnosticoResultado(level.key);
+    track.diagnosticoResultado(level.key, tipo);
     setPhase("gate");
     top();
   };
@@ -193,22 +176,32 @@ export default function Diagnostico() {
       return;
     }
     const servicios = recommended.map((s) => s.short).join(" · ") || "Evaluación general";
-    const perfil = encodeLeadProfile(
-      {
-        giro: org.giro as GiroId,
-        people: PERSONAS.find((p) => p.id === org.personas)?.value,
-        area: SUPERFICIE.find((s) => s.id === org.superficie)?.value,
-        morelos: org.estado === "Morelos",
-      },
-      recommended.map((s) => s.code),
-    );
+    const codigos = recommended.map((s) => s.code);
+    // Casa y evento no llevan giro ni personas: no son inmuebles que el cotizador clasifique
+    const perfilLinea = esNegocio
+      ? encodeLeadProfile(
+          {
+            giro: perfil.giro as GiroId,
+            people: PERSONAS.find((x) => x.id === perfil.personas)?.value,
+            area: SUPERFICIE.find((x) => x.id === perfil.superficie)?.value,
+            morelos: estado === "Morelos",
+          },
+          codigos,
+        )
+      : encodeLeadProfile({ morelos: estado === "Morelos" }, codigos, tipo);
+    const detalle = form.org.trim();
     const msg = [
       form.contact ? "DESEA QUE UN ASESOR LO CONTACTE" : "No pidió contacto de un asesor (solo descargó su diagnóstico)",
-      `Diagnóstico básico: ${fmt(score)}/10 (${level.label})`,
-      `Giro: ${giroLabel} | ${personasLabel} | Superficie: ${superficieLabel} | Estado: ${org.estado}`,
+      esNegocio
+        ? `Diagnóstico básico: ${fmt(score)}/10 (${level.label})`
+        : `Diagnóstico básico de ${cfg.nombre.toLowerCase()}: ${fmt(score)}/10 (${level.label})`,
+      esNegocio
+        ? `Giro: ${giroLabel} | ${personasLabel} | Superficie: ${superficieLabel} | Estado: ${estado}`
+        : datos.map(([k, v]) => `${k}: ${v}`).join(" | "),
+      !esNegocio && detalle ? `${cfg.contacto.etiquetaNota}: ${detalle}` : "",
       `Áreas a atender: ${failed.map((q) => q.short).join(", ") || "ninguna"}`,
       markers.length ? `Marcadores en mapa: ${markers.length}` : "",
-      perfil,
+      perfilLinea,
     ].filter(Boolean).join("\n");
 
     setSubmitting(true);
@@ -219,20 +212,26 @@ export default function Diagnostico() {
         body: JSON.stringify({
           name: form.name.trim() || "Sin nombre (diagnóstico web)",
           email: form.email.trim(),
-          organization: form.org.trim() || "No indicada",
-          role: giroLabel,
+          // En casa el campo opcional es la colonia: va en la nota, no como organización
+          organization: (tipo === "casa" ? "" : detalle) || "No indicada",
+          role: esNegocio ? giroLabel : cfg.nombre,
           telefono: form.tel.trim(),
           servicio: servicios.slice(0, 150),
           message: msg,
           // Datos separados para el aviso de Telegram (la nota del lead usa "message")
           diagnostico: {
+            tipo,
             puntaje: fmt(score),
             nivel: level.label,
             quiereContacto: form.contact,
             giro: giroLabel,
             personas: personasLabel,
-            superficie: org.superficie === "ns" ? "" : superficieLabel,
-            estado: org.estado,
+            superficie: perfil.superficie === "ns" ? "" : superficieLabel,
+            estado,
+            // Datos propios de casa o evento (el estado ya va aparte)
+            datos: esNegocio
+              ? []
+              : [...datos.filter(([k]) => k !== "Estado"), ...(tipo === "casa" && detalle ? [[cfg.contacto.etiquetaNota, detalle]] : [])],
             areas: failed.map((q) => q.short),
             servicios: recommended.map((s) => `${s.code} · ${s.short}`),
             marcadores: markers.length,
@@ -243,7 +242,7 @@ export default function Diagnostico() {
       // fetch solo lanza en error de red: un 4xx/5xx de la Edge Function llega
       // como respuesta "exitosa". Sin este check el lead se pierde.
       if (!res.ok) throw new Error(`submit-lead ${res.status}`);
-      track.diagnosticoLead(level.key, org.giro);
+      track.diagnosticoLead(level.key, esNegocio ? perfil.giro : tipo, tipo);
       setPhase("result");
       top();
     } catch {
@@ -260,18 +259,20 @@ export default function Diagnostico() {
       await downloadDiagnosticoPdf({
         date: new Date(),
         name: form.name.trim(),
-        org: form.org.trim(),
-        giro: giroLabel,
-        estado: org.estado,
+        org: tipo === "casa" ? "" : form.org.trim(),
+        giro: esNegocio ? giroLabel : datos.filter(([k]) => k !== "Estado" && k !== "Fecha").map(([, v]) => v).join(" · "),
+        estado,
+        sujeto: cfg.sujeto,
+        textos: cfg.pdf,
         score: fmt(score),
         levelLabel: level.label,
         levelBody: level.body,
         levelColor: level.color,
-        failed: failed.map((q) => ({ short: q.short, riesgo: q.riesgo, service: SERVICES[q.services[0]].short })),
+        failed: failed.map((q) => ({ short: q.short, riesgo: q.riesgo, service: SERVICIOS[q.services[0]].short })),
         passed: passed.map((q) => q.short),
         services: recommended.map((s) => ({ short: s.short, url: s.url })),
       });
-      track.diagnosticoPdf(level.key);
+      track.diagnosticoPdf(level.key, tipo);
     } catch (e) {
       toast({ title: "No se pudo generar el PDF", description: (e as Error)?.message ?? "Intenta de nuevo.", variant: "destructive" });
     } finally {
@@ -280,16 +281,19 @@ export default function Diagnostico() {
   };
 
   // El bot de WhatsApp lee estos datos y solo pregunta lo que falte. Sin correo ni teléfono.
-  const waPerfil = [
-    giroLabel && `Giro: ${giroLabel}`,
-    personasLabel && `Personas: ${personasLabel.replace(/ personas$/, "")}`,
-    org.superficie !== "ns" && superficieLabel && `Superficie: ${superficieLabel.replace(/^De /, "")}`,
-    org.estado && `Estado: ${org.estado}`,
-  ].filter(Boolean).join(" · ");
+  const waPerfil = esNegocio
+    ? [
+        giroLabel && `Giro: ${giroLabel}`,
+        personasLabel && `Personas: ${personasLabel.replace(/ personas$/, "")}`,
+        perfil.superficie !== "ns" && superficieLabel && `Superficie: ${superficieLabel.replace(/^De /, "")}`,
+        estado && `Estado: ${estado}`,
+      ].filter(Boolean).join(" · ")
+    : datos.map(([k, v]) => `${k}: ${v}`).join(" · ");
   const waText = encodeURIComponent(
-    `Hola STRATEC, hice el diagnóstico básico (nivel: ${level.label}, ${fmt(score)}/10) y quiero agendar una evaluación.` +
+    `Hola STRATEC, ${cfg.whatsapp} (nivel: ${level.label}, ${fmt(score)}/10) y quiero agendar una evaluación.` +
       (waPerfil ? ` ${waPerfil}` : ""),
   );
+  const IconoPerfil = ICONO_TIPO[tipo];
 
   return (
     <div className="min-h-screen bg-smoke">
@@ -299,21 +303,47 @@ export default function Diagnostico() {
           {/* ── LANDING + CUESTIONARIO ── */}
           {phase === "quiz" && (
             <>
-              <DiagnosticoHero onStart={startQuiz} />
+              <DiagnosticoHero onStart={startQuiz} sujeto={esNegocio ? undefined : cfg.sujeto} />
               <DiagnosticoInfo onStart={startQuiz} />
               <section id="cuestionario" className="scroll-mt-20 py-20 md:py-24 bg-smoke">
               <div className="container-wide max-w-3xl mx-auto px-4">
               <div className="eyebrow mb-3">— Tu diagnóstico</div>
               <h2 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-3">
-                Empieza: 10 preguntas sobre tu negocio
+                Empieza: 10 preguntas sobre {cfg.sujeto}
               </h2>
-              <p className="text-steel text-sm md:text-base leading-relaxed mb-10">
+              <p className="text-steel text-sm md:text-base leading-relaxed mb-8">
                 Contesta con lo que sabes hoy. Si no estás seguro, elige "No estoy seguro": también cuenta para tu resultado.
               </p>
 
+              {/* Qué se revisa: cada opción tiene sus propias preguntas */}
+              <fieldset className="mb-10">
+                <legend className="text-xs uppercase tracking-wider text-steel mb-3">¿Qué quieres revisar?</legend>
+                <div className="grid sm:grid-cols-3 gap-2">
+                  {TIPOS.map((t) => {
+                    const Icono = ICONO_TIPO[t];
+                    const sel = t === tipo;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => cambiarTipo(t)}
+                        aria-pressed={sel}
+                        className={`min-h-[48px] sm:min-h-[64px] flex items-center gap-3 px-4 py-2.5 sm:py-3 border text-left transition-colors ${sel ? "border-navy bg-navy text-smoke" : "border-steel/25 bg-white text-navy hover:border-navy/50"}`}
+                      >
+                        <Icono className={`h-5 w-5 shrink-0 ${sel ? "text-[#C4A04A]" : "text-steel"}`} />
+                        <span>
+                          <span className="block text-sm font-medium leading-tight">{DIAGNOSTICOS[t].etiqueta}</span>
+                          <span className={`hidden sm:block text-[11px] leading-snug mt-0.5 ${sel ? "text-smoke/70" : "text-steel"}`}>{DIAGNOSTICOS[t].detalle}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
               {/* Avance: un segmento por pregunta y uno para los datos del negocio */}
               <div className="flex items-center justify-between text-xs text-steel mb-2">
-                <span>{onData ? "Último paso: sobre tu negocio" : `Pregunta ${step + 1} de ${QUESTIONS.length}`}</span>
+                <span>{onData ? `Último paso: sobre ${cfg.sujeto}` : `Pregunta ${step + 1} de ${QUESTIONS.length}`}</span>
                 <span>{answeredCount} de {QUESTIONS.length} respondidas</span>
               </div>
               <div className="flex gap-1 mb-6" aria-hidden>
@@ -326,7 +356,7 @@ export default function Diagnostico() {
               <AnimatePresence mode="wait" custom={dir} initial={false}>
               {!onData ? (
                 <motion.div
-                  key={`q-${step}`}
+                  key={`q-${tipo}-${step}`}
                   custom={dir}
                   variants={slide}
                   initial="enter"
@@ -375,7 +405,7 @@ export default function Diagnostico() {
                 </motion.div>
               ) : (
               <motion.div
-                key="datos"
+                key={`datos-${tipo}`}
                 custom={dir}
                 variants={slide}
                 initial="enter"
@@ -383,40 +413,22 @@ export default function Diagnostico() {
                 exit="exit"
                 transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
               >
-              {/* Datos del negocio */}
+              {/* Datos del último paso: cambian según el tipo de diagnóstico */}
               <section className="mb-6 border border-steel/20 bg-white p-5">
                 <h3 className="font-display text-xl text-navy mb-1 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#C4A04A]" /> Sobre tu negocio
+                  <IconoPerfil className="h-5 w-5 text-[#C4A04A]" /> {cfg.perfil.titulo}
                 </h3>
-                <p className="text-sm text-steel mb-4">Para adaptar las recomendaciones a tu tipo de inmueble.</p>
+                <p className="text-sm text-steel mb-4">{cfg.perfil.ayuda}</p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <label className="space-y-1">
-                    <span className="text-xs text-steel">Giro *</span>
-                    <select value={org.giro} onChange={(e) => setOrg({ ...org, giro: e.target.value })} className={inputCls}>
-                      <option value="">Selecciona</option>
-                      {GIROS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-xs text-steel">Personas en el inmueble (trabajadores y visitantes) *</span>
-                    <select value={org.personas} onChange={(e) => setOrg({ ...org, personas: e.target.value })} className={inputCls}>
-                      <option value="">Selecciona</option>
-                      {PERSONAS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-xs text-steel">Superficie construida aproximada</span>
-                    <select value={org.superficie} onChange={(e) => setOrg({ ...org, superficie: e.target.value })} className={inputCls}>
-                      {SUPERFICIE.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-xs text-steel">Estado *</span>
-                    <select value={org.estado} onChange={(e) => setOrg({ ...org, estado: e.target.value })} className={inputCls}>
-                      <option value="">Selecciona</option>
-                      {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </label>
+                  {cfg.perfil.campos.map((c) => (
+                    <label key={c.id} className="space-y-1">
+                      <span className="text-xs text-steel">{c.label}{c.required ? " *" : ""}</span>
+                      <select value={perfil[c.id] ?? ""} onChange={(e) => setPerfil({ ...perfil, [c.id]: e.target.value })} className={inputCls}>
+                        {c.required && <option value="">Selecciona</option>}
+                        {c.options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                      </select>
+                    </label>
+                  ))}
                 </div>
               </section>
 
@@ -431,11 +443,11 @@ export default function Diagnostico() {
                   <span className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-[#C4A04A] shrink-0" />
                     <span>
-                      <span className="font-display text-lg text-navy">Marca tu predio</span>
+                      <span className="font-display text-lg text-navy">{cfg.mapa.titulo}</span>
                       <span className="block text-xs text-steel">
                         Opcional · {markers.length > 0
                           ? `${markers.length} marcador${markers.length !== 1 ? "es" : ""} colocado${markers.length !== 1 ? "s" : ""}`
-                          : "señala accesos, puntos ciegos y zonas que te preocupan"}
+                          : cfg.mapa.ayuda}
                       </span>
                     </span>
                   </span>
@@ -493,7 +505,7 @@ export default function Diagnostico() {
                     <input required type="email" autoComplete="email" placeholder="Correo *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
                     <input required type="tel" autoComplete="tel" inputMode="tel" placeholder="Teléfono (10 dígitos) *" value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={inputCls} />
                     <input autoComplete="name" placeholder="Nombre (opcional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
-                    <input autoComplete="organization" placeholder="Empresa o institución (opcional)" value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className={inputCls} />
+                    <input autoComplete={esNegocio ? "organization" : "off"} placeholder={cfg.contacto.campo} value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className={inputCls} />
                   </div>
                   <label className="flex items-start gap-3 border border-steel/20 bg-smoke/60 px-4 py-3 cursor-pointer">
                     <input type="checkbox" checked={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.checked })} className="mt-1 h-4 w-4 accent-[#0B1F3A]" />
@@ -548,7 +560,7 @@ export default function Diagnostico() {
                   </h2>
                   <div className="space-y-3">
                     {failed.map((q) => {
-                      const svc = SERVICES[q.services[0]];
+                      const svc = SERVICIOS[q.services[0]];
                       return (
                         <div key={q.id} className="border border-steel/20 bg-white p-4 flex flex-col sm:flex-row sm:items-start gap-3">
                           <div className="flex-1">

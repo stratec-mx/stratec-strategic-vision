@@ -5,7 +5,7 @@ import { getSEOConfig } from "@/config/seo";
 import { coverageData } from "@/data/coverageData";
 import { SERVICES_DATA, SERVICIOS_INDEX } from "@/data/servicesData";
 import { REMOTE_GROUPS, remoteServices } from "@/data/remoteServices";
-import { AREAS_TEXT, INCLUDES, FAQ } from "@/data/diagnosticoLanding";
+import { AREAS_TEXT, INCLUDES, FAQ, OTROS_DIAGNOSTICOS } from "@/data/diagnosticoLanding";
 
 export interface PrerenderRoute {
   path: string;
@@ -120,9 +120,10 @@ export function buildRoutes(): PrerenderRoute[] {
     ...coverageRoutes(),
     route(
       "/diagnostico",
-      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS</h1>${p("Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
-<h2>Qué evalúa</h2>${AREAS_TEXT.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}
-<h2>Cómo funciona</h2>${ul(["Responde 10 preguntas y algunos datos generales de tu organización.", "Deja un correo y un teléfono para recibir el resultado.", "Ve tu resultado y descarga el PDF."].map(esc))}
+      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS</h1>${p("Responde 10 preguntas sobre tu empresa o institución, tu casa o tu evento y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
+<h2>Qué evalúa</h2>${AREAS_TEXT.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}${p(OTROS_DIAGNOSTICOS)}
+<h2>Tres diagnósticos</h2>${ul([a("/diagnostico", "Diagnóstico para negocios e instituciones"), a("/diagnostico?tipo=casa", "Diagnóstico de seguridad para tu casa"), a("/diagnostico?tipo=evento", "Diagnóstico de seguridad para eventos masivos")])}
+<h2>Cómo funciona</h2>${ul(["Elige qué quieres revisar (negocio, casa o evento) y responde 10 preguntas.", "Deja un correo y un teléfono para recibir el resultado.", "Ve tu resultado y descarga el PDF."].map(esc))}
 <h2>Qué incluye tu PDF</h2>${ul(INCLUDES.map(esc))}
 <h2>Preguntas frecuentes</h2>${FAQ.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}`,
     ),

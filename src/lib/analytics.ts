@@ -48,22 +48,24 @@ export const track = {
   /**
    * El visitante terminó el cuestionario y vio su nivel de vulnerabilidad
    */
-  diagnosticoResultado: (nivel: string) =>
+  diagnosticoResultado: (nivel: string, tipo: string = "negocio") =>
     trackEvent("diagnostico_resultado", {
       category: "engagement",
       label: nivel,
+      tipo,
     }),
 
   /**
    * El visitante dejó sus datos en el diagnóstico: posible cliente.
    * Solo se envía el nivel y el sector, nunca nombre, empresa o correo.
    */
-  diagnosticoLead: (nivel: string, sector: string) => {
+  diagnosticoLead: (nivel: string, sector: string, tipo: string = "negocio") => {
     trackEvent("generate_lead", {
       category: "lead",
       label: "diagnostico",
       nivel,
       sector: sector || "sin_especificar",
+      tipo,
     });
     track.metaLead();
   },
@@ -71,10 +73,11 @@ export const track = {
   /**
    * Descargó el PDF de su diagnóstico
    */
-  diagnosticoPdf: (nivel: string) =>
+  diagnosticoPdf: (nivel: string, tipo: string = "negocio") =>
     trackEvent("diagnostico_pdf", {
       category: "engagement",
       label: nivel,
+      tipo,
     }),
 
   /**
