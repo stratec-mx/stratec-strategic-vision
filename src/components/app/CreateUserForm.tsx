@@ -11,6 +11,7 @@ const ROLE_CHOICES = [
   { value: "admin", label: "Administrador" },
   { value: "analyst", label: "Analista" },
   { value: "operations", label: "Operaciones" },
+  { value: "advisor", label: "Asesor" },
   { value: "executive", label: "Ejecutivo" },
   { value: "viewer", label: "Solo lectura" },
   { value: "none", label: "Sin acceso (asignar después)" },

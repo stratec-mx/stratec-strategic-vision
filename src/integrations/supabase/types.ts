@@ -577,7 +577,7 @@ export type Database = {
         | "whatsapp"
         | "task"
         | "stage_change"
-      app_role: "admin" | "executive" | "analyst" | "operations" | "viewer"
+      app_role: "admin" | "executive" | "analyst" | "operations" | "viewer" | "advisor"
       deal_stage:
         | "prospeccion"
         | "diagnostico"
@@ -735,7 +735,7 @@ export const Constants = {
         "task",
         "stage_change",
       ],
-      app_role: ["admin", "executive", "analyst", "operations", "viewer"],
+      app_role: ["admin", "executive", "analyst", "operations", "viewer", "advisor"],
       deal_stage: [
         "prospeccion",
         "diagnostico",

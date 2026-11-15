@@ -3,7 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { RESOURCES, type Action, type Permissions, type Resource } from "@/lib/access";
 
-export type Role = "admin" | "analyst" | "operations" | "viewer" | "executive";
+export type Role = "admin" | "analyst" | "operations" | "advisor" | "viewer" | "executive";
 
 interface AuthCtx {
   session: Session | null;

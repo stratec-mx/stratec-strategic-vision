@@ -145,9 +145,11 @@ export const DocumentsList = () => {
         title="Documentos"
         description="Diagnósticos, análisis de riesgo, dictámenes y demás documentos que se entregan al cliente."
         actions={
-          <Button onClick={() => setOpen(true)} disabled={missing} className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
-            <FilePlus2 className="h-4 w-4 mr-2" /> Nuevo documento
-          </Button>
+          isAdmin ? (
+            <Button onClick={() => setOpen(true)} disabled={missing} className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10">
+              <FilePlus2 className="h-4 w-4 mr-2" /> Nuevo documento
+            </Button>
+          ) : undefined
         }
       />
 
@@ -252,6 +254,8 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 export const DocumentEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  // Solo los administradores editan; los demás perfiles ven el documento y su PDF
+  const { isAdmin } = useAuth();
   const [row, setRow] = useState<any | null>(null);
   const [missing, setMissing] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -297,7 +301,7 @@ export const DocumentEditor = () => {
 
   // Guardado automático (1.2 s después del último cambio) + respaldo local inmediato
   useEffect(() => {
-    if (!data || !row || !dirty.current) return;
+    if (!data || !row || !dirty.current || !isAdmin) return;
     try { localStorage.setItem(backupKey, JSON.stringify({ savedAt: new Date().toISOString(), data })); } catch { /* sin espacio */ }
     setSave("saving");
     const h = setTimeout(async () => {
@@ -362,8 +366,8 @@ export const DocumentEditor = () => {
         description={clients.find((c) => c.id === clientId)?.name ?? "Sin cliente"}
         actions={
           <div className="flex items-center gap-3">
-            <SaveIndicator state={save} />
-            <Select value={status} onValueChange={(v) => { dirty.current = true; setStatus(v); }}>
+            {isAdmin ? <SaveIndicator state={save} /> : <span className="text-[11px] uppercase tracking-wider text-steel">Solo lectura</span>}
+            <Select value={status} disabled={!isAdmin} onValueChange={(v) => { dirty.current = true; setStatus(v); }}>
               <SelectTrigger className="rounded-none h-10 w-36 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>{STATUS.map((s) => <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>)}</SelectContent>
             </Select>
@@ -374,7 +378,7 @@ export const DocumentEditor = () => {
         }
       />
 
-      <div className="space-y-6 max-w-5xl">
+      <fieldset disabled={!isAdmin} className="space-y-6 max-w-5xl min-w-0">
         {/* Datos generales */}
         <Card title="Datos generales" hint="Aparecen en la portada y en la ficha del documento.">
           <div className="grid sm:grid-cols-2 gap-4">
@@ -498,7 +502,7 @@ export const DocumentEditor = () => {
             );
           return null;
         })}
-      </div>
+      </fieldset>
 
       <PdfPreviewDialog preview={preview} onClose={() => { if (preview) URL.revokeObjectURL(preview.url); setPreview(null); }} />
     </div>

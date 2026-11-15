@@ -19,6 +19,7 @@ export type Permissions = Partial<Record<Resource, { read: boolean; write: boole
 export const CONFIGURABLE_ROLES = [
   { id: "analyst", label: "Analista" },
   { id: "operations", label: "Operaciones" },
+  { id: "advisor", label: "Asesor" },
   { id: "executive", label: "Ejecutivo" },
   { id: "viewer", label: "Solo lectura" },
 ] as const;

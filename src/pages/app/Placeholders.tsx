@@ -34,6 +34,7 @@ const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: typ
   { value: "admin",      label: "Administrador", description: "Acceso total al sistema",         icon: Shield },
   { value: "analyst",    label: "Analista",       description: "Lectura y análisis de datos",     icon: Eye },
   { value: "operations", label: "Operaciones",    description: "Gestión de leads y clientes",     icon: Settings2 },
+  { value: "advisor",    label: "Asesor",         description: "Atiende prospectos y clientes",   icon: Settings2 },
   { value: "executive",  label: "Ejecutivo",      description: "Vista ejecutiva y reportes",      icon: Eye },
   { value: "viewer",     label: "Solo lectura",   description: "Consulta sin modificaciones",     icon: Eye },
 ];
@@ -72,7 +73,7 @@ export const Settings = () => {
     }
     const roleOf = new Map<string, Role>();
     // Si un usuario tuviera varios roles, se muestra el de mayor privilegio
-    const rank: Role[] = ["admin", "analyst", "operations", "executive", "viewer"];
+    const rank: Role[] = ["admin", "analyst", "operations", "advisor", "executive", "viewer"];
     for (const x of r.data ?? []) {
       const cur = roleOf.get(x.user_id as string);
       const next = x.role as Role;
@@ -122,7 +123,13 @@ export const Settings = () => {
       .upsert({ user_id: target.id, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (insErr) {
       setBusy(null);
-      toast({ title: "Error al asignar rol", description: insErr.message, variant: "destructive" });
+      // 22P02: la base todavía no tiene ese rol (p. ej. Asesor antes de supabase/setup/propuestas/08-rol-asesor.sql)
+      const sinRol = insErr.code === "22P02" || /invalid input value for enum/i.test(insErr.message);
+      toast({
+        title: "Error al asignar rol",
+        description: sinRol ? "Ese rol todavía no existe en la base de datos: falta ejecutar supabase/setup/propuestas/08-rol-asesor.sql." : insErr.message,
+        variant: "destructive",
+      });
       return;
     }
     const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", target.id).neq("role", role);
