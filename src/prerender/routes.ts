@@ -5,7 +5,8 @@ import { getSEOConfig } from "@/config/seo";
 import { coverageData } from "@/data/coverageData";
 import { SERVICES_DATA, SERVICIOS_INDEX } from "@/data/servicesData";
 import { REMOTE_GROUPS, remoteServices } from "@/data/remoteServices";
-import { AREAS_TEXT, INCLUDES, FAQ, OTROS_DIAGNOSTICOS } from "@/data/diagnosticoLanding";
+import { AREAS_TEXT, INCLUDES, FAQ, FAQ_CASA, FAQ_EVENTO } from "@/data/diagnosticoLanding";
+import { DIAGNOSTICOS } from "@/data/diagnosticoPreguntas";
 
 export interface PrerenderRoute {
   path: string;
@@ -108,6 +109,25 @@ function coverageRoutes() {
   return [index, ...rest];
 }
 
+const OTROS_DIAGNOSTICOS = `<h2>Otros diagnósticos gratuitos</h2>${ul(Object.values(DIAGNOSTICOS).map((d) => a(d.ruta, `Diagnóstico para ${d.etiqueta.toLowerCase()}`)))}`;
+
+/** Diagnóstico de casa o de evento: su propia página con sus preguntas. */
+function diagnosticoRoute(tipo: "casa" | "evento", faq: { q: string; a: string }[]): PrerenderRoute {
+  const d = DIAGNOSTICOS[tipo];
+  const l = d.landing;
+  const previas = d.perfil.campos.filter((c) => c.antes);
+  return route(
+    d.ruta,
+    `<h1>${esc(l.titulo)}</h1>${p(l.pregunta)}${p(l.intro)}
+<h2>${esc(l.areasTitulo)}</h2>${l.areas.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}
+${previas.length ? `<h2>Antes de empezar</h2>${ul(previas.map((c) => esc(c.label)))}` : ""}
+<h2>Las 10 preguntas</h2><ol>${d.preguntas.map((q) => `<li>${esc(q.text)}</li>`).join("")}</ol>
+<h2>Resultado</h2>${p(l.resultado)}${p(l.alcance)}
+<h2>Qué incluye tu PDF</h2>${ul(INCLUDES.map(esc))}
+<h2>Preguntas frecuentes</h2>${faq.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}${OTROS_DIAGNOSTICOS}`,
+  );
+}
+
 export function buildRoutes(): PrerenderRoute[] {
   const heading = (path: string) => getSEOConfig(path).title.split(" | ")[0];
   return [
@@ -120,13 +140,14 @@ export function buildRoutes(): PrerenderRoute[] {
     ...coverageRoutes(),
     route(
       "/diagnostico",
-      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS</h1>${p("Responde 10 preguntas sobre tu empresa o institución, tu casa o tu evento y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
-<h2>Qué evalúa</h2>${AREAS_TEXT.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}${p(OTROS_DIAGNOSTICOS)}
-<h2>Tres diagnósticos</h2>${ul([a("/diagnostico", "Diagnóstico para negocios e instituciones"), a("/diagnostico?tipo=casa", "Diagnóstico de seguridad para tu casa"), a("/diagnostico?tipo=evento", "Diagnóstico de seguridad para eventos masivos")])}
-<h2>Cómo funciona</h2>${ul(["Elige qué quieres revisar (negocio, casa o evento) y responde 10 preguntas.", "Deja un correo y un teléfono para recibir el resultado.", "Ve tu resultado y descarga el PDF."].map(esc))}
+      `<h1>Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS</h1>${p("Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos. Sin costo, unos 3 minutos.")}
+<h2>Qué evalúa</h2>${AREAS_TEXT.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}
+<h2>Cómo funciona</h2>${ul(["Responde 10 preguntas y algunos datos generales de tu organización.", "Deja un correo y un teléfono para recibir el resultado.", "Ve tu resultado y descarga el PDF."].map(esc))}
 <h2>Qué incluye tu PDF</h2>${ul(INCLUDES.map(esc))}
-<h2>Preguntas frecuentes</h2>${FAQ.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}`,
+<h2>Preguntas frecuentes</h2>${FAQ.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}${OTROS_DIAGNOSTICOS}`,
     ),
+    diagnosticoRoute("casa", FAQ_CASA),
+    diagnosticoRoute("evento", FAQ_EVENTO),
     route(
       "/schedule",
       `<h1>Agende un diagnóstico estratégico confidencial.</h1>${p("Una sesión privada de 30 minutos para evaluar el contexto institucional de su organización y proponer un marco de actuación alineado a sus objetivos.")}`,

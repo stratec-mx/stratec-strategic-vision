@@ -10,6 +10,8 @@ export const Terminos = lazyWithPreload(() => import("../pages/Terminos.tsx"));
 export const Confidentiality = lazyWithPreload(() => import("../pages/Confidentiality.tsx"));
 export const Auth = lazyWithPreload(() => import("../pages/Auth.tsx"));
 export const Diagnostico = lazyWithPreload(() => import("../pages/Diagnostico.tsx"));
+export const DiagnosticoResidencial = lazyWithPreload(() => import("../pages/DiagnosticoResidencial.tsx"));
+export const DiagnosticoEventos = lazyWithPreload(() => import("../pages/DiagnosticoEventos.tsx"));
 export const CoverageIndex = lazyWithPreload(() => import("../pages/coverage/CoverageIndex.tsx"));
 export const CoverageLocality = lazyWithPreload(() => import("../pages/coverage/CoverageLocality.tsx"));
 export const ServicesIndex = lazyWithPreload(() => import("../pages/services/ServicesIndex.tsx"));

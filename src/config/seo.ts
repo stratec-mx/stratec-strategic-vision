@@ -139,6 +139,20 @@ const staticConfig: Record<string, PageSEO> = {
     ogType: "website",
     canonicalUrl: `${baseUrl}/diagnostico`
   },
+  "/diagnostico-residencial": {
+    title: "Diagnóstico de Seguridad Residencial Gratuito para tu Casa | STRATEC",
+    description: "¿Qué tan protegida está tu casa y tu familia? Responde 10 preguntas y recibe gratis un diagnóstico inicial en PDF con las áreas a fortalecer: accesos, cámaras, extorsión y emergencias.",
+    keywords: ["seguridad residencial", "seguridad para casa", "diagnóstico de seguridad para el hogar", "prevención de robo a casa", "extorsión telefónica qué hacer"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/diagnostico-residencial`
+  },
+  "/diagnostico-eventos": {
+    title: "Diagnóstico de Seguridad para Eventos Masivos Gratuito | STRATEC",
+    description: "¿Tu evento está preparado para recibir al público de manera segura? Responde 10 preguntas y recibe gratis un diagnóstico inicial en PDF sobre aforo, salidas, accesos, emergencias y coordinación.",
+    keywords: ["seguridad en eventos masivos", "plan de seguridad para eventos", "protección civil eventos", "aforo eventos", "seguridad para conciertos y ferias"],
+    ogType: "website",
+    canonicalUrl: `${baseUrl}/diagnostico-eventos`
+  },
   "/schedule": {
     title: "Agenda un Diagnóstico Estratégico Confidencial | STRATEC",
     description: "Sesión privada de 30 minutos con un consultor de STRATEC para evaluar el contexto de tu organización y proponer un marco de actuación.",

@@ -32,7 +32,7 @@ export interface DiagnosticoPdfData {
   /** "tu negocio", "tu casa", "tu evento". Por omisión, "tu organización". */
   sujeto?: string;
   /** Textos que cambian según el tipo de diagnóstico */
-  textos?: { titulo: string; paraQuien: string; revisar: string; mantener: string };
+  textos?: { titulo: string; paraQuien: string; revisar: string; mantener: string; alcance?: string };
   score: string;
   levelLabel: string;
   levelBody: string;
@@ -277,6 +277,7 @@ export async function downloadDiagnosticoPdf(d: DiagnosticoPdfData): Promise<voi
   // ── Alcance del diagnóstico ──
   font("normal", 7.8);
   const scope =
+    tx.alcance ??
     "Alcance. Este es un diagnóstico básico generado automáticamente a partir de tus respuestas. Sirve como punto de partida: no sustituye una evaluación en sitio ni la revisión de la autoridad competente. Para un análisis completo de " + sujeto + ", agenda una evaluación con STRATEC.";
   const scopeLines: string[] = doc.splitTextToSize(scope, CW - 26);
   const sh = scopeLines.length * 10.5 + 22;

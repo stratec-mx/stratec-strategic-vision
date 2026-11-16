@@ -1,5 +1,7 @@
-// Preguntas y textos del diagnóstico básico (/diagnostico) por tipo:
-// negocio o institución, casa (seguridad residencial) y evento masivo.
+// Preguntas y textos de los tres diagnósticos gratuitos, cada uno con su página:
+//   /diagnostico (y /diagnostico-empresarial)  negocio o institución
+//   /diagnostico-residencial                   casa
+//   /diagnostico-eventos                       evento masivo
 // Redactadas para que cualquier persona las entienda, sin términos técnicos.
 // En todas, "Sí" es la respuesta que indica que el punto está cubierto.
 import { GIROS } from "@/lib/pricing";
@@ -66,13 +68,36 @@ export interface CampoPerfil {
   options: OpcionPerfil[];
   /** Valor inicial de un campo opcional; con este valor el dato se omite */
   inicial?: string;
+  /** Se pregunta antes de las 10 preguntas (segmentación), no en el último paso */
+  antes?: boolean;
+}
+
+/** Textos propios de la página de cada diagnóstico. */
+export interface LandingDiagnostico {
+  /** Etiquetas pequeñas sobre el título */
+  chips: string[];
+  /** Título de la página (H1) */
+  titulo: string;
+  /** Pregunta que abre la página */
+  pregunta: string;
+  intro: string;
+  areasTitulo: string;
+  areas: { title: string; text: string }[];
+  /** Puntos de ejemplo en la vista ilustrativa del PDF */
+  mock: string[];
+  /** Qué obtiene el visitante con su resultado */
+  resultado: string;
+  /** Alcance: lo que el diagnóstico no sustituye ni garantiza */
+  alcance: string;
 }
 
 export interface ConfigDiagnostico {
   id: TipoDiagnostico;
-  /** Botón del selector */
+  /** Dirección de su página */
+  ruta: string;
+  /** Nombre para enlazarlo desde los otros diagnósticos */
   etiqueta: string;
-  detalle: string;
+  landing: LandingDiagnostico;
   /** Nombre interno (aviso de Telegram, nota del lead) */
   nombre: string;
   /** "tu negocio", "tu casa", "tu evento" */
@@ -83,7 +108,7 @@ export interface ConfigDiagnostico {
   mapa: { titulo: string; ayuda: string };
   /** Campo opcional del formulario de contacto (empresa, colonia, nombre del evento) */
   contacto: { campo: string; etiquetaNota: string };
-  pdf: { titulo: string; paraQuien: string; revisar: string; mantener: string };
+  pdf: { titulo: string; paraQuien: string; revisar: string; mantener: string; alcance: string };
   /** Frase del mensaje de WhatsApp: "hice el diagnóstico básico …" */
   whatsapp: string;
 }
@@ -109,8 +134,19 @@ export const SUPERFICIE = [
 
 const NEGOCIO: ConfigDiagnostico = {
   id: "negocio",
-  etiqueta: "Mi negocio o institución",
-  detalle: "Empresas, comercios, escuelas, oficinas",
+  ruta: "/diagnostico",
+  etiqueta: "Empresas e instituciones",
+  landing: {
+    chips: ["Básico", "GRATIS", "PDF descargable"],
+    titulo: "Genera y descarga tu diagnóstico de seguridad en PDF, GRATIS",
+    pregunta: "",
+    intro: "Responde 10 preguntas sobre tu empresa o institución y obtén tu nivel de vulnerabilidad, las áreas a atender y un plan de acción priorizado. Basado en la metodología ISO 31000 de gestión de riesgos.",
+    areasTitulo: "Seis áreas que deciden cómo responde tu organización ante un incidente",
+    areas: [],
+    mock: ["Qué hacer ante extorsión", "Saber a quién avisar", "Plan para seguir trabajando"],
+    resultado: "Conoce tu nivel de vulnerabilidad, las áreas a atender y un plan de acción en orden de prioridad.",
+    alcance: "Es un diagnóstico básico a partir de tus respuestas: sirve como punto de partida y no sustituye una evaluación en sitio.",
+  },
   nombre: "Negocio",
   sujeto: "tu negocio",
   preguntas: [
@@ -147,27 +183,44 @@ const NEGOCIO: ConfigDiagnostico = {
     paraQuien: "Organización participante",
     revisar: "Documenta lo realizado y revísalo al menos una vez al año o cuando cambie el inmueble o el personal.",
     mantener: "Mantén al día procedimientos, equipos y capacitación, y revisa tus condiciones de seguridad al menos una vez al año.",
+    alcance: "Alcance. Este es un diagnóstico básico generado automáticamente a partir de tus respuestas. Sirve como punto de partida: no sustituye una evaluación en sitio ni la revisión de la autoridad competente. Para un análisis completo de tu organización, agenda una evaluación con STRATEC.",
   },
   whatsapp: "hice el diagnóstico básico",
 };
 
 const CASA: ConfigDiagnostico = {
   id: "casa",
-  etiqueta: "Mi casa",
-  detalle: "Casa, departamento o fraccionamiento",
+  ruta: "/diagnostico-residencial",
+  etiqueta: "Casa y familia",
+  landing: {
+    chips: ["Residencial", "GRATIS", "PDF descargable"],
+    titulo: "Diagnóstico inicial de seguridad residencial",
+    pregunta: "¿Qué tan protegida está tu casa y tu familia?",
+    intro: "Responde estas 10 preguntas para identificar posibles vulnerabilidades en tu vivienda y conocer qué medidas puedes fortalecer.",
+    areasTitulo: "Cuatro frentes que definen qué tan protegida está tu vivienda",
+    areas: [
+      { title: "Seguridad física", text: "Puertas, ventanas, cerraduras, iluminación de los accesos y control de llaves." },
+      { title: "Cámaras y alarma", text: "Si tu vivienda tiene cámaras o alarma y si has comprobado que funcionan." },
+      { title: "Familia y hábitos", text: "Extorsión por llamada o mensaje, lo que se comparte en público y quién entra a tu domicilio." },
+      { title: "Emergencias", text: "Plan familiar ante sismo o incendio, extintores, detectores de humo e instalación de gas." },
+    ],
+    mock: ["Accesos iluminados de noche", "Control de llaves y claves", "Plan familiar ante emergencias"],
+    resultado: "Identifica áreas de oportunidad y recibe orientación inicial para fortalecer la seguridad de tu hogar.",
+    alcance: "Es un diagnóstico inicial a partir de tus respuestas: identifica posibles áreas de oportunidad, pero no sustituye una inspección física de la vivienda.",
+  },
   nombre: "Casa",
   sujeto: "tu casa",
   preguntas: [
-    { id: 1, text: "¿Las puertas y ventanas que dan a la calle cierran bien y tienen cerraduras en buen estado?", short: "Puertas y ventanas seguras", services: ["consultoria"], riesgo: "La mayoría de los robos a casa entran por una puerta o ventana mal cerrada o fácil de forzar. Es lo primero que busca quien quiere entrar." },
-    { id: 2, text: "¿La entrada, la cochera y el patio quedan bien iluminados de noche?", short: "Exterior iluminado de noche", services: ["consultoria"], riesgo: "Las zonas oscuras permiten acercarse a la casa sin ser visto. Una buena luz es de las medidas más sencillas y efectivas." },
-    { id: 3, text: "¿Tienes cámaras o alarma y comprobaste este mes que funcionan? (Si no tienes, responde No.)", short: "Cámaras o alarma funcionando", services: ["tecnologia"], riesgo: "Muchas cámaras y alarmas dejan de funcionar sin que nadie lo note. Si no sirven, no avisan a tiempo ni dejan prueba de lo que pasó." },
-    { id: 4, text: "¿Sabes con certeza quién tiene copia de las llaves o las claves de acceso de tu casa?", short: "Control de llaves y claves", services: ["consultoria"], riesgo: "Una copia olvidada con alguien que ya no debería tenerla es una entrada abierta. Cuando no hay certeza, conviene cambiar cerraduras y claves." },
-    { id: 5, text: "¿Todos en casa saben qué hacer si llaman para extorsionar, amenazar o decir que un familiar está en peligro?", short: "Saber qué hacer ante extorsión o engaños", services: ["protocolos"], riesgo: "Estas llamadas buscan asustar para que alguien pague o dé información en minutos. Una familia que ya sabe qué hacer cuelga, verifica y no cae." },
-    { id: 6, text: "¿En tu familia evitan publicar en redes sociales cuando salen de viaje, su ubicación o fotos que muestren lo que hay en casa?", short: "Cuidado con lo que se publica en redes", services: ["protocolos"], riesgo: "Avisar en redes que la casa está sola, o mostrar rutinas y objetos de valor, le da a un extraño la información que necesita." },
-    { id: 7, text: "¿Verificas quiénes son las personas que entran a trabajar a tu casa, como personal doméstico, técnicos o repartidores?", short: "Verificar a quien entra a trabajar", services: ["protocolos"], riesgo: "Muchos robos y engaños empiezan con alguien que entró como técnico, repartidor o empleado sin que nadie comprobara quién era." },
-    { id: 8, text: "¿Tu familia tiene acordado qué hacer y dónde reunirse si hay un sismo o un incendio?", short: "Plan familiar ante sismo o incendio", services: ["capacitacion"], riesgo: "Sin un plan, cada quien reacciona distinto y se pierde tiempo buscando a los demás. Acordarlo antes evita lesiones y angustia." },
-    { id: 9, text: "¿Tienes en casa un extintor vigente y al menos un detector de humo que funcione?", short: "Extintor y detector de humo", services: ["capacitacion"], riesgo: "Casi todos los incendios en casa empiezan pequeños. Un extintor a la mano y un detector que avise a tiempo hacen la diferencia." },
-    { id: 10, text: "¿Revisaron tu instalación de gas (tanque, mangueras y conexiones) en el último año y todos saben cerrar la llave de paso?", short: "Instalación de gas revisada", services: ["consultoria"], riesgo: "Una fuga de gas puede causar una explosión o una intoxicación. Las mangueras y los reguladores se desgastan aunque no se note." },
+    { id: 1, text: "¿Las puertas y ventanas que dan al exterior cuentan con cerraduras funcionales y mecanismos de cierre adecuados?", short: "Puertas y ventanas seguras", services: ["consultoria"], riesgo: "La mayoría de los robos a casa entran por una puerta o ventana mal cerrada o fácil de forzar. Es lo primero que busca quien quiere entrar." },
+    { id: 2, text: "¿La entrada principal, la cochera, los patios y otros puntos de acceso cuentan con iluminación suficiente durante la noche?", short: "Accesos iluminados de noche", services: ["consultoria"], riesgo: "Las zonas oscuras permiten acercarse a la casa sin ser visto. Una buena luz es de las medidas más sencillas y efectivas." },
+    { id: 3, text: "¿Tu vivienda cuenta con cámaras o sistema de alarma y has comprobado recientemente que funcionan correctamente?", short: "Cámaras o alarma funcionando", services: ["tecnologia"], riesgo: "Muchas cámaras y alarmas dejan de funcionar sin que nadie lo note. Si no sirven, no avisan a tiempo ni dejan prueba de lo que pasó." },
+    { id: 4, text: "¿Tienes identificado quiénes cuentan con copias de las llaves, controles o claves de acceso de tu vivienda?", short: "Control de llaves y claves de acceso", services: ["consultoria"], riesgo: "Una copia olvidada con alguien que ya no debería tenerla es una entrada abierta. Cuando no hay certeza, conviene cambiar cerraduras y claves." },
+    { id: 5, text: "¿En tu familia saben cómo actuar ante llamadas o mensajes de extorsión, amenazas o supuestas emergencias que involucren a algún familiar?", short: "Saber qué hacer ante extorsión o engaños", services: ["protocolos"], riesgo: "Estas llamadas y mensajes buscan asustar para que alguien pague o dé información en minutos. Una familia que ya sabe qué hacer cuelga, verifica y no cae." },
+    { id: 6, text: "¿Evitan compartir públicamente información sobre ausencias prolongadas, ubicación en tiempo real o elementos que permitan conocer los bienes y condiciones de seguridad de tu vivienda?", short: "Cuidado con lo que se comparte en público", services: ["protocolos"], riesgo: "Avisar que la casa está sola, o mostrar rutinas y objetos de valor, le da a un extraño la información que necesita." },
+    { id: 7, text: "¿Verificas la identidad y el motivo de ingreso de las personas externas que realizan trabajos o entregas en tu domicilio?", short: "Verificar a quien entra al domicilio", services: ["protocolos"], riesgo: "Muchos robos y engaños empiezan con alguien que entró como técnico, repartidor o empleado sin que nadie comprobara quién era." },
+    { id: 8, text: "¿Tu familia tiene definido qué hacer, por dónde salir y dónde reunirse en caso de sismo, incendio u otra emergencia?", short: "Plan familiar ante emergencias", services: ["protocolos"], riesgo: "Sin un plan, cada quien reacciona distinto y se pierde tiempo buscando a los demás. Acordarlo antes evita lesiones y angustia." },
+    { id: 9, text: "¿Cuentas con extintores vigentes y detectores de humo funcionales en los espacios donde se necesitan?", short: "Extintores y detectores de humo", services: ["consultoria"], riesgo: "Casi todos los incendios en casa empiezan pequeños. Un extintor a la mano y un detector que avise a tiempo hacen la diferencia." },
+    { id: 10, text: "¿La instalación de gas recibe revisiones periódicas y los integrantes de tu familia saben cómo cerrar la llave de paso?", short: "Instalación de gas revisada", services: ["consultoria"], riesgo: "Una fuga de gas puede causar una explosión o una intoxicación. Las mangueras y los reguladores se desgastan aunque no se note." },
   ],
   niveles: {
     bajo: "Tu casa tiene lo básico en orden. Mantén al día cerraduras, cámaras, extintor y gas, y repasa el plan con tu familia al menos una vez al año.",
@@ -200,31 +253,49 @@ const CASA: ConfigDiagnostico = {
   mapa: { titulo: "Marca tu casa", ayuda: "señala accesos, zonas oscuras y puntos que te preocupan" },
   contacto: { campo: "Colonia o fraccionamiento (opcional)", etiquetaNota: "Colonia o fraccionamiento" },
   pdf: {
-    titulo: "DIAGNÓSTICO BÁSICO DE SEGURIDAD EN CASA",
+    titulo: "DIAGNÓSTICO INICIAL DE SEGURIDAD RESIDENCIAL",
     paraQuien: "Hogar participante",
     revisar: "Anota lo que ya resolviste y revísalo al menos una vez al año o cuando cambien las personas que viven o trabajan en casa.",
     mantener: "Mantén al día cerraduras, cámaras, extintor y gas, y repasa el plan con tu familia al menos una vez al año.",
+    alcance: "Alcance. Este es un diagnóstico inicial generado automáticamente a partir de tus respuestas. Identifica posibles áreas de oportunidad: no sustituye una inspección física de la vivienda. Para una revisión completa de tu casa, agenda una evaluación con STRATEC.",
   },
-  whatsapp: "hice el diagnóstico básico de mi casa",
+  whatsapp: "hice el diagnóstico de seguridad residencial",
 };
 
 const EVENTO: ConfigDiagnostico = {
   id: "evento",
-  etiqueta: "Un evento masivo",
-  detalle: "Conciertos, ferias, eventos deportivos o privados",
+  ruta: "/diagnostico-eventos",
+  etiqueta: "Eventos masivos",
+  landing: {
+    chips: ["Eventos masivos", "GRATIS", "PDF descargable"],
+    titulo: "Diagnóstico inicial de seguridad para eventos masivos",
+    pregunta: "¿Tu evento está preparado para recibir al público de manera segura?",
+    intro: "Antes de abrir las puertas, identifica posibles riesgos y verifica si cuentas con las condiciones básicas para organizar un evento seguro.",
+    areasTitulo: "Cinco frentes que deciden si tu evento está listo para recibir al público",
+    areas: [
+      { title: "Responsable y decisiones", text: "Quién coordina la seguridad, con qué funciones y con qué autoridad ante una contingencia." },
+      { title: "Aforo y riesgos", text: "Capacidad máxima del recinto, su control y las condiciones de las instalaciones temporales." },
+      { title: "Emergencias", text: "Rutas y salidas, procedimientos ante contingencias y atención médica prevista." },
+      { title: "Accesos y asistentes", text: "Control de entradas, boletos o acreditaciones y objetos no permitidos." },
+      { title: "Comunicación y coordinación", text: "Personal con funciones claras, medios alternos al celular, y permisos y coordinaciones identificados." },
+    ],
+    mock: ["Aforo determinado y controlado", "Procedimientos ante contingencias", "Comunicación alterna al celular"],
+    resultado: "Identifica áreas de oportunidad en la planeación de seguridad de tu evento y conoce qué aspectos requieren atención antes de su realización.",
+    alcance: "Es una autoevaluación preliminar a partir de tus respuestas: no garantiza que el evento sea seguro, que cumpla la normativa ni que cuente con las autorizaciones necesarias.",
+  },
   nombre: "Evento masivo",
   sujeto: "tu evento",
   preguntas: [
-    { id: 1, text: "¿Hay una persona responsable de la seguridad del evento, con autoridad para tomar decisiones e incluso detenerlo?", short: "Responsable de seguridad con autoridad", services: ["consultoria"], riesgo: "Si nadie tiene la última palabra, las decisiones urgentes se retrasan. En una multitud, unos minutos de duda bastan para que un incidente crezca." },
-    { id: 2, text: "¿Calculaste cuántas personas caben de forma segura en el lugar y tienes cómo evitar que entren más?", short: "Aforo calculado y controlado", services: ["analisis"], riesgo: "El sobrecupo es de las causas más comunes de tragedias en eventos: impide salir, respirar y atender a quien lo necesita." },
-    { id: 3, text: "¿Las salidas de emergencia alcanzan para el número de asistentes, tienen señales y van a estar libres todo el evento?", short: "Salidas de emergencia suficientes y libres", services: ["gestion"], riesgo: "Una salida con candado, tapada por un puesto o sin señal puede atrapar a cientos de personas en segundos." },
-    { id: 4, text: "¿Habrá control en las entradas, con revisión de boletos y de objetos prohibidos, y personal suficiente para hacerlo?", short: "Control de accesos y revisión", services: ["protocolos"], riesgo: "Sin filtros entran objetos peligrosos y personas sin boleto, y las filas se vuelven aglomeraciones difíciles de controlar." },
-    { id: 5, text: "¿Tienes por escrito qué hacer si hay un incendio, un sismo, una estampida, una riña o mal clima?", short: "Plan por escrito ante emergencias", services: ["gestion"], riesgo: "Improvisar frente a una multitud asustada casi nunca funciona. Un plan define quién decide, por dónde se sale y qué se le dice al público." },
-    { id: 6, text: "¿Habrá servicio médico o ambulancia en el lugar durante todo el evento?", short: "Servicio médico en el lugar", services: ["gestion"], riesgo: "En una concentración grande siempre hay desmayos, caídas o emergencias médicas. Sin atención en el lugar, la ayuda tarda demasiado en llegar entre la gente." },
-    { id: 7, text: "¿Ya avisaste a Protección Civil y a las autoridades locales, y tienes los permisos que te pidieron?", short: "Aviso y permisos con las autoridades", services: ["consultoria"], riesgo: "Sin permisos, la autoridad puede suspender el evento el mismo día. Además, bomberos, policía y tránsito responden mejor cuando ya conocen el evento." },
-    { id: 8, text: "¿El personal del evento (seguridad, acomodadores, voluntarios) sabe qué le toca hacer en una emergencia y recibió una explicación previa?", short: "Personal con funciones claras", services: ["capacitacion"], riesgo: "El público sigue lo que hace el personal. Si el personal no sabe qué hacer, una evacuación se vuelve desorden." },
-    { id: 9, text: "¿Puedes comunicarte con todo tu equipo por radio y dar indicaciones al público por sonido, aunque falle el celular?", short: "Comunicación con el equipo y el público", services: ["protocolos"], riesgo: "En eventos grandes la red celular se satura. Sin radios ni sonido no hay manera de coordinar al equipo ni de guiar a la gente." },
-    { id: 10, text: "¿Revisaste que escenarios, gradas, carpas y conexiones eléctricas temporales estén bien montados y que haya extintores a la mano?", short: "Instalaciones temporales y extintores revisados", services: ["gestion"], riesgo: "Las estructuras temporales y las conexiones eléctricas improvisadas son causa frecuente de colapsos e incendios en eventos." },
+    { id: 1, text: "¿Existe una persona responsable de coordinar la seguridad del evento, con funciones definidas y autoridad para tomar decisiones ante una contingencia?", short: "Responsable de seguridad con autoridad", services: ["consultoria"], riesgo: "Si nadie tiene la última palabra, las decisiones urgentes se retrasan. En una multitud, unos minutos de duda bastan para que un incidente crezca." },
+    { id: 2, text: "¿Se ha determinado la capacidad máxima de asistentes del recinto y existe un mecanismo para controlar que no se supere?", short: "Aforo determinado y controlado", services: ["analisis"], riesgo: "El sobrecupo es de las causas más comunes de tragedias en eventos: impide salir, respirar y atender a quien lo necesita." },
+    { id: 3, text: "¿Las rutas y salidas de emergencia han sido identificadas, señalizadas y previstas para mantenerse libres y disponibles durante todo el evento?", short: "Rutas y salidas de emergencia previstas", services: ["analisis"], riesgo: "Una salida con candado, tapada por un puesto o sin señal puede atrapar a cientos de personas en segundos." },
+    { id: 4, text: "¿Existe un procedimiento para controlar los accesos, verificar boletos o acreditaciones y prevenir el ingreso de objetos no permitidos?", short: "Procedimiento de control de accesos", services: ["protocolos"], riesgo: "Sin filtros entran objetos peligrosos y personas sin boleto, y las filas se vuelven aglomeraciones difíciles de controlar." },
+    { id: 5, text: "¿Cuentas con procedimientos documentados para actuar ante incendios, sismos, aglomeraciones peligrosas, riñas, condiciones meteorológicas adversas u otras contingencias previsibles?", short: "Procedimientos ante contingencias", services: ["protocolos"], riesgo: "Improvisar frente a una multitud asustada casi nunca funciona. Un procedimiento define quién decide, por dónde se sale y qué se le dice al público." },
+    { id: 6, text: "¿Se ha previsto la atención médica durante el evento, considerando el número de asistentes, las características de la actividad y los riesgos identificados?", short: "Atención médica prevista", services: ["consultoria"], riesgo: "En una concentración grande siempre hay desmayos, caídas o emergencias médicas. Sin atención prevista, la ayuda tarda demasiado en llegar entre la gente." },
+    { id: 7, text: "¿Has identificado los permisos, avisos, autorizaciones y coordinaciones institucionales que requiere tu evento y verificado cuáles debes tramitar?", short: "Permisos y coordinaciones identificados", services: ["consultoria"], riesgo: "Un permiso o aviso que falta puede llevar a que la autoridad suspenda el evento el mismo día. Identificarlos con tiempo evita sorpresas." },
+    { id: 8, text: "¿El personal, los organizadores y los responsables operativos conocen sus funciones y han recibido instrucciones previas sobre cómo actuar ante una emergencia?", short: "Personal con funciones claras", services: ["capacitacion"], riesgo: "El público sigue lo que hace el personal. Si el personal no sabe qué hacer, una evacuación se vuelve desorden." },
+    { id: 9, text: "¿Tu equipo cuenta con medios de comunicación alternativos al teléfono celular para coordinar operaciones y transmitir instrucciones al público?", short: "Comunicación alterna al celular", services: ["protocolos"], riesgo: "En eventos grandes la red celular se satura. Sin radios ni sonido no hay manera de coordinar al equipo ni de guiar a la gente." },
+    { id: 10, text: "¿Se han revisado las condiciones de seguridad de escenarios, gradas, carpas, instalaciones eléctricas temporales, equipos y medios de respuesta ante incendios?", short: "Instalaciones temporales y equipo contra incendio", services: ["analisis"], riesgo: "Las estructuras temporales y las conexiones eléctricas improvisadas son causa frecuente de colapsos e incendios en eventos." },
   ],
   niveles: {
     bajo: "Tu evento tiene lo básico previsto. Repasa el plan con tu equipo antes de abrir puertas y verifica salidas, accesos y comunicación el mismo día.",
@@ -236,23 +307,25 @@ const EVENTO: ConfigDiagnostico = {
     ayuda: "Para adaptar las recomendaciones al tipo y tamaño del evento.",
     campos: [
       {
-        id: "evento", label: "Tipo de evento", corto: "Evento", required: true,
+        id: "evento", label: "¿Qué tipo de evento estás organizando?", corto: "Evento", required: true, antes: true,
         options: [
-          { id: "concierto", label: "Concierto o festival" },
+          { id: "concierto", label: "Concierto o espectáculo" },
           { id: "deportivo", label: "Evento deportivo" },
-          { id: "feria", label: "Feria o exposición" },
-          { id: "civico", label: "Religioso o cívico" },
-          { id: "privado", label: "Corporativo o privado" },
+          { id: "feria", label: "Feria, festival o exposición" },
+          { id: "cultural", label: "Evento cultural o religioso" },
+          { id: "empresarial", label: "Evento empresarial o corporativo" },
+          { id: "politico", label: "Evento político o institucional" },
+          { id: "otro", label: "Otro" },
         ],
       },
       {
-        id: "asistentes", label: "Asistentes esperados", corto: "Asistentes", required: true,
+        id: "asistentes", label: "Asistencia esperada", corto: "Asistentes", required: true, antes: true,
         options: [
-          { id: "250", label: "Hasta 250 personas" },
-          { id: "1000", label: "251 a 1,000 personas" },
-          { id: "5000", label: "1,001 a 5,000 personas" },
-          { id: "20000", label: "5,001 a 20,000 personas" },
-          { id: "20000+", label: "Más de 20,000 personas" },
+          { id: "0-499", label: "Menos de 500 personas" },
+          { id: "500-1000", label: "De 500 a 1,000 personas" },
+          { id: "1001-5000", label: "De 1,001 a 5,000 personas" },
+          { id: "5001-10000", label: "De 5,001 a 10,000 personas" },
+          { id: "10000+", label: "Más de 10,000 personas" },
         ],
       },
       {
@@ -278,12 +351,13 @@ const EVENTO: ConfigDiagnostico = {
   mapa: { titulo: "Marca el lugar del evento", ayuda: "señala entradas, salidas y zonas que te preocupan" },
   contacto: { campo: "Nombre del evento u organizador (opcional)", etiquetaNota: "Evento u organizador" },
   pdf: {
-    titulo: "DIAGNÓSTICO BÁSICO DE SEGURIDAD PARA EVENTOS",
+    titulo: "DIAGNÓSTICO INICIAL DE SEGURIDAD PARA EVENTOS MASIVOS",
     paraQuien: "Evento participante",
     revisar: "Repasa todo con tu equipo antes del evento y vuelve a verificarlo el mismo día, antes de abrir puertas.",
     mantener: "Repasa el plan con tu equipo antes de abrir puertas y verifica salidas, accesos y comunicación el mismo día.",
+    alcance: "Alcance. Esta es una autoevaluación preliminar generada automáticamente a partir de tus respuestas. No garantiza que el evento sea seguro, que cumpla la normativa ni que cuente con las autorizaciones necesarias, y no sustituye la revisión de la autoridad competente. Para un análisis completo de tu evento, agenda una evaluación con STRATEC.",
   },
-  whatsapp: "hice el diagnóstico básico de mi evento",
+  whatsapp: "hice el diagnóstico de seguridad para eventos masivos",
 };
 
 export const DIAGNOSTICOS: Record<TipoDiagnostico, ConfigDiagnostico> = { negocio: NEGOCIO, casa: CASA, evento: EVENTO };
@@ -303,7 +377,21 @@ export function datosPerfil(tipo: TipoDiagnostico, valores: Record<string, strin
   });
 }
 
-/** Cierto cuando todos los campos obligatorios del último paso tienen una opción válida. */
-export function perfilCompleto(tipo: TipoDiagnostico, valores: Record<string, string>): boolean {
-  return DIAGNOSTICOS[tipo].perfil.campos.every((c) => !c.required || c.options.some((o) => o.id === valores[c.id]));
+/** Campos que se preguntan antes de las preguntas ("antes") o en el último paso ("final"). */
+export function camposDe(tipo: TipoDiagnostico, momento: "antes" | "final"): CampoPerfil[] {
+  return DIAGNOSTICOS[tipo].perfil.campos.filter((c) => Boolean(c.antes) === (momento === "antes"));
 }
+
+/** Cierto cuando los campos obligatorios (todos, o solo los de un momento) tienen una opción válida. */
+export function perfilCompleto(tipo: TipoDiagnostico, valores: Record<string, string>, momento?: "antes" | "final"): boolean {
+  const campos = momento ? camposDe(tipo, momento) : DIAGNOSTICOS[tipo].perfil.campos;
+  return campos.every((c) => !c.required || c.options.some((o) => o.id === valores[c.id]));
+}
+
+/** Direcciones alternas que muestran un diagnóstico (campañas). */
+export const RUTAS_DIAGNOSTICO: Record<string, TipoDiagnostico> = {
+  "/diagnostico": "negocio",
+  "/diagnostico-empresarial": "negocio",
+  "/diagnostico-residencial": "casa",
+  "/diagnostico-eventos": "evento",
+};

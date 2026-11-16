@@ -17,6 +17,8 @@ import {
   CoverageIndex,
   CoverageLocality,
   Diagnostico,
+  DiagnosticoResidencial,
+  DiagnosticoEventos,
   DictamenSeguridad,
   EstudioAnalisisRiesgo,
   GpsMonitoreoVehicular,
@@ -62,6 +64,10 @@ export const routeElements = (
     <Route path="/auth" element={<Auth />} />
     <Route path="/mapa-demo" element={<Suspense fallback={<CargandoPanel />}><MapaDemo /></Suspense>} />
     <Route path="/diagnostico" element={<Diagnostico />} />
+    <Route path="/diagnostico-residencial" element={<DiagnosticoResidencial />} />
+    <Route path="/diagnostico-eventos" element={<DiagnosticoEventos />} />
+    {/* Dirección de campañas: el diagnóstico empresarial es /diagnostico */}
+    <Route path="/diagnostico-empresarial" element={<Navigate to="/diagnostico" replace />} />
 
     {/* Coverage routes */}
     <Route path="/cobertura" element={<CoverageIndex />} />

@@ -1,13 +1,16 @@
-// Diagnóstico básico gratuito — entrada pública de clientes (lead magnet).
-// Tres cuestionarios (src/data/diagnosticoPreguntas.ts): negocio o institución,
-// casa y evento masivo. Enlaces directos: /diagnostico?tipo=casa y ?tipo=evento.
-// Flujo: 10 preguntas + datos del último paso → correo y teléfono (captura de
-// lead, Supabase submit-lead) → resultado en pantalla y PDF.
+// Diagnósticos gratuitos — entrada pública de clientes (lead magnet).
+// Tres cuestionarios (src/data/diagnosticoPreguntas.ts), cada uno con su página:
+//   /diagnostico                 empresas e instituciones (este archivo)
+//   /diagnostico-residencial     casa y familia (DiagnosticoResidencial.tsx)
+//   /diagnostico-eventos         eventos masivos (DiagnosticoEventos.tsx)
+// Los enlaces anteriores /diagnostico?tipo=casa|evento redirigen a su página.
+// Flujo: (eventos: tipo y asistencia) → 10 preguntas → datos del último paso →
+// correo y teléfono (captura de lead, Supabase submit-lead) → resultado y PDF.
 // El perfil viaja en las notas del lead para que la cotización se arme ya
 // clasificada en el dashboard (en casa y evento, sin giro: solo los servicios).
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldCheck, MapPin, ArrowLeft, ArrowRight, Loader2, AlertTriangle, ChevronDown, FileDown, Building2, Home, Users, Lock, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -18,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { track } from "@/lib/analytics";
 import { encodeLeadProfile, type GiroId } from "@/lib/pricing";
 import {
-  DIAGNOSTICOS, SERVICIOS, TIPOS, PERSONAS, SUPERFICIE, datosPerfil, perfilCompleto, perfilInicial, tipoDesdeParam,
+  DIAGNOSTICOS, SERVICIOS, TIPOS, PERSONAS, SUPERFICIE, camposDe, datosPerfil, perfilCompleto, perfilInicial, tipoDesdeParam,
   type TipoDiagnostico,
 } from "@/data/diagnosticoPreguntas";
 import { DiagnosticoHero, DiagnosticoInfo, DiagnosticoFaq } from "@/components/diagnostico/DiagnosticoLanding";
@@ -33,11 +36,37 @@ const ICONO_TIPO = { negocio: Building2, casa: Home, evento: Users } as const;
 
 const inputCls = "h-11 px-3 border border-steel/25 bg-white text-sm text-navy focus:border-[#C4A04A] focus:outline-none w-full";
 
+/** /diagnostico: empresas e instituciones. Los enlaces viejos con ?tipo= van a su página. */
 export default function Diagnostico() {
+  const [searchParams] = useSearchParams();
+  const { hash } = useLocation();
+  const viejo = tipoDesdeParam(searchParams.get("tipo"));
+  if (viejo !== "negocio") {
+    const resto = new URLSearchParams(searchParams);
+    resto.delete("tipo");
+    const q = resto.toString();
+    return <Navigate to={`${DIAGNOSTICOS[viejo].ruta}${q ? `?${q}` : ""}${hash}`} replace />;
+  }
+  return <DiagnosticoPagina tipo="negocio" />;
+}
+
+/** Enlaces a los otros dos diagnósticos (cada uno tiene su página). */
+const OtrosDiagnosticos = ({ actual }: { actual: TipoDiagnostico }) => (
+  <p className="text-xs text-steel">
+    ¿Buscas otro diagnóstico?{" "}
+    {TIPOS.filter((t) => t !== actual).map((t, i) => (
+      <span key={t}>
+        {i > 0 && " · "}
+        <Link to={DIAGNOSTICOS[t].ruta} onClick={() => track.ctaClick(`diagnostico_otro_${t}`)} className="underline hover:text-navy">
+          {DIAGNOSTICOS[t].etiqueta}
+        </Link>
+      </span>
+    ))}
+  </p>
+);
+
+export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tipoUrl = tipoDesdeParam(searchParams.get("tipo"));
-  const [tipo, setTipo] = useState<TipoDiagnostico>(tipoUrl);
   const cfg = DIAGNOSTICOS[tipo];
   const QUESTIONS = cfg.preguntas;
   const [markers, setMarkers] = useState<SecurityMarker[]>([]);
@@ -46,18 +75,23 @@ export default function Diagnostico() {
   const [phase, setPhase] = useState<"quiz" | "gate" | "result">("quiz");
   const [submitting, setSubmitting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [perfil, setPerfil] = useState<Record<string, string>>(() => perfilInicial(tipoUrl));
+  const [perfil, setPerfil] = useState<Record<string, string>>(() => perfilInicial(tipo));
   const [form, setForm] = useState({ name: "", org: "", email: "", tel: "", contact: false, hp: "" });
 
-  // Paso del cuestionario: 0..9 = preguntas, 10 = datos del último paso
+  // Pasos: (segmentación, solo eventos) → 10 preguntas → datos del último paso
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const stepRef = useRef<HTMLDivElement>(null);
   const advanceTimer = useRef<number | undefined>(undefined);
   const moved = useRef(false);
   const reduceMotion = useReducedMotion();
-  const onData = step >= QUESTIONS.length;
-  const current = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+  const camposAntes = camposDe(tipo, "antes");
+  const camposFinal = camposDe(tipo, "final");
+  const PRE = camposAntes.length ? 1 : 0;
+  const ULTIMO = PRE + QUESTIONS.length;
+  const enSegmento = PRE === 1 && step === 0;
+  const onData = step >= ULTIMO;
+  const current = QUESTIONS[Math.min(Math.max(step - PRE, 0), QUESTIONS.length - 1)];
   const slide = {
     enter: (d: number) => ({ opacity: 0, x: reduceMotion ? 0 : d * 48 }),
     center: { opacity: 1, x: 0 },
@@ -65,6 +99,7 @@ export default function Diagnostico() {
   };
 
   const answeredCount = Object.keys(answers).length;
+  const segmentoListo = perfilCompleto(tipo, perfil, "antes");
   const profileReady = perfilCompleto(tipo, perfil);
   const ready = answeredCount === QUESTIONS.length && profileReady;
 
@@ -93,35 +128,10 @@ export default function Diagnostico() {
   const superficieLabel = esNegocio ? etiqueta("superficie") : "";
   const estado = perfil.estado ?? "";
 
-  // Cambiar de cuestionario reinicia respuestas y datos (las preguntas son otras)
-  const aplicarTipo = (nuevo: TipoDiagnostico) => {
-    window.clearTimeout(advanceTimer.current);
-    setTipo(nuevo);
-    setAnswers({});
-    setPerfil(perfilInicial(nuevo));
-    setDir(-1);
-    setStep(0);
-  };
-  const cambiarTipo = (nuevo: TipoDiagnostico) => {
-    if (nuevo === tipo) return;
-    if (Object.keys(answers).length > 0 && !window.confirm("Al cambiar de diagnóstico se borran las respuestas que llevas. ¿Quieres cambiar?")) return;
-    aplicarTipo(nuevo);
-    track.ctaClick(`diagnostico_tipo_${nuevo}`);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (nuevo === "negocio") next.delete("tipo");
-      else next.set("tipo", nuevo);
-      return next;
-    }, { replace: true });
-  };
-  // Si la dirección cambia por fuera (un enlace a ?tipo=casa con la página abierta), se sigue
-  useEffect(() => {
-    if (tipoUrl !== tipo) aplicarTipo(tipoUrl);
-  }, [tipoUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goTo = (to: number) => {
     window.clearTimeout(advanceTimer.current);
-    const next = Math.max(0, Math.min(QUESTIONS.length, to));
+    const next = Math.max(0, Math.min(ULTIMO, to));
     setDir(next >= step ? 1 : -1);
     moved.current = true;
     setStep(next);
@@ -157,7 +167,7 @@ export default function Diagnostico() {
 
   const goGate = () => {
     if (!ready) {
-      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos del último paso.", variant: "destructive" });
+      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos que se piden.", variant: "destructive" });
       return;
     }
     track.diagnosticoResultado(level.key, tipo);
@@ -194,7 +204,7 @@ export default function Diagnostico() {
       form.contact ? "DESEA QUE UN ASESOR LO CONTACTE" : "No pidió contacto de un asesor (solo descargó su diagnóstico)",
       esNegocio
         ? `Diagnóstico básico: ${fmt(score)}/10 (${level.label})`
-        : `Diagnóstico básico de ${cfg.nombre.toLowerCase()}: ${fmt(score)}/10 (${level.label})`,
+        : `${cfg.landing.titulo}: ${fmt(score)}/10 (${level.label})`,
       esNegocio
         ? `Giro: ${giroLabel} | ${personasLabel} | Superficie: ${superficieLabel} | Estado: ${estado}`
         : datos.map(([k, v]) => `${k}: ${v}`).join(" | "),
@@ -303,58 +313,68 @@ export default function Diagnostico() {
           {/* ── LANDING + CUESTIONARIO ── */}
           {phase === "quiz" && (
             <>
-              <DiagnosticoHero onStart={startQuiz} sujeto={esNegocio ? undefined : cfg.sujeto} />
-              <DiagnosticoInfo onStart={startQuiz} />
+              <DiagnosticoHero onStart={startQuiz} landing={esNegocio ? undefined : cfg.landing} />
+              <DiagnosticoInfo onStart={startQuiz} landing={esNegocio ? undefined : cfg.landing} tipo={tipo} />
               <section id="cuestionario" className="scroll-mt-20 py-20 md:py-24 bg-smoke">
               <div className="container-wide max-w-3xl mx-auto px-4">
               <div className="eyebrow mb-3">— Tu diagnóstico</div>
               <h2 className="font-display text-3xl md:text-4xl text-navy font-light leading-tight mb-3">
                 Empieza: 10 preguntas sobre {cfg.sujeto}
               </h2>
-              <p className="text-steel text-sm md:text-base leading-relaxed mb-8">
+              <p className="text-steel text-sm md:text-base leading-relaxed mb-3">
                 Contesta con lo que sabes hoy. Si no estás seguro, elige "No estoy seguro": también cuenta para tu resultado.
               </p>
-
-              {/* Qué se revisa: cada opción tiene sus propias preguntas */}
-              <fieldset className="mb-10">
-                <legend className="text-xs uppercase tracking-wider text-steel mb-3">¿Qué quieres revisar?</legend>
-                <div className="grid sm:grid-cols-3 gap-2">
-                  {TIPOS.map((t) => {
-                    const Icono = ICONO_TIPO[t];
-                    const sel = t === tipo;
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => cambiarTipo(t)}
-                        aria-pressed={sel}
-                        className={`min-h-[48px] sm:min-h-[64px] flex items-center gap-3 px-4 py-2.5 sm:py-3 border text-left transition-colors ${sel ? "border-navy bg-navy text-smoke" : "border-steel/25 bg-white text-navy hover:border-navy/50"}`}
-                      >
-                        <Icono className={`h-5 w-5 shrink-0 ${sel ? "text-[#C4A04A]" : "text-steel"}`} />
-                        <span>
-                          <span className="block text-sm font-medium leading-tight">{DIAGNOSTICOS[t].etiqueta}</span>
-                          <span className={`hidden sm:block text-[11px] leading-snug mt-0.5 ${sel ? "text-smoke/70" : "text-steel"}`}>{DIAGNOSTICOS[t].detalle}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
+              <div className="mb-10"><OtrosDiagnosticos actual={tipo} /></div>
 
               {/* Avance: un segmento por pregunta y uno para los datos del negocio */}
               <div className="flex items-center justify-between text-xs text-steel mb-2">
-                <span>{onData ? `Último paso: sobre ${cfg.sujeto}` : `Pregunta ${step + 1} de ${QUESTIONS.length}`}</span>
+                <span>{enSegmento ? `Antes de empezar: sobre ${cfg.sujeto}` : onData ? `Último paso: sobre ${cfg.sujeto}` : `Pregunta ${step - PRE + 1} de ${QUESTIONS.length}`}</span>
                 <span>{answeredCount} de {QUESTIONS.length} respondidas</span>
               </div>
               <div className="flex gap-1 mb-6" aria-hidden>
-                {[...QUESTIONS.map((q) => !!answers[q.id]), profileReady].map((done, i) => (
+                {[...(PRE ? [segmentoListo] : []), ...QUESTIONS.map((q) => !!answers[q.id]), profileReady].map((done, i) => (
                   <div key={i} className={`h-1.5 flex-1 transition-colors duration-300 ${i === step ? "bg-navy" : done ? "bg-[#C4A04A]" : "bg-steel/15"}`} />
                 ))}
               </div>
 
               <div ref={stepRef} className="scroll-mt-24 overflow-hidden">
               <AnimatePresence mode="wait" custom={dir} initial={false}>
-              {!onData ? (
+              {enSegmento ? (
+                <motion.div
+                  key={`seg-${tipo}`}
+                  custom={dir}
+                  variants={slide}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
+                  className="border border-steel/20 bg-white p-6 md:p-8"
+                >
+                  <h3 className="font-display text-xl md:text-2xl text-navy leading-snug mb-1 flex items-center gap-2">
+                    <IconoPerfil className="h-5 w-5 text-[#C4A04A]" /> Antes de empezar
+                  </h3>
+                  <p className="text-sm text-steel mb-5">Dos datos para dimensionar tu evento. Después siguen las 10 preguntas.</p>
+                  <div className="space-y-4">
+                    {camposAntes.map((c) => (
+                      <label key={c.id} className="block space-y-1">
+                        <span className="text-sm text-navy">{c.label}{c.required ? " *" : ""}</span>
+                        <select value={perfil[c.id] ?? ""} onChange={(e) => setPerfil({ ...perfil, [c.id]: e.target.value })} className={inputCls}>
+                          {c.required && <option value="">Selecciona</option>}
+                          {c.options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => goTo(1)}
+                    disabled={!segmentoListo}
+                    className="mt-6 w-full h-12 bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    Comenzar las preguntas <ArrowRight className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              ) : !onData ? (
                 <motion.div
                   key={`q-${tipo}-${step}`}
                   custom={dir}
@@ -420,7 +440,7 @@ export default function Diagnostico() {
                 </h3>
                 <p className="text-sm text-steel mb-4">{cfg.perfil.ayuda}</p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {cfg.perfil.campos.map((c) => (
+                  {camposFinal.map((c) => (
                     <label key={c.id} className="space-y-1">
                       <span className="text-xs text-steel">{c.label}{c.required ? " *" : ""}</span>
                       <select value={perfil[c.id] ?? ""} onChange={(e) => setPerfil({ ...perfil, [c.id]: e.target.value })} className={inputCls}>
@@ -473,7 +493,7 @@ export default function Diagnostico() {
               >
                 Generar mi diagnóstico <ArrowRight className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => goTo(QUESTIONS.length - 1)} className="mt-4 inline-flex items-center gap-1 text-sm text-steel hover:text-navy">
+              <button type="button" onClick={() => goTo(ULTIMO - 1)} className="mt-4 inline-flex items-center gap-1 text-sm text-steel hover:text-navy">
                 <ArrowLeft className="h-4 w-4" /> Volver a las preguntas
               </button>
               </motion.div>
@@ -482,7 +502,7 @@ export default function Diagnostico() {
               </div>
               </div>
               </section>
-              <DiagnosticoFaq onStart={startQuiz} />
+              <DiagnosticoFaq onStart={startQuiz} tipo={tipo} />
             </>
           )}
 
@@ -495,7 +515,7 @@ export default function Diagnostico() {
                 <CheckCircle2 className="h-12 w-12 text-[#C4A04A] mx-auto mb-4" />
                 <h1 className="font-display text-3xl text-navy font-light mb-3">Tu diagnóstico está listo</h1>
                 <p className="text-sm text-steel max-w-lg mx-auto">
-                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico básico en PDF. Es GRATIS.
+                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico {esNegocio ? "básico" : "inicial"} en PDF. Es GRATIS.
                 </p>
               </div>
               <section className="border border-navy/15 bg-white p-6 md:p-8">
@@ -520,7 +540,7 @@ export default function Diagnostico() {
                   <p className="text-[0.7rem] text-steel/80 text-center flex items-center justify-center gap-1.5">
                     <Lock className="h-3 w-3 shrink-0" />
                     <span>
-                      Tus datos se tratan de forma confidencial conforme a nuestro{" "}
+                      Al continuar, aceptas que tus datos se traten de forma confidencial conforme a nuestro{" "}
                       <Link to="/privacidad" className="underline">aviso de privacidad</Link>.
                     </span>
                   </p>
@@ -580,7 +600,7 @@ export default function Diagnostico() {
                   {form.contact ? "Un asesor te contactará pronto" : "¿Quieres una evaluación completa?"}
                 </h2>
                 <p className="text-sm text-steel mb-6 max-w-lg mx-auto">
-                  Este es un diagnóstico básico a partir de tus respuestas. Una evaluación con STRATEC revisa tu caso a fondo y te entrega un plan a la medida.
+                  {esNegocio ? "Este es un diagnóstico básico a partir de tus respuestas." : cfg.landing.alcance} Una evaluación con STRATEC revisa tu caso a fondo y te entrega un plan a la medida.
                 </p>
                 <a href={`https://wa.me/522206488688?text=${waText}`} target="_blank" rel="noopener noreferrer" onClick={() => track.whatsappClick("diagnostico")}
                    className="inline-flex items-center gap-2 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold px-8 py-4 uppercase tracking-wider text-sm transition-colors">
