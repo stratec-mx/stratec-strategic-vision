@@ -72,7 +72,10 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
   const [markers, setMarkers] = useState<SecurityMarker[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
-  const [phase, setPhase] = useState<"quiz" | "gate" | "result">("quiz");
+  const [phase, setPhase] = useState<"quiz" | "result">("quiz");
+  // Los datos de contacto se piden antes de las preguntas: el cuestionario solo
+  // se muestra a quien se registró (protege el instrumento y capta al prospecto).
+  const [registrado, setRegistrado] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [perfil, setPerfil] = useState<Record<string, string>>(() => perfilInicial(tipo));
@@ -159,23 +162,8 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
     track.ctaClick("diagnostico_comenzar");
     document.getElementById("cuestionario")?.scrollIntoView({ behavior: "smooth" });
   };
-  const backToQuiz = () => {
-    setPhase("quiz");
-    // Espera a que el cuestionario vuelva a montarse
-    setTimeout(() => document.getElementById("cuestionario")?.scrollIntoView(), 50);
-  };
-
-  const goGate = () => {
-    if (!ready) {
-      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos que se piden.", variant: "destructive" });
-      return;
-    }
-    track.diagnosticoResultado(level.key, tipo);
-    setPhase("gate");
-    top();
-  };
-
-  const submitGate = async (e: React.FormEvent) => {
+  // Paso 1: registro con correo y teléfono, antes de ver las preguntas
+  const registrar = (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       toast({ title: "Correo inválido", description: "Ingresa un correo válido.", variant: "destructive" });
@@ -185,6 +173,23 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
       toast({ title: "Teléfono inválido", description: "Ingresa un teléfono de 10 dígitos.", variant: "destructive" });
       return;
     }
+    setRegistrado(true);
+    track.ctaClick(`diagnostico_registro_${tipo}`);
+    setTimeout(() => document.getElementById("cuestionario")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }), 50);
+  };
+
+  // Al terminar: se envía el lead con todo y se muestra el resultado
+  const goGate = async () => {
+    if (!ready) {
+      toast({ title: "Faltan datos", description: "Responde las 10 preguntas y completa los datos que se piden.", variant: "destructive" });
+      return;
+    }
+    if (form.hp) {
+      // Bot: no se envía nada
+      setPhase("result");
+      return;
+    }
+    track.diagnosticoResultado(level.key, tipo);
     const servicios = recommended.map((s) => s.short).join(" · ") || "Evaluación general";
     const codigos = recommended.map((s) => s.code);
     // Casa y evento no llevan giro ni personas: no son inmuebles que el cotizador clasifique
@@ -326,6 +331,43 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
               </p>
               <div className="mb-10"><OtrosDiagnosticos actual={tipo} /></div>
 
+              {!registrado ? (
+                <section className="border border-navy/15 bg-white p-6 md:p-8">
+                  <h3 className="font-display text-xl md:text-2xl text-navy leading-snug mb-1 flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-[#C4A04A]" /> Regístrate para comenzar
+                  </h3>
+                  <p className="text-sm text-steel mb-5">
+                    Déjanos un correo y un teléfono de contacto: con ellos te entregamos tu resultado y tu diagnóstico {esNegocio ? "básico" : "inicial"} en PDF. Es GRATIS.
+                  </p>
+                  <form onSubmit={registrar} className="space-y-4">
+                    <input type="text" tabIndex={-1} autoComplete="off" value={form.hp} onChange={(e) => setForm({ ...form, hp: e.target.value })} className="hidden" aria-hidden />
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <input required type="email" autoComplete="email" placeholder="Correo *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
+                      <input required type="tel" autoComplete="tel" inputMode="tel" placeholder="Teléfono (10 dígitos) *" value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={inputCls} />
+                      <input autoComplete="name" placeholder="Nombre (opcional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
+                      <input autoComplete={esNegocio ? "organization" : "off"} placeholder={cfg.contacto.campo} value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className={inputCls} />
+                    </div>
+                    <label className="flex items-start gap-3 border border-steel/20 bg-smoke/60 px-4 py-3 cursor-pointer">
+                      <input type="checkbox" checked={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.checked })} className="mt-1 h-4 w-4 accent-[#0B1F3A]" />
+                      <span className="text-sm text-navy">
+                        Deseo que un asesor de STRATEC me contacte por teléfono o WhatsApp
+                        <span className="block text-xs text-steel">Opcional. Si no la marcas, solo recibirás tu diagnóstico.</span>
+                      </span>
+                    </label>
+                    <button type="submit" className="w-full h-14 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm transition-colors flex items-center justify-center gap-2">
+                      Comenzar mi diagnóstico <ArrowRight className="h-4 w-4" />
+                    </button>
+                    <p className="text-[0.7rem] text-steel/80 text-center flex items-center justify-center gap-1.5">
+                      <Lock className="h-3 w-3 shrink-0" />
+                      <span>
+                        Al continuar, aceptas que tus datos se traten de forma confidencial conforme a nuestro{" "}
+                        <Link to="/privacidad" className="underline">aviso de privacidad</Link>.
+                      </span>
+                    </p>
+                  </form>
+                </section>
+              ) : (
+              <>
               {/* Avance: un segmento por pregunta y uno para los datos del negocio */}
               <div className="flex items-center justify-between text-xs text-steel mb-2">
                 <span>{enSegmento ? `Antes de empezar: sobre ${cfg.sujeto}` : onData ? `Último paso: sobre ${cfg.sujeto}` : `Pregunta ${step - PRE + 1} de ${QUESTIONS.length}`}</span>
@@ -488,10 +530,10 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
 
               <button
                 onClick={goGate}
-                disabled={!ready}
+                disabled={!ready || submitting}
                 className="w-full h-14 bg-navy hover:bg-navy-deep text-smoke uppercase tracking-wider text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Generar mi diagnóstico <ArrowRight className="h-4 w-4" />
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando…</> : <>Ver mi resultado <ArrowRight className="h-4 w-4" /></>}
               </button>
               <button type="button" onClick={() => goTo(ULTIMO - 1)} className="mt-4 inline-flex items-center gap-1 text-sm text-steel hover:text-navy">
                 <ArrowLeft className="h-4 w-4" /> Volver a las preguntas
@@ -500,6 +542,8 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
               )}
               </AnimatePresence>
               </div>
+              </>
+              )}
               </div>
               </section>
               <DiagnosticoFaq onStart={startQuiz} tipo={tipo} />
@@ -507,50 +551,6 @@ export function DiagnosticoPagina({ tipo }: { tipo: TipoDiagnostico }) {
           )}
 
         <div className="container-wide max-w-3xl mx-auto px-4">
-
-          {/* ── FASE CONTACTO (para ver y descargar) ── */}
-          {phase === "gate" && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="text-center mb-8">
-                <CheckCircle2 className="h-12 w-12 text-[#C4A04A] mx-auto mb-4" />
-                <h1 className="font-display text-3xl text-navy font-light mb-3">Tu diagnóstico está listo</h1>
-                <p className="text-sm text-steel max-w-lg mx-auto">
-                  Déjanos un correo y un teléfono de contacto para ver tu resultado y descargar tu diagnóstico {esNegocio ? "básico" : "inicial"} en PDF. Es GRATIS.
-                </p>
-              </div>
-              <section className="border border-navy/15 bg-white p-6 md:p-8">
-                <form onSubmit={submitGate} className="space-y-4">
-                  <input type="text" tabIndex={-1} autoComplete="off" value={form.hp} onChange={(e) => setForm({ ...form, hp: e.target.value })} className="hidden" aria-hidden />
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <input required type="email" autoComplete="email" placeholder="Correo *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
-                    <input required type="tel" autoComplete="tel" inputMode="tel" placeholder="Teléfono (10 dígitos) *" value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={inputCls} />
-                    <input autoComplete="name" placeholder="Nombre (opcional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
-                    <input autoComplete={esNegocio ? "organization" : "off"} placeholder={cfg.contacto.campo} value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} className={inputCls} />
-                  </div>
-                  <label className="flex items-start gap-3 border border-steel/20 bg-smoke/60 px-4 py-3 cursor-pointer">
-                    <input type="checkbox" checked={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.checked })} className="mt-1 h-4 w-4 accent-[#0B1F3A]" />
-                    <span className="text-sm text-navy">
-                      Deseo que un asesor de STRATEC me contacte por teléfono o WhatsApp
-                      <span className="block text-xs text-steel">Opcional. Si no la marcas, solo recibirás tu diagnóstico.</span>
-                    </span>
-                  </label>
-                  <button type="submit" disabled={submitting} className="w-full h-14 bg-[#C4A04A] hover:bg-[#b3923f] text-navy font-semibold uppercase tracking-wider text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando…</> : <>Ver y descargar mi diagnóstico <ArrowRight className="h-4 w-4" /></>}
-                  </button>
-                  <p className="text-[0.7rem] text-steel/80 text-center flex items-center justify-center gap-1.5">
-                    <Lock className="h-3 w-3 shrink-0" />
-                    <span>
-                      Al continuar, aceptas que tus datos se traten de forma confidencial conforme a nuestro{" "}
-                      <Link to="/privacidad" className="underline">aviso de privacidad</Link>.
-                    </span>
-                  </p>
-                </form>
-              </section>
-              <button type="button" onClick={backToQuiz} className="mt-4 text-xs text-steel underline mx-auto block">
-                Volver a mis respuestas
-              </button>
-            </motion.div>
-          )}
 
           {/* ── FASE RESULTADO ── */}
           {phase === "result" && (

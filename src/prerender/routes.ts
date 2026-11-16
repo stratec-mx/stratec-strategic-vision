@@ -121,7 +121,6 @@ function diagnosticoRoute(tipo: "casa" | "evento", faq: { q: string; a: string }
     `<h1>${esc(l.titulo)}</h1>${p(l.pregunta)}${p(l.intro)}
 <h2>${esc(l.areasTitulo)}</h2>${l.areas.map((x) => `<h3>${esc(x.title)}</h3>${p(x.text)}`).join("")}
 ${previas.length ? `<h2>Antes de empezar</h2>${ul(previas.map((c) => esc(c.label)))}` : ""}
-<h2>Las 10 preguntas</h2><ol>${d.preguntas.map((q) => `<li>${esc(q.text)}</li>`).join("")}</ol>
 <h2>Resultado</h2>${p(l.resultado)}${p(l.alcance)}
 <h2>Qué incluye tu PDF</h2>${ul(INCLUDES.map(esc))}
 <h2>Preguntas frecuentes</h2>${faq.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}${OTROS_DIAGNOSTICOS}`,
