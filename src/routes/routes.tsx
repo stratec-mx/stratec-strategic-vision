@@ -32,6 +32,7 @@ import {
   ProteccionCivil,
   ProtocolosSeguridad,
   RevisionProgramaInterno,
+  ProteccionCivilEventosMasivos,
   Schedule,
   ServicesIndex,
   Terminos,
@@ -92,6 +93,7 @@ export const routeElements = (
     <Route path="/servicios/plan-continuidad-operaciones" element={<PlanContinuidadOperaciones />} />
     <Route path="/servicios/dictamen-seguridad" element={<DictamenSeguridad />} />
     <Route path="/servicios/revision-programa-interno" element={<RevisionProgramaInterno />} />
+    <Route path="/servicios/proteccion-civil-eventos-masivos" element={<ProteccionCivilEventosMasivos />} />
     <Route path="/servicios/acompanamiento-mensual" element={<AcompanamientoMensual />} />
     <Route path="/servicios/protocolos-seguridad" element={<ProtocolosSeguridad />} />
     <Route path="/servicios/nom-035-violencia-laboral" element={<Nom035ViolenciaLaboral />} />

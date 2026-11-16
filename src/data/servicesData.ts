@@ -1033,6 +1033,72 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     },
   },
 
+  // ── Protección Civil para eventos masivos (servicio integral en sitio) ──
+  "proteccion-civil-eventos-masivos": {
+    slug: "proteccion-civil-eventos-masivos",
+    numero: "02.6",
+    titulo: "Protección Civil para Eventos Masivos",
+    descripcionCorta: "Servicio integral para eventos: análisis de riesgos, programa del evento y personal de staff en sitio con chalecos distintivos y radios.",
+    href: "/servicios/proteccion-civil-eventos-masivos",
+    heroImage: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1920&q=80",
+    breadcrumb: "Protección Civil para Eventos Masivos",
+    parentBreadcrumb: "Protección Civil y Gestión de Riesgos",
+    parentHref: "/servicios/proteccion-civil",
+    h1: "Protección Civil para eventos masivos",
+    lead: "Conciertos, ferias, eventos deportivos, religiosos, empresariales o institucionales: planeamos la seguridad de tu evento y la operamos en sitio con personal de staff identificado, comunicación por radio y coordinación con las autoridades, desde antes de abrir puertas hasta que sale la última persona.",
+    intro: "Un solo responsable para toda la parte de Protección Civil del evento: primero identificamos los riesgos, después diseñamos la estrategia y el día del evento la ejecutamos con nuestro equipo.",
+    blocks: [
+      {
+        h2: "Análisis de riesgos y aforo del recinto",
+        p: "Revisamos el lugar y el formato del evento: capacidad segura de asistentes, accesos, rutas y salidas de emergencia, escenarios, gradas, carpas e instalaciones temporales, entorno y clima. Con eso definimos qué hay que atender antes de la fecha.",
+        blockImage: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Programa Especial de Protección Civil del evento",
+        p: "Elaboramos el programa del evento con su análisis de riesgos, organización del personal, procedimientos ante incendio, sismo, aglomeraciones, riñas, mal clima o personas extraviadas, rutas de evacuación, puntos de reunión y directorio de emergencia, listo para presentarlo ante la autoridad que corresponda.",
+        blockImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Personal de staff en sitio",
+        p: "El día del evento nuestro personal opera en accesos, salidas, pasillos y zonas críticas, identificado con chalecos distintivos y con radios de comunicación. Guía al público, mantiene libres las rutas de evacuación, atiende incidentes y dirige una evacuación si hace falta.",
+        blockImage: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        h2: "Coordinación operativa y puesto de mando",
+        p: "Instalamos un puesto de mando con comunicación por radio, damos instrucciones previas al personal del organizador y mantenemos enlace con Protección Civil, seguridad pública y servicios médicos durante todo el evento.",
+        blockImage: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80",
+      },
+    ],
+    modalidades: "En sitio · Planeación previa y operación el día del evento",
+    nota: "Antes de cotizar puedes hacer gratis el diagnóstico inicial de seguridad para eventos masivos: en unos minutos sabrás qué aspectos de tu evento requieren atención.",
+    gancho: "En un evento masivo no hay segunda oportunidad: la seguridad se planea antes y se opera en sitio.",
+    cta: "Cotizar Protección Civil para mi evento",
+    ragSnippet: {
+      h2: "¿Quién se encarga de la Protección Civil de tu evento?",
+      p: "STRATEC ofrece un servicio integral de Protección Civil para eventos masivos: análisis de riesgos y aforo del recinto, Programa Especial de Protección Civil del evento, personal de staff en sitio identificado con chalecos distintivos y radios, puesto de mando y coordinación con las autoridades durante el evento.",
+    },
+    deliverables: [
+      { fase: "1 · Visita y análisis", entregable: "Análisis de riesgos y aforo del recinto",             queResuelve: "Sabes qué atender antes de la fecha" },
+      { fase: "2 · Programa",          entregable: "Programa Especial de Protección Civil del evento",    queResuelve: "Procedimientos, rutas y organización por escrito" },
+      { fase: "3 · Preparación",       entregable: "Instrucciones previas al personal del organizador",   queResuelve: "Cada persona sabe qué le toca en una emergencia" },
+      { fase: "4 · Día del evento",    entregable: "Staff identificado, radios y puesto de mando",        queResuelve: "Operación y respuesta en sitio de principio a fin" },
+      { fase: "5 · Cierre",            entregable: "Reporte de incidencias del evento",                   queResuelve: "Registro de lo ocurrido y mejoras para el siguiente" },
+    ],
+    seo: {
+      title: "Protección Civil para Eventos Masivos en Morelos | STRATEC",
+      description:
+        "Servicio integral de Protección Civil para eventos masivos: análisis de riesgos y aforo, Programa Especial del evento y personal de staff en sitio con chalecos distintivos, radios y puesto de mando.",
+      keywords: [
+        "protección civil para eventos masivos",
+        "programa especial de protección civil",
+        "seguridad para eventos",
+        "staff de seguridad para eventos",
+        "protección civil para conciertos",
+        "protección civil para ferias",
+      ],
+    },
+  },
+
   // ── S10 · Acompañamiento mensual (ingreso recurrente, a distancia) ──────
   "acompanamiento-mensual": {
     slug: "acompanamiento-mensual",

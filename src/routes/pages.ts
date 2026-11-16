@@ -29,6 +29,7 @@ export const AuditoriaSeguridadPage = lazyWithPreload(() => import("../pages/ser
 export const PlanContinuidadOperaciones = lazyWithPreload(() => import("../pages/services/PlanContinuidadOperaciones.tsx"));
 export const DictamenSeguridad = lazyWithPreload(() => import("../pages/services/DictamenSeguridad.tsx"));
 export const RevisionProgramaInterno = lazyWithPreload(() => import("../pages/services/RevisionProgramaInterno.tsx"));
+export const ProteccionCivilEventosMasivos = lazyWithPreload(() => import("../pages/services/ProteccionCivilEventosMasivos.tsx"));
 export const AcompanamientoMensual = lazyWithPreload(() => import("../pages/services/AcompanamientoMensual.tsx"));
 export const ProtocolosSeguridad = lazyWithPreload(() => import("../pages/services/ProtocolosSeguridad.tsx"));
 export const Nom035ViolenciaLaboral = lazyWithPreload(() => import("../pages/services/Nom035ViolenciaLaboral.tsx"));
