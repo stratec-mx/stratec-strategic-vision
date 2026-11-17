@@ -140,13 +140,13 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
           ["Marcó su predio en el mapa", d.marcadores ? `${d.marcadores} punto${d.marcadores === 1 ? "" : "s"}` : ""],
         ]),
     );
-    const areas = (d.areas ?? []).slice(0, 10);
+    const areas = (Array.isArray(d.areas) ? d.areas : []).slice(0, 10);
     bloques.push(
       areas.length
         ? `⚠️ <b>Puntos por atender (${areas.length})</b>\n` + areas.map((a) => `• ${esc(a, 120)}`).join("\n")
         : `✅ <b>Sin puntos por atender</b>`,
     );
-    const servicios = (d.servicios ?? []).slice(0, 8);
+    const servicios = (Array.isArray(d.servicios) ? d.servicios : []).slice(0, 8);
     if (servicios.length) bloques.push(`🧭 <b>Servicios sugeridos</b>\n` + servicios.map((s) => `• ${esc(s, 120)}`).join("\n"));
   } else {
     if (lead.servicio) bloques.push(`📋 <b>Servicio de interés</b>\n${esc(lead.servicio, 150)}`);
