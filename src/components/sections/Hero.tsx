@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import hero from "@/assets/hero-stratec.jpg";
+import { LoopVideo } from "@/components/media/LoopVideo";
 import { NetworkBackground } from "@/components/NetworkBackground";
 import { track } from "@/lib/analytics";
 
@@ -9,7 +9,19 @@ export const Hero = () => {
   return (
     <section className="relative flex items-center bg-navy-deep overflow-hidden pt-20" style={{ minHeight: '100dvh' }}>
       <div className="absolute inset-0">
-        <img src={hero} alt="Equipo ejecutivo analizando infraestructura crítica" className="w-full h-full object-cover opacity-40" width={1920} height={1080} />
+        {/* Fondo decorativo en bucle (docs/videos-en-bucle.md). La capa oscura de 0.6
+            deja el video al 40 %, igual que la foto anterior; con "reducir movimiento"
+            o ahorro de datos se queda el póster. */}
+        <LoopVideo
+          poster="/videos/home-poster.jpg"
+          webm="/videos/home.webm"
+          mp4="/videos/home.mp4"
+          mobileWebm="/videos/home-movil.webm"
+          mobileMp4="/videos/home-movil.mp4"
+          overlay={0.6}
+          aspectRatio={null}
+          className="absolute inset-0"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-deep via-navy-deep/85 to-navy-deep/40" />
         <NetworkBackground />
         <div className="absolute inset-0 grid-bg-light opacity-50" />
