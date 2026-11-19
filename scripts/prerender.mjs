@@ -57,6 +57,19 @@ function render(r) {
   }
   html = html.replace(/(<link rel="alternate" hreflang="[^"]+" href=")[^"]*(")/g, (_, a, b) => `${a}${attr(r.canonical)}${b}`);
 
+  // El FAQPage general de index.html describe la página de inicio: en las demás
+  // páginas no se ve y chocaría con su propio FAQPage, así que solo se queda en "/".
+  if (r.path !== "/") {
+    html = html.replace(/\s*<!-- GEO: FAQPage[^>]*-->\s*<script type="application\/ld\+json">[\s\S]*?<\/script>/, "");
+  }
+  if (r.jsonLd?.length) {
+    // "<" escapado para que ningún texto pueda cerrar la etiqueta <script>.
+    const scripts = r.jsonLd
+      .map((o) => `<script type="application/ld+json" data-prerender>${JSON.stringify(o).replace(/</g, "\\u003c")}</script>`)
+      .join("\n    ");
+    html = html.replace("</head>", () => `    ${scripts}\n  </head>`);
+  }
+
   const mount = '<div id="root"></div>';
   if (!html.includes(mount)) throw new Error("[prerender] Falta el contenedor #root");
   return html.replace(mount, () => `<div id="root"><main id="main-content" style="${STYLE}">${r.body}</main></div>`);

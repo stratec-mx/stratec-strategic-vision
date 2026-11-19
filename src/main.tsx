@@ -9,6 +9,9 @@ import "./index.css";
 const PRELOAD_TIMEOUT_MS = 8000;
 
 const mount = () => {
+  // Los datos estructurados del HTML prerenderizado se quitan: la página los
+  // vuelve a poner con Helmet y así no quedan duplicados.
+  document.querySelectorAll("script[data-prerender]").forEach((el) => el.remove());
   createRoot(document.getElementById("root")!).render(
     <HelmetProvider>
       <App />

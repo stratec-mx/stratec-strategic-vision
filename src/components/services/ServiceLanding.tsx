@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronRight, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { NetworkBackground } from "@/components/NetworkBackground";
-import { ServiceBlock, ServiceData, RagDeliverable } from "@/data/servicesData";
+import { ServiceBlock, ServiceData, RagDeliverable, ServiceFaq, ServiceGuideSection, ServiceLink } from "@/data/servicesData";
 import { SeoHelmet } from "@/components/SEO/SeoHelmet";
 import { SchemaMarkup } from "@/components/SEO/SchemaMarkup";
-import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL, SITE_METHODOLOGIES } from "@/lib/seo";
+import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, FAQ_SCHEMA, SITE_URL, SITE_METHODOLOGIES } from "@/lib/seo";
 
 interface ServiceLandingProps {
   data: ServiceData;
@@ -19,6 +19,7 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
     heroImage, heroEmblem, breadcrumb, parentBreadcrumb, parentHref,
     h1, lead, intro, blocks, modalidades, nota, cta, seo, href,
     ragSnippet, deliverables, deliverablesListTitle, deliverablesList,
+    guide, faqs, related,
   } = data;
 
   const pageUrl = `${SITE_URL}${href}`;
@@ -62,6 +63,9 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
       />
       <SchemaMarkup schema={serviceSchema} />
       <SchemaMarkup schema={breadcrumbSchema} />
+      {faqs && faqs.length > 0 && (
+        <SchemaMarkup schema={FAQ_SCHEMA(faqs.map((f) => ({ question: f.q, answer: f.a })))} />
+      )}
       <Navbar />
 
       <main id="main-content">
@@ -227,6 +231,9 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
             </div>
           </section>
         )}
+
+        {/* ── Contenido ampliado: qué es, a quién aplica, pasos, tiempos ── */}
+        {guide && guide.length > 0 && <GuideSections sections={guide} />}
 
         {/* ══ TABLA DE ENTREGABLES ════════════════════════════════
              <table> nativo — los LLMs extraen tablas HTML con alta
@@ -412,6 +419,12 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
           </div>
         </section>
 
+        {/* ── Preguntas frecuentes (visibles; también van como FAQPage) ── */}
+        {faqs && faqs.length > 0 && <FaqSection faqs={faqs} />}
+
+        {/* ── Enlaces a servicios relacionados ── */}
+        {related && related.length > 0 && <RelatedLinks links={related} />}
+
         {/* ══ Metodología: normas citadas en texto plano ══ */}
         <section
           aria-label="Metodología y estándares"
@@ -558,17 +571,16 @@ function BlockItem({
         </div>
       </button>
 
-      {/* ── Panel expandible ── */}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.38, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
+      {/* ── Panel expandible ──
+           El texto queda siempre en el HTML (solo se oculta a la vista) para
+           que los buscadores lo lean aunque el bloque esté cerrado. */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+        aria-hidden={!open}
+      >
+          <div className="overflow-hidden">
             <div className="grid md:grid-cols-12 gap-6 md:gap-10 pb-10">
               {/* Espaciador (columna del número) */}
               <div className="hidden md:block md:col-span-1" />
@@ -583,6 +595,7 @@ function BlockItem({
                 </p>
                 <a
                   href="/#contact"
+                  tabIndex={open ? undefined : -1}
                   className="inline-flex items-center gap-2 font-condensed text-[0.72rem] uppercase tracking-[0.2em]
                              text-[#C4A04A] border border-[rgba(196,160,74,0.4)] px-6 py-2.5
                              hover:bg-[rgba(196,160,74,0.1)] hover:border-[#C4A04A] transition-all duration-300"
@@ -592,9 +605,124 @@ function BlockItem({
                 </a>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      </div>
     </motion.div>
+  );
+}
+
+/* ── Encabezado pequeño de sección (línea dorada + etiqueta) ─────────────── */
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-8">
+      <div className="h-px w-8 bg-[#C4A04A]/40" />
+      <span className="font-condensed text-[0.68rem] uppercase tracking-[0.3em] text-[#C4A04A]/55">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+const BODY_TEXT = { color: "rgba(230,228,224,0.72)" };
+
+/* ── Contenido ampliado del servicio, siempre visible ───────────────────── */
+function GuideSections({ sections }: { sections: ServiceGuideSection[] }) {
+  return (
+    <section
+      aria-label="Información del servicio"
+      className="py-14 md:py-20 bg-navy-deep border-b border-[rgba(196,160,74,0.08)]"
+    >
+      <div className="container-wide max-w-4xl space-y-12 md:space-y-14">
+        {sections.map((sec) => {
+          const List = sec.ordered ? "ol" : "ul";
+          return (
+            <article key={sec.h2}>
+              <h2 className="font-serif font-light text-2xl md:text-[1.75rem] text-white leading-snug mb-4">
+                {sec.h2}
+              </h2>
+              {sec.p && (
+                <p className="font-condensed font-light text-[1rem] leading-[1.85] mb-4" style={BODY_TEXT}>
+                  {sec.p}
+                </p>
+              )}
+              {sec.items && sec.items.length > 0 && (
+                <List className="space-y-3 mt-2">
+                  {sec.items.map((item, i) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-3 font-condensed font-light text-[0.98rem] leading-[1.75]"
+                      style={BODY_TEXT}
+                    >
+                      <span className="text-[#C4A04A]/70 shrink-0 min-w-[1.25rem] select-none" aria-hidden="true">
+                        {sec.ordered ? `${i + 1}.` : "·"}
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </List>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ── Preguntas frecuentes: <details> nativo, el texto siempre está en el HTML ── */
+function FaqSection({ faqs }: { faqs: ServiceFaq[] }) {
+  return (
+    <section
+      aria-labelledby="preguntas-frecuentes"
+      className="py-14 md:py-20 bg-[#0D0D18] border-t border-[rgba(196,160,74,0.1)]"
+    >
+      <div className="container-wide max-w-4xl">
+        <h2 id="preguntas-frecuentes" className="font-serif font-light text-2xl md:text-[1.75rem] text-white mb-8">
+          Preguntas frecuentes
+        </h2>
+        <div className="divide-y divide-[rgba(196,160,74,0.12)] border-y border-[rgba(196,160,74,0.12)]">
+          {faqs.map((f) => (
+            <details key={f.q} className="group py-5">
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                <h3 className="font-condensed text-[1.02rem] text-white/85 leading-snug group-open:text-[#C4A04A]/90">
+                  {f.q}
+                </h3>
+                <ChevronDown
+                  className="h-4 w-4 mt-1 shrink-0 text-[#C4A04A]/60 transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <p className="mt-3 font-condensed font-light text-[0.97rem] leading-[1.8]" style={BODY_TEXT}>
+                {f.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Enlaces internos a servicios y diagnósticos relacionados ───────────── */
+function RelatedLinks({ links }: { links: ServiceLink[] }) {
+  return (
+    <section aria-label="Servicios relacionados" className="py-14 md:py-16 bg-navy-deep border-t border-[rgba(196,160,74,0.1)]">
+      <div className="container-wide max-w-4xl">
+        <SectionLabel>Servicios relacionados</SectionLabel>
+        <ul className="grid sm:grid-cols-2 gap-3">
+          {links.map((l) => (
+            <li key={l.href}>
+              <Link
+                to={l.href}
+                className="flex items-center justify-between gap-3 border border-[rgba(196,160,74,0.2)] px-5 py-4 font-condensed text-[0.92rem] text-white/80 hover:border-[#C4A04A] hover:text-[#C4A04A] transition-colors duration-300"
+              >
+                {l.label}
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }

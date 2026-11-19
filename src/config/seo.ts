@@ -168,16 +168,16 @@ const staticConfig: Record<string, PageSEO> = {
     canonicalUrl: `${baseUrl}/cobertura`
   },
   "/cobertura/morelos": {
-    title: "Consultoría de Seguridad Institucional en Morelos | STRATEC",
-    description: "STRATEC ofrece auditorías de seguridad, gestión institucional y consultoría estratégica en Morelos. Servicio dirigido a gobierno, corporativos, universidades e industria.",
-    keywords: ["consultoría seguridad Morelos", "auditoría seguridad Morelos", "seguridad institucional Morelos"],
+    title: "Protección Civil y Seguridad para Empresas en Morelos | STRATEC",
+    description: "Programa Interno de Protección Civil, capacitación de brigadas, cámaras de seguridad y protocolos contra extorsión para empresas e instituciones en Morelos.",
+    keywords: ["protección civil Morelos", "programa interno de protección civil Morelos", "consultoría seguridad Morelos", "capacitación brigadas Morelos"],
     ogType: "website",
     canonicalUrl: `${baseUrl}/cobertura/morelos`
   },
   "/cobertura/morelos/cuernavaca": {
-    title: "Consultoría de Seguridad Institucional en Cuernavaca | STRATEC",
-    description: "STRATEC ofrece auditorías de seguridad, gestión institucional y consultoría estratégica en Cuernavaca, Morelos. Servicio para gobierno, corporativos, universidades e industria.",
-    keywords: ["consultoría seguridad Cuernavaca", "auditoría seguridad Cuernavaca", "seguridad institucional Cuernavaca"],
+    title: "Protección Civil y Seguridad para Empresas en Cuernavaca | STRATEC",
+    description: "Programa Interno de Protección Civil, brigadas, cámaras de seguridad y protocolos contra extorsión para empresas e instituciones en Cuernavaca, Morelos.",
+    keywords: ["protección civil Cuernavaca", "programa interno de protección civil Cuernavaca", "cámaras de seguridad Cuernavaca", "consultoría seguridad Cuernavaca"],
     ogType: "website",
     canonicalUrl: `${baseUrl}/cobertura/morelos/cuernavaca`
   },

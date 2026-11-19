@@ -143,3 +143,12 @@ export const coverageData: Record<
     }
   }
 };
+
+/** Servicios presenciales que se destacan en las páginas de Morelos, con el nombre del lugar. */
+export const morelosFeatured = (place: string) => [
+  { href: "/servicios/programa-interno-proteccion-civil", label: `Programa Interno de Protección Civil en ${place}` },
+  { href: "/servicios/capacitacion-brigadas-emergencia", label: `Capacitación de brigadas de emergencia en ${place}` },
+  { href: "/servicios/videovigilancia-cctv", label: `Cámaras de seguridad y CCTV para empresas en ${place}` },
+  { href: "/servicios/proteccion-civil-eventos-masivos", label: `Protección Civil para eventos masivos en ${place}` },
+  { href: "/servicios/protocolos-seguridad", label: "Protocolos contra extorsión y fraude para empresas" },
+];

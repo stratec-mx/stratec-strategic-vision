@@ -31,6 +31,27 @@ export interface RagDeliverable {
   queResuelve: string;
 }
 
+/** Sección de contenido ampliado, siempre visible: qué es, a quién aplica, pasos, tiempos. */
+export interface ServiceGuideSection {
+  h2: string;
+  p?: string;
+  items?: string[];
+  /** Lista numerada (pasos) en lugar de viñetas. */
+  ordered?: boolean;
+}
+
+/** Pregunta frecuente: se muestra en la página y se publica como FAQPage. */
+export interface ServiceFaq {
+  q: string;
+  a: string;
+}
+
+/** Enlace interno a un servicio, diagnóstico o página de cobertura relacionada. */
+export interface ServiceLink {
+  href: string;
+  label: string;
+}
+
 export interface ServiceData {
   slug: string;
   numero: string;
@@ -57,6 +78,9 @@ export interface ServiceData {
   deliverables?: RagDeliverable[];
   deliverablesListTitle?: string;
   deliverablesList?: string[];
+  guide?: ServiceGuideSection[];
+  faqs?: ServiceFaq[];
+  related?: ServiceLink[];
 }
 
 // ─── Índice de servicios (usado en homepage + /servicios) ──────────────────
@@ -443,8 +467,8 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     breadcrumb: "Programa Interno de Protección Civil",
     parentBreadcrumb: "Protección Civil y Gestión de Riesgos",
     parentHref: "/servicios/proteccion-civil",
-    h1: "Programa Interno de Protección Civil",
-    lead: "El Programa Interno de Protección Civil (PIPC) es el instrumento normativo que toda empresa, institución o dependencia está obligada a implementar. STRATEC diseña, integra y documenta el PIPC de tu organización conforme a la Ley General de Protección Civil y la normatividad del Estado de Morelos, garantizando cumplimiento legal y operatividad real ante emergencias.",
+    h1: "Programa Interno de Protección Civil en Cuernavaca y Morelos",
+    lead: "El Programa Interno de Protección Civil (PIPC) es el plan con el que tu empresa, escuela o institución se organiza para prevenir riesgos y actuar en una emergencia, y es un requisito de Protección Civil para muchos inmuebles. STRATEC lo elabora a la medida de tu inmueble conforme a la Ley General de Protección Civil y la normatividad del Estado de Morelos, y te acompaña a presentarlo ante la autoridad.",
     intro: "No es un documento para el cajón: es el sistema que permite a tu organización prevenir, responder y recuperarse ante cualquier evento de riesgo.",
     blocks: [
       {
@@ -468,44 +492,142 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
         blockImage: "https://images.unsplash.com/photo-1758404958502-44f156617bae?auto=format&fit=crop&w=900&q=80",
       },
       {
-        h2: "Registro ante Autoridades y Cumplimiento Normativo",
-        p: "Gestión del proceso de registro del PIPC ante la Coordinación Estatal de Protección Civil de Morelos u otras autoridades competentes. Nos aseguramos de que la documentación cumpla con todos los requisitos formales y técnicos exigidos.",
+        h2: "Presentación ante Protección Civil",
+        p: "Integramos el programa con los requisitos formales y técnicos que pide la autoridad y te acompañamos en el trámite ante la Unidad Municipal o la Coordinación Estatal de Protección Civil de Morelos, según corresponda. La revisión y la aprobación son decisión de la autoridad.",
         blockImage: "https://images.unsplash.com/photo-1601546993085-fdfb6c5f76a9?auto=format&fit=crop&w=900&q=80",
       },
     ],
     modalidades: "Presencial · A distancia (videollamada, planos y recorrido por video)",
     gancho:
-      "Sin un PIPC registrado, tu organización opera fuera de la ley y expuesta a sanciones. Lo diseñamos, lo documentamos y te acompañamos en el registro ante las autoridades competentes.",
-    cta: "Solicitar diseño de PIPC",
+      "Una inspección o una emergencia no son el momento de descubrir que falta tu Programa Interno. Lo elaboramos a la medida de tu inmueble y te acompañamos a presentarlo ante Protección Civil.",
+    cta: "Solicitar mi Programa Interno",
     ragSnippet: {
-      h2: "¿Su empresa en Morelos opera sin PIPC registrado? Es una infracción activa, no un trámite pendiente.",
-      p: "El Programa Interno de Protección Civil (PIPC) es el instrumento legal obligatorio para toda empresa o institución en México. STRATEC lo diseña, documenta y gestiona su registro ante la Coordinación Estatal de Protección Civil de Morelos, garantizando cumplimiento normativo completo en un proceso de 4 a 8 semanas.",
+      h2: "¿Tu empresa en Cuernavaca o Morelos necesita Programa Interno de Protección Civil?",
+      p: "El Programa Interno de Protección Civil es el plan con el que un inmueble se organiza para prevenir riesgos, actuar en una emergencia y recuperarse. STRATEC lo elabora en Cuernavaca y todo Morelos: análisis de riesgos, Unidad Interna, brigadas, procedimientos, planos y acompañamiento ante Protección Civil. Como referencia, toma de 4 a 8 semanas.",
     },
     deliverables: [
       { fase: "1 · Diagnóstico",    entregable: "Informe de riesgos del inmueble (amenazas internas y externas)",         queResuelve: "Identifica qué pone en riesgo a su personal e instalaciones" },
       { fase: "2 · Estructura",     entregable: "Organigrama de la Unidad Interna de Protección Civil (UIPC)",            queResuelve: "Define quién hace qué antes, durante y después de una emergencia" },
       { fase: "3 · Procedimientos", entregable: "Protocolos por tipo de evento: sismo, incendio, derrames, amenaza",      queResuelve: "Elimina la improvisación cuando el tiempo no da margen de error" },
       { fase: "4 · Señalización",   entregable: "Planos de evacuación actualizados + revisión de señalética NOM",         queResuelve: "Cumple los requisitos visuales exigidos en inspecciones oficiales" },
-      { fase: "5 · Registro",       entregable: "Trámite ante la Coordinación Estatal de Protección Civil Morelos",       queResuelve: "Convierte el programa en documento legal vigente y verificable" },
-      { fase: "6 · Cierre",         entregable: "Informe de entrega + constancias individuales del proceso",              queResuelve: "Evidencia documental ante autoridades, clientes y auditores" },
+      { fase: "5 · Presentación",   entregable: "Acompañamiento en el trámite ante Protección Civil (municipal o estatal)", queResuelve: "Presentas el programa completo y con los requisitos formales" },
+      { fase: "6 · Cierre",         entregable: "Programa completo + calendario de capacitación y simulacros",            queResuelve: "Evidencia documental ante autoridades, clientes y auditores" },
     ],
     deliverablesListTitle: "¿Para qué tipo de organización aplica el PIPC?",
     deliverablesList: [
-      "Empresas industriales, comerciales o de servicios con más de 15 empleados",
+      "Empresas industriales, comerciales y de servicios",
       "Instituciones educativas: colegios, universidades y centros de capacitación",
       "Clínicas, hospitales y centros médicos privados",
+      "Hoteles, restaurantes, salones de eventos y lugares con afluencia de público",
       "Dependencias municipales y organismos públicos del Estado de Morelos",
       "Desarrollos inmobiliarios, centros comerciales y edificios de oficinas",
-      "Empresas en proceso de licitación pública que requieren acreditar cumplimiento normativo",
+      "Empresas que participan en licitaciones y deben acreditar cumplimiento en protección civil",
+    ],
+    guide: [
+      {
+        h2: "¿Qué es el Programa Interno de Protección Civil?",
+        p: "Es el documento, y el plan de trabajo que lo acompaña, con el que un inmueble se organiza para prevenir accidentes, responder a una emergencia y volver a operar después. Reúne el análisis de riesgos del lugar, quién forma la Unidad Interna de Protección Civil, qué hace cada brigada, los procedimientos ante sismo o incendio, los planos de evacuación y el calendario de capacitación y simulacros. Se organiza en tres partes:",
+        items: [
+          "Prevención: lo que se hace todos los días para que no pase nada, como revisiones, mantenimiento, señalización y capacitación.",
+          "Auxilio: qué hace cada persona durante la emergencia: dar la alerta, evacuar, dar primeros auxilios o controlar un conato de incendio.",
+          "Recuperación: cómo se revisa el inmueble y se vuelve a operar después del evento.",
+        ],
+      },
+      {
+        h2: "¿Quién necesita un Programa Interno en Cuernavaca y Morelos?",
+        p: "Lo necesitan, en general, los inmuebles donde trabajan o acuden personas: empresas, comercios, escuelas, clínicas, hoteles, salones de eventos, edificios de oficinas y dependencias de gobierno. Qué establecimientos están obligados, y con qué nivel de detalle, lo determinan la ley estatal de protección civil y el reglamento de cada municipio según el giro, el tamaño del inmueble, el número de personas y el nivel de riesgo. En la primera llamada revisamos tu caso y te decimos qué aplica.",
+      },
+      {
+        h2: "Cómo elaboramos tu Programa Interno, paso a paso",
+        ordered: true,
+        items: [
+          "Llamada inicial: conocemos tu inmueble, tu giro y los documentos que ya tienes, y te enviamos una cotización con alcance y calendario.",
+          "Visita y análisis de riesgos: recorremos el inmueble para identificar riesgos internos y externos: sismo, incendio, instalaciones, inundación y entorno.",
+          "Unidad Interna y brigadas: definimos responsables, suplentes y brigadas, con sus funciones antes, durante y después de una emergencia.",
+          "Procedimientos y planos: redactamos los procedimientos para cada tipo de emergencia y elaboramos los planos con rutas de evacuación, salidas, equipo de emergencia y puntos de reunión.",
+          "Capacitación y simulacro: preparamos a las brigadas y probamos el programa con un simulacro.",
+          "Entrega y trámite: te entregamos el programa completo y te acompañamos a presentarlo ante la Unidad Municipal o la Coordinación Estatal de Protección Civil.",
+        ],
+      },
+      {
+        h2: "¿Qué recibes?",
+        items: [
+          "El Programa Interno completo, listo para presentarse ante Protección Civil.",
+          "El análisis de riesgos del inmueble.",
+          "El acta y el organigrama de la Unidad Interna de Protección Civil.",
+          "Los procedimientos de actuación para cada tipo de emergencia.",
+          "Los planos de evacuación y la revisión de la señalización.",
+          "El programa anual de capacitación y simulacros, con formatos para registrar cada actividad.",
+          "La constancia DC-3 para el personal que concluye la capacitación de brigadas.",
+        ],
+      },
+      {
+        h2: "¿Cuánto tiempo tarda?",
+        p: "Depende del tamaño del inmueble, de sus riesgos y de cuánta documentación ya exista. Como referencia, integrar el programa toma de 4 a 8 semanas; el calendario exacto va en la cotización. Los tiempos de revisión y respuesta de Protección Civil los fija cada autoridad y no dependen de nosotros.",
+      },
+      {
+        h2: "¿Por qué elaborarlo con STRATEC?",
+        items: [
+          "Registro como consultor en Protección Civil en el Estado de Morelos.",
+          "Más de 300 personas capacitadas en seguridad y protección civil.",
+          "Experiencia con instituciones de seguridad pública, prevención y procuración de justicia.",
+          "Un programa hecho para tu inmueble, no un formato genérico.",
+          "Al concluir la capacitación se entrega la constancia DC-3.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        q: "¿Qué es el Programa Interno de Protección Civil?",
+        a: "Es el documento con el que un inmueble se organiza para prevenir riesgos, actuar durante una emergencia y recuperarse después. Incluye el análisis de riesgos, la Unidad Interna de Protección Civil, las brigadas, los procedimientos de emergencia, los planos de evacuación y el calendario de capacitación y simulacros.",
+      },
+      {
+        q: "¿Mi negocio en Morelos está obligado a tener Programa Interno de Protección Civil?",
+        a: "Depende del giro, del tamaño del inmueble, del número de personas y del nivel de riesgo, según la ley estatal de protección civil y el reglamento de tu municipio. Es común que se pida a empresas, escuelas, clínicas, hoteles y lugares con afluencia de público. En la primera llamada revisamos tu caso.",
+      },
+      {
+        q: "¿Cuánto tarda elaborar el Programa Interno?",
+        a: "Como referencia, de 4 a 8 semanas para integrarlo, según el tamaño del inmueble y la información disponible. La revisión de la autoridad tiene sus propios tiempos, que no dependen de nosotros.",
+      },
+      {
+        q: "¿Qué documentos necesito para empezar?",
+        a: "Los que ya tengas: datos generales de la empresa y del inmueble, planos o croquis, lista de personal por área, constancias de capacitación anteriores y registros de mantenimiento de extintores e instalaciones. Si falta algo, te decimos cómo conseguirlo.",
+      },
+      {
+        q: "¿Ustedes presentan el programa ante Protección Civil?",
+        a: "Te entregamos el programa listo para presentarse y te acompañamos en el trámite ante la Unidad Municipal o la Coordinación Estatal de Protección Civil de Morelos, según corresponda. La revisión y la aprobación son decisión de la autoridad.",
+      },
+      {
+        q: "¿Cada cuánto se actualiza el Programa Interno?",
+        a: "Conviene revisarlo cada año y siempre que cambie algo importante: el inmueble, el giro, el personal responsable o los riesgos. La vigencia y la renovación las marca la autoridad de tu municipio o del estado.",
+      },
+      {
+        q: "Ya tengo un Programa Interno, ¿pueden revisarlo?",
+        a: "Sí. Con la revisión de Programa Interno analizamos tus documentos a distancia y te entregamos un reporte con lo que falta, lo que está vencido y lo que conviene corregir antes de una inspección.",
+      },
+      {
+        q: "¿La capacitación de brigadas incluye constancia?",
+        a: "Sí. Al concluir la capacitación se entrega la constancia DC-3.",
+      },
+    ],
+    related: [
+      { href: "/servicios/capacitacion-brigadas-emergencia", label: "Capacitación de brigadas de emergencia" },
+      { href: "/servicios/revision-programa-interno", label: "Revisión de tu Programa Interno" },
+      { href: "/servicios/estudio-analisis-riesgo", label: "Estudio y análisis de riesgo" },
+      { href: "/servicios/plan-continuidad-operaciones", label: "Plan de continuidad de operaciones" },
+      { href: "/servicios/proteccion-civil-eventos-masivos", label: "Protección Civil para eventos masivos" },
+      { href: "/diagnostico", label: "Diagnóstico de seguridad gratuito" },
+      { href: "/cobertura/morelos/cuernavaca", label: "STRATEC en Cuernavaca" },
     ],
     seo: {
       title: "Programa Interno de Protección Civil en Cuernavaca y Morelos | STRATEC",
       description:
-        "Diseño e implementación del Programa Interno de Protección Civil (PIPC) para empresas, instituciones y municipios en el Estado de Morelos. Cumplimiento normativo, diagnóstico de riesgos y registro ante autoridades.",
+        "Elaboramos tu Programa Interno de Protección Civil en Cuernavaca y todo Morelos: análisis de riesgos, brigadas, planos y acompañamiento ante Protección Civil.",
       keywords: [
         "Programa Interno de Protección Civil",
         "PIPC",
         "Programa Interno de Protección Civil Morelos",
+        "Programa Interno de Protección Civil Cuernavaca",
         "programa protección civil empresa Morelos",
         "protección civil municipios Morelos",
         "PIPC Estado de Morelos",
@@ -530,7 +652,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     breadcrumb: "Capacitación de Brigadas de Emergencia",
     parentBreadcrumb: "Capacitación Especializada",
     parentHref: "/servicios/capacitacion",
-    h1: "Capacitación de Brigadas de Emergencia",
+    h1: "Capacitación de Brigadas de Emergencia en Cuernavaca y Morelos",
     lead: "Las brigadas de emergencia son el primer eslabón de respuesta dentro de cualquier organización. STRATEC forma y evalúa a los integrantes de tus brigadas con entrenamiento práctico, protocolos actualizados y evaluaciones reales, para que actúen con eficacia cuando una emergencia no da tiempo de improvisar.",
     blocks: [
       {
@@ -575,12 +697,96 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "Módulo 4 · Búsqueda y Rescate", entregable: "Localización y estabilización de víctimas en espacios comprometidos", queResuelve: "Transferencia segura a cuerpos de rescate profesionales" },
       { fase: "Módulo 5 · Evaluación",     entregable: "Simulacro práctico + constancias individuales del programa",     queResuelve: "Documenta competencias para el PIPC y auditorías institucionales" },
     ],
+    guide: [
+      {
+        h2: "¿Qué son las brigadas de emergencia?",
+        p: "Son grupos de colaboradores de la propia organización, con funciones asignadas, que actúan en los primeros minutos de una emergencia, antes de que lleguen bomberos, paramédicos o Protección Civil. Forman parte de la Unidad Interna de Protección Civil y del Programa Interno. Las más comunes son:",
+        items: [
+          "Brigada de evacuación: conduce al personal y a los visitantes por las rutas seguras hasta el punto de reunión y confirma que nadie quede dentro.",
+          "Brigada de primeros auxilios: atiende a las personas lesionadas mientras llegan los servicios médicos.",
+          "Brigada contra incendios: usa los extintores para controlar un conato de incendio y da la alerta.",
+          "Brigada de búsqueda y rescate: localiza a personas que no llegaron al punto de reunión y apoya su traslado seguro.",
+          "En inmuebles pequeños, una brigada multifuncional puede cubrir varias funciones.",
+        ],
+      },
+      {
+        h2: "¿Quién debe tomar la capacitación?",
+        p: "Las personas designadas como brigadistas y sus suplentes, los jefes de piso o de área y quien coordina la Unidad Interna de Protección Civil. La capacitación sirve a empresas, fábricas, comercios, escuelas, clínicas, hoteles, edificios de oficinas y dependencias de gobierno en Cuernavaca, Jiutepec, Cuautla y el resto de Morelos. Además de preparar al personal, deja evidencia de la capacitación que piden el Programa Interno y las normas de la STPS.",
+      },
+      {
+        h2: "Cómo es la capacitación, paso a paso",
+        ordered: true,
+        items: [
+          "Revisamos tu inmueble, tus riesgos y cuántas personas integran cada brigada para ajustar el contenido.",
+          "Impartimos la capacitación en tus instalaciones, con teoría breve y práctica: evacuación por tus propias rutas, primeros auxilios y uso de extintores.",
+          "Cerramos con un ejercicio de evaluación y, cuando aplica, un simulacro coordinado.",
+          "Entregamos las constancias y un informe de desempeño para integrarlo a tu Programa Interno.",
+        ],
+      },
+      {
+        h2: "¿Qué recibes?",
+        items: [
+          "Capacitación práctica para cada brigada, adaptada a tu inmueble.",
+          "Constancia DC-3 para cada persona que concluye la capacitación.",
+          "Informe de desempeño con observaciones y recomendaciones.",
+          "Evidencia de capacitación lista para tu Programa Interno de Protección Civil.",
+        ],
+      },
+      {
+        h2: "¿Cuánto dura?",
+        p: "Se imparte en sesiones intensivas de 4 a 8 horas, según las brigadas y los módulos que se incluyan. Se programa en la fecha que menos afecte tu operación.",
+      },
+      {
+        h2: "Experiencia de STRATEC en capacitación",
+        p: "Hemos capacitado a más de 300 personas en seguridad y protección civil, entre ellas personal de instituciones de seguridad pública y de salud, estudiantes y colaboradores de empresas privadas.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿Qué brigadas debe tener mi empresa?",
+        a: "Depende del tamaño del inmueble, del número de personas y de sus riesgos. Lo habitual es contar con brigadas de evacuación, primeros auxilios, combate de incendios y búsqueda y rescate; en inmuebles pequeños una brigada multifuncional puede cubrir varias funciones. Lo definimos con base en tu Programa Interno.",
+      },
+      {
+        q: "¿Cuánto dura la capacitación de brigadas?",
+        a: "Se imparte en sesiones intensivas de 4 a 8 horas, según las brigadas y los módulos que se incluyan.",
+      },
+      {
+        q: "¿Entregan constancia DC-3?",
+        a: "Sí. Al concluir la capacitación se entrega la constancia DC-3 a cada participante.",
+      },
+      {
+        q: "¿La capacitación se da en nuestras instalaciones?",
+        a: "Sí. Es presencial e in company: practicar en tus propias rutas de evacuación y con tu equipo de emergencia hace que la capacitación sea útil el día que se necesite.",
+      },
+      {
+        q: "¿Cada cuánto conviene volver a capacitar a las brigadas?",
+        a: "Conviene reforzarla al menos una vez al año y cada vez que cambian los integrantes de las brigadas, el inmueble o los riesgos. El calendario forma parte de tu Programa Interno.",
+      },
+      {
+        q: "¿Incluye simulacro?",
+        a: "Cada programa cierra con un ejercicio práctico de evaluación y, cuando aplica, un simulacro coordinado con todo el personal.",
+      },
+      {
+        q: "¿En qué ciudades imparten la capacitación?",
+        a: "En Cuernavaca, Jiutepec, Temixco, Cuautla y el resto del Estado de Morelos, en las instalaciones de tu organización.",
+      },
+    ],
+    related: [
+      { href: "/servicios/programa-interno-proteccion-civil", label: "Programa Interno de Protección Civil" },
+      { href: "/servicios/revision-programa-interno", label: "Revisión de tu Programa Interno" },
+      { href: "/servicios/proteccion-civil-eventos-masivos", label: "Protección Civil para eventos masivos" },
+      { href: "/servicios/capacitacion", label: "Otros cursos de capacitación" },
+      { href: "/diagnostico", label: "Diagnóstico de seguridad gratuito" },
+    ],
     seo: {
-      title: "Capacitación de Brigadas de Emergencia | Evacuación y Primeros Auxilios | STRATEC",
+      title: "Capacitación de Brigadas de Protección Civil en Morelos | STRATEC",
       description:
-        "Formación práctica para brigadas de evacuación, primeros auxilios, contra incendios y búsqueda y rescate. Programas in company con constancias y simulacros para empresas e instituciones en México.",
+        "Curso para brigadas de evacuación, primeros auxilios, incendios y rescate en tus instalaciones en Cuernavaca y Morelos. Al concluir, constancia DC-3.",
       keywords: [
         "capacitación brigadas de emergencia",
+        "curso de brigadas de protección civil",
+        "capacitación brigadas Cuernavaca",
+        "curso brigadistas Morelos con DC-3",
         "brigadas de evacuación",
         "brigadas de primeros auxilios",
         "brigada contra incendios",
@@ -679,7 +885,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     breadcrumb: "Videovigilancia CCTV",
     parentBreadcrumb: "Integración Tecnológica para la Seguridad",
     parentHref: "/servicios/integracion-tecnologica",
-    h1: "Sistemas de Videovigilancia CCTV",
+    h1: "Cámaras de seguridad y videovigilancia CCTV para empresas en Cuernavaca y Morelos",
     lead: "Un sistema de videovigilancia mal diseñado genera puntos ciegos, evidencia inutilizable y falsa sensación de seguridad. STRATEC diseña e implementa soluciones CCTV basadas en el análisis de cobertura real, no en catálogos: el número de cámaras, su tipo y su posición se determinan por el mapa de riesgos de tu instalación.",
     intro: "Videovigilancia como herramienta estratégica: disuasión, evidencia, gestión de incidentes y supervisión operativa en un solo sistema.",
     blocks: [
@@ -723,10 +929,83 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "Fase 4 · Instalación",  entregable: "Cableado, configuración, acceso remoto y pruebas de funcionamiento",    queResuelve: "Sistema operativo y verificado desde el primer día" },
       { fase: "Fase 5 · Capacitación", entregable: "Uso del sistema, exportación de evidencia y soporte post-instalación",  queResuelve: "El sistema se aprovecha al 100%, no se subutiliza" },
     ],
+    guide: [
+      {
+        h2: "¿Qué es un sistema de videovigilancia CCTV?",
+        p: "CCTV significa circuito cerrado de televisión: un conjunto de cámaras conectadas a una grabadora (NVR o DVR) que guarda las imágenes y permite verlas en vivo, desde un monitor o desde el celular. Bien diseñado, sirve para disuadir robos, revisar qué pasó en un incidente, contar con evidencia y supervisar la operación. Mal diseñado, deja puntos ciegos, graba imágenes que no permiten reconocer a nadie y da una falsa sensación de seguridad.",
+      },
+      {
+        h2: "¿Para quién es?",
+        p: "Para empresas, fábricas, bodegas, comercios, oficinas, escuelas, clínicas, hoteles y condominios en Cuernavaca, Jiutepec, Cuautla y el resto de Morelos que necesitan vigilar accesos, cajas, estacionamientos, almacenes, perímetros o áreas restringidas. También para quien ya tiene cámaras y no sabe si cubren lo importante o si la grabación sirve como evidencia.",
+      },
+      {
+        h2: "Cómo diseñamos e instalamos tu sistema, paso a paso",
+        ordered: true,
+        items: [
+          "Visita y análisis de riesgos: recorremos el inmueble para identificar accesos, puntos críticos, puntos ciegos e iluminación.",
+          "Mapa de cobertura: definimos dónde va cada cámara, qué debe verse en cada imagen y qué tipo de cámara conviene.",
+          "Diseño y cotización: diagrama del sistema con cámaras, grabadora, almacenamiento, red y energía, con presupuesto por concepto.",
+          "Instalación y configuración: cableado, grabación continua o por movimiento, alertas y acceso desde el celular.",
+          "Pruebas y entrega: revisamos cada cámara de día y de noche, capacitamos a quien operará el sistema y te entregamos el manual de uso.",
+        ],
+      },
+      {
+        h2: "¿Qué recibes?",
+        items: [
+          "Mapa de cobertura con la ubicación y el propósito de cada cámara.",
+          "Diagrama técnico y presupuesto detallado por concepto.",
+          "Equipo de grado profesional con garantía y soporte técnico en México.",
+          "Sistema instalado, configurado y probado, con acceso remoto desde el celular.",
+          "Capacitación para reproducir grabaciones, exportar evidencia y atender alertas.",
+          "Manual de usuario y soporte técnico después de la instalación.",
+        ],
+      },
+      {
+        h2: "¿Cuánto tiempo tarda?",
+        p: "Depende del número de cámaras, del cableado necesario y de las condiciones del inmueble. La visita y el diseño van primero; el calendario de instalación se acuerda en la cotización para afectar lo menos posible tu operación.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿Cuántas cámaras de seguridad necesita mi negocio?",
+        a: "Depende de lo que haya que proteger, no de los metros cuadrados. Primero identificamos accesos, cajas, almacenes, estacionamientos y puntos ciegos, y con ese mapa de cobertura definimos cuántas cámaras hacen falta y de qué tipo.",
+      },
+      {
+        q: "¿Qué conviene más, cámaras IP o analógicas?",
+        a: "Las cámaras IP suelen dar mejor resolución y más funciones; las analógicas pueden aprovechar cableado existente y costar menos. Lo recomendamos según lo que necesites reconocer en la imagen, la infraestructura que ya tienes y tu presupuesto.",
+      },
+      {
+        q: "¿Puedo ver mis cámaras desde el celular?",
+        a: "Sí. Configuramos el acceso remoto para que veas las cámaras en vivo y revises grabaciones desde el celular o la computadora, con usuarios y contraseñas para cada persona autorizada.",
+      },
+      {
+        q: "¿Cuántos días se guardan las grabaciones?",
+        a: "Depende de la capacidad de almacenamiento, del número de cámaras, de la resolución y de si se graba de forma continua o solo con movimiento. Dimensionamos el almacenamiento según cuántos días necesitas conservar.",
+      },
+      {
+        q: "¿Pueden revisar o aprovechar las cámaras que ya tengo?",
+        a: "Sí. Evaluamos tu sistema actual, te decimos qué cubre, qué no y qué se puede aprovechar, y proponemos solo lo que haga falta.",
+      },
+      {
+        q: "¿Necesito aviso de privacidad si tengo cámaras?",
+        a: "Las imágenes de las personas son datos personales, por lo que conviene colocar avisos visibles de videovigilancia y contar con un aviso de privacidad que explique para qué se usan las grabaciones. Te orientamos al diseñar el sistema.",
+      },
+      {
+        q: "¿Dan soporte después de la instalación?",
+        a: "Sí. Capacitamos a quien operará el sistema, entregamos el manual de uso y damos soporte técnico después de la instalación.",
+      },
+    ],
+    related: [
+      { href: "/servicios/estudio-analisis-riesgo", label: "Estudio y análisis de riesgo" },
+      { href: "/servicios/protocolos-seguridad", label: "Protocolos de seguridad y prevención de extorsión" },
+      { href: "/servicios/gps-monitoreo-vehicular", label: "GPS y monitoreo vehicular para flotillas" },
+      { href: "/servicios/integracion-tecnologica", label: "Integración tecnológica para la seguridad" },
+      { href: "/diagnostico", label: "Diagnóstico de seguridad gratuito" },
+    ],
     seo: {
-      title: "Instalación de Videovigilancia CCTV para Empresas | Cámaras de Seguridad | STRATEC",
+      title: "Cámaras de Seguridad y CCTV para Empresas en Cuernavaca | STRATEC",
       description:
-        "Diseño, suministro e instalación de sistemas de videovigilancia CCTV para empresas, comercios e instituciones en México. Evaluación de cobertura, equipo profesional y capacitación incluida.",
+        "Diseño, suministro e instalación de cámaras de seguridad CCTV para empresas, comercios y escuelas en Cuernavaca y Morelos, con acceso desde el celular y soporte.",
       keywords: [
         "videovigilancia CCTV",
         "instalación cámaras de seguridad",
@@ -1044,7 +1323,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     breadcrumb: "Protección Civil para Eventos Masivos",
     parentBreadcrumb: "Protección Civil y Gestión de Riesgos",
     parentHref: "/servicios/proteccion-civil",
-    h1: "Protección Civil para eventos masivos",
+    h1: "Protección Civil para eventos masivos en Cuernavaca y Morelos",
     lead: "Conciertos, ferias, eventos deportivos, religiosos, empresariales o institucionales: planeamos la seguridad de tu evento y la operamos en sitio con personal de staff identificado, comunicación por radio y coordinación con las autoridades, desde antes de abrir puertas hasta que sale la última persona.",
     intro: "Un solo responsable para toda la parte de Protección Civil del evento: primero identificamos los riesgos, después diseñamos la estrategia y el día del evento la ejecutamos con nuestro equipo.",
     blocks: [
@@ -1084,13 +1363,77 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "4 · Día del evento",    entregable: "Staff identificado, radios y puesto de mando",        queResuelve: "Operación y respuesta en sitio de principio a fin" },
       { fase: "5 · Cierre",            entregable: "Reporte de incidencias del evento",                   queResuelve: "Registro de lo ocurrido y mejoras para el siguiente" },
     ],
+    guide: [
+      {
+        h2: "¿Qué es el Programa Especial de Protección Civil de un evento?",
+        p: "Es el plan de seguridad de un evento en particular: cuántas personas caben de forma segura, por dónde entran y salen, qué riesgos tiene el lugar, quién hace qué en una emergencia y cómo se coordina con las autoridades. Para los eventos masivos, la autoridad de Protección Civil suele pedirlo como parte del permiso. Lo elaboramos y, además, lo operamos el día del evento.",
+      },
+      {
+        h2: "¿Para qué eventos es?",
+        p: "Para conciertos, festivales, ferias, eventos deportivos, carreras, peregrinaciones y fiestas patronales, graduaciones, congresos, exposiciones, eventos empresariales e institucionales en Cuernavaca y el resto de Morelos, en recintos cerrados o al aire libre. Cuándo un evento requiere programa especial lo define la autoridad municipal o estatal según el aforo, el tipo de evento y el lugar.",
+      },
+      {
+        h2: "Cómo trabajamos, paso a paso",
+        ordered: true,
+        items: [
+          "Primera llamada: conocemos la fecha, el lugar, el aforo esperado y el formato del evento.",
+          "Visita al recinto: revisamos accesos, salidas de emergencia, rutas, escenarios, gradas, carpas, instalaciones temporales y entorno.",
+          "Programa Especial: elaboramos el documento con análisis de riesgos, organización del personal, procedimientos de emergencia, rutas de evacuación y directorio.",
+          "Preparación: damos instrucciones previas al personal del organizador y definimos posiciones, radios y puesto de mando.",
+          "Día del evento: nuestro staff opera en sitio, identificado con chalecos distintivos y radios, desde antes de abrir puertas hasta que sale la última persona.",
+          "Cierre: te entregamos un reporte de incidencias con recomendaciones para el siguiente evento.",
+        ],
+      },
+      {
+        h2: "¿Con cuánta anticipación conviene contratar?",
+        p: "Lo antes posible. El programa debe estar listo con tiempo para presentarlo ante la autoridad, y cada autoridad fija sus propios plazos de revisión. Contratar con anticipación también permite corregir a tiempo lo que el análisis del recinto detecte.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿Qué es un Programa Especial de Protección Civil?",
+        a: "Es el plan de seguridad de un evento: aforo seguro, accesos y salidas, riesgos del lugar, organización del personal, procedimientos de emergencia y coordinación con las autoridades. Para eventos masivos, la autoridad de Protección Civil suele pedirlo para autorizar el evento.",
+      },
+      {
+        q: "¿Mi evento necesita Programa Especial de Protección Civil?",
+        a: "Depende del aforo, del tipo de evento y del lugar; lo define la autoridad municipal o estatal de Protección Civil. Si tienes duda, en la primera llamada revisamos tu caso y te orientamos.",
+      },
+      {
+        q: "¿Con cuánta anticipación debo contratar?",
+        a: "Lo antes posible: el programa tiene que estar listo para presentarlo ante la autoridad con tiempo, y cada autoridad fija sus propios plazos de revisión.",
+      },
+      {
+        q: "¿Cuánto personal de staff necesita mi evento?",
+        a: "Depende del aforo, del recinto, del número de accesos y salidas y de los riesgos del evento. Lo definimos en el análisis de riesgos y queda por escrito en la cotización.",
+      },
+      {
+        q: "¿Su personal está en el evento?",
+        a: "Sí. El día del evento nuestro staff opera en accesos, salidas, pasillos y zonas críticas, identificado con chalecos distintivos y con radios, coordinado desde un puesto de mando.",
+      },
+      {
+        q: "¿Se coordinan con las autoridades y los servicios médicos?",
+        a: "Sí. Durante el evento mantenemos enlace con Protección Civil, seguridad pública y los servicios médicos presentes.",
+      },
+      {
+        q: "¿Puedo saber gratis qué necesita mi evento?",
+        a: "Sí. El diagnóstico de seguridad para eventos masivos es gratuito: en unos minutos te dice qué aspectos de tu evento requieren atención.",
+      },
+    ],
+    related: [
+      { href: "/diagnostico-eventos", label: "Diagnóstico gratuito para eventos masivos" },
+      { href: "/servicios/programa-interno-proteccion-civil", label: "Programa Interno de Protección Civil" },
+      { href: "/servicios/capacitacion-brigadas-emergencia", label: "Capacitación de brigadas de emergencia" },
+      { href: "/servicios/estudio-analisis-riesgo", label: "Estudio y análisis de riesgo" },
+    ],
     seo: {
       title: "Protección Civil para Eventos Masivos en Morelos | STRATEC",
       description:
-        "Servicio integral de Protección Civil para eventos masivos: análisis de riesgos y aforo, Programa Especial del evento y personal de staff en sitio con chalecos distintivos, radios y puesto de mando.",
+        "Programa Especial de Protección Civil y staff en sitio para conciertos, ferias y eventos en Cuernavaca y Morelos: análisis de aforo, radios y puesto de mando.",
       keywords: [
         "protección civil para eventos masivos",
         "programa especial de protección civil",
+        "programa especial de protección civil Morelos",
+        "protección civil eventos Cuernavaca",
         "seguridad para eventos",
         "staff de seguridad para eventos",
         "protección civil para conciertos",
@@ -1177,7 +1520,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
     breadcrumb: "Protocolos de Seguridad",
     parentBreadcrumb: "Consultoría en Seguridad",
     parentHref: "/servicios/consultoria-seguridad",
-    h1: "Protocolos de seguridad y prevención de extorsión",
+    h1: "Protocolos de seguridad y prevención de extorsión para empresas",
     lead: "¿Tu equipo sabe qué hacer cuando recibe una llamada de extorsión, detecta un intento de fraude o enfrenta una amenaza? Diseñamos protocolos de actuación a la medida de tu organización para que cada colaborador sepa cómo reconocer el riesgo, a quién avisar y qué hacer.",
     intro: "La extorsión es uno de los delitos más frecuentes contra las empresas en México. Un protocolo claro reduce el margen de error en los primeros minutos, que son los que más importan.",
     blocks: [
@@ -1215,12 +1558,96 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
       { fase: "3 · Responsables",    entregable: "Funciones, responsables y líneas de comunicación", queResuelve: "Cada persona sabe a quién avisar" },
       { fase: "4 · Implementación",  entregable: "Recomendaciones de implementación y difusión",    queResuelve: "El protocolo se conoce y se aplica" },
     ],
+    guide: [
+      {
+        h2: "¿Qué es un protocolo contra extorsión?",
+        p: "Es un documento breve y claro que le dice a cada persona de tu organización qué hacer si recibe una llamada o un mensaje de extorsión, un intento de fraude o una amenaza: cómo reconocerlo, qué responder y qué nunca decir, a quién avisar, cómo verificar la situación y cómo denunciar. Su objetivo es que nadie tenga que improvisar en los primeros minutos, que son los que más importan.",
+      },
+      {
+        h2: "¿Para quién es?",
+        p: "Para comercios, restaurantes, oficinas, clínicas, escuelas, constructoras, transportistas y cualquier organización donde alguien contesta el teléfono, atiende al público o maneja pagos. Se elabora a distancia, así que atendemos a empresas de Cuernavaca, de Morelos y del resto de México.",
+      },
+      {
+        h2: "Qué hacer si recibes una llamada de extorsión",
+        p: "Estas recomendaciones generales sirven a cualquier persona; el protocolo de tu empresa las convierte en pasos concretos para tu equipo:",
+        items: [
+          "No des información: ni nombres, ni horarios, ni datos de familiares o de la empresa.",
+          "No sigas instrucciones ni hagas depósitos, transferencias o recargas.",
+          "Cuelga y verifica directamente con la persona que supuestamente está en riesgo.",
+          "Anota el número, la hora y lo que te dijeron, y avisa al responsable de tu organización.",
+          "Denuncia al 089 (denuncia anónima). Si hay un riesgo inmediato, llama al 911.",
+        ],
+      },
+      {
+        h2: "Cómo elaboramos tu protocolo, paso a paso",
+        ordered: true,
+        items: [
+          "Entrevista por videollamada para entender cómo opera tu organización y quién contesta llamadas, mensajes y visitas.",
+          "Revisión de los puntos por donde puede entrar una extorsión o un fraude: teléfonos, WhatsApp, redes sociales, recepción y solicitudes de pago.",
+          "Redacción del protocolo con lo que se hace en cada situación.",
+          "Definición de responsables, suplentes y líneas de comunicación.",
+          "Entrega con recomendaciones para darlo a conocer y aplicarlo en tu equipo.",
+        ],
+      },
+      {
+        h2: "¿Qué recibes?",
+        items: [
+          "Protocolo de actuación a la medida ante extorsión, fraude, amenazas e incidentes.",
+          "Responsables, suplentes y líneas de comunicación definidos por escrito.",
+          "Recomendaciones para difundir el protocolo y reducir la información de la empresa que queda expuesta.",
+          "Opcional: capacitación práctica para tu personal; al concluir, se entrega la constancia DC-3.",
+        ],
+      },
+      {
+        h2: "¿Cuánto tiempo tarda?",
+        p: "Depende del tamaño de tu organización y del número de sedes; el calendario exacto va en la cotización. Como se trabaja a distancia, se puede empezar sin esperar visitas.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿Qué hago si recibo una llamada de extorsión en mi negocio?",
+        a: "No des información ni sigas instrucciones, cuelga y verifica directamente con la persona que supuestamente está en riesgo, anota el número y lo que te dijeron, avisa al responsable de tu organización y denuncia al 089. Si hay un riesgo inmediato, llama al 911.",
+      },
+      {
+        q: "¿Qué incluye un protocolo contra extorsión?",
+        a: "Cómo reconocer una llamada o mensaje de extorsión, qué responder y qué no, cómo verificar la situación, a quién avisar dentro de la organización, quién decide y cómo denunciar. Se hace a la medida de tu operación.",
+      },
+      {
+        q: "¿También sirve contra fraudes?",
+        a: "Sí. El protocolo incluye medidas para detectar solicitudes falsas de pago, a quien se hace pasar por un proveedor o un directivo y los engaños para obtener información.",
+      },
+      {
+        q: "¿Se puede hacer a distancia?",
+        a: "Sí. Las entrevistas son por videollamada y el protocolo se entrega en digital, así que atendemos a empresas de todo México.",
+      },
+      {
+        q: "¿Incluye capacitación para el personal?",
+        a: "Se puede complementar con una capacitación práctica para que el equipo aplique el protocolo bajo presión. Al concluir, se entrega la constancia DC-3.",
+      },
+      {
+        q: "¿Sirve si ya recibimos una llamada de extorsión?",
+        a: "Sí. Es el mejor momento para que no se repita: revisamos qué pasó y preparamos al equipo. Si estás recibiendo una amenaza en este momento, llama al 911.",
+      },
+      {
+        q: "¿La información de mi empresa es confidencial?",
+        a: "Sí. Lo que compartes se maneja con confidencialidad y solo se usa para elaborar tu protocolo.",
+      },
+    ],
+    related: [
+      { href: "/servicios/estudio-analisis-riesgo", label: "Estudio y análisis de riesgo" },
+      { href: "/servicios/videovigilancia-cctv", label: "Cámaras de seguridad y videovigilancia" },
+      { href: "/servicios/nom-035-violencia-laboral", label: "NOM-035 y protocolo de violencia laboral" },
+      { href: "/servicios/consultoria-seguridad", label: "Consultoría en seguridad" },
+      { href: "/diagnostico", label: "Diagnóstico de seguridad gratuito" },
+    ],
     seo: {
-      title: "Protocolos de Seguridad y Prevención de Extorsión para Empresas | STRATEC",
+      title: "Protocolo contra Extorsión y Fraude para Empresas | STRATEC",
       description:
-        "Protocolos de actuación para empresas ante extorsión telefónica, fraude e ingeniería social, amenazas e incidentes de seguridad. Diseño a la medida y a distancia.",
+        "Protocolos para que tu equipo sepa qué hacer ante una llamada de extorsión, un fraude o una amenaza: qué responder, a quién avisar y cómo denunciar. A distancia.",
       keywords: [
         "protocolo de extorsión telefónica empresa",
+        "qué hacer ante una llamada de extorsión",
+        "protocolo contra extorsión para negocios",
         "prevención de extorsión empresas",
         "protocolo de seguridad empresarial",
         "protocolo fraude ingeniería social",

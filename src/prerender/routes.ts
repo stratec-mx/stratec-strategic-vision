@@ -2,11 +2,12 @@
 // Así los buscadores reciben título, canónica y contenido propios de cada URL
 // sin depender de JavaScript. React reemplaza este HTML al cargar.
 import { getSEOConfig } from "@/config/seo";
-import { coverageData } from "@/data/coverageData";
+import { coverageData, morelosFeatured } from "@/data/coverageData";
 import { SERVICES_DATA, SERVICIOS_INDEX } from "@/data/servicesData";
 import { REMOTE_GROUPS, remoteServices } from "@/data/remoteServices";
 import { AREAS_TEXT, INCLUDES, FAQ, FAQ_CASA, FAQ_EVENTO } from "@/data/diagnosticoLanding";
 import { DIAGNOSTICOS } from "@/data/diagnosticoPreguntas";
+import { BREADCRUMB_SCHEMA, FAQ_SCHEMA, SERVICE_SCHEMA, SITE_URL } from "@/lib/seo";
 
 export interface PrerenderRoute {
   path: string;
@@ -16,6 +17,8 @@ export interface PrerenderRoute {
   canonical: string;
   ogImage?: string;
   body: string;
+  /** Datos estructurados propios de la página (se insertan en <head>). */
+  jsonLd?: object[];
 }
 
 const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -71,6 +74,22 @@ ${ul(["Gobierno", "Industria", "Corporativos", "Construcción", "Educación", "I
   );
 }
 
+/** Service, migas de pan y, si la página tiene preguntas, FAQPage: lo mismo que React agrega al cargar. */
+function serviceJsonLd(s: (typeof SERVICES_DATA)[string], description: string): object[] {
+  const url = `${SITE_URL}${s.href}`;
+  const crumbs = [
+    { name: "Inicio", url: SITE_URL },
+    { name: "Servicios", url: `${SITE_URL}/servicios` },
+    ...(s.parentBreadcrumb && s.parentHref ? [{ name: s.parentBreadcrumb, url: `${SITE_URL}${s.parentHref}` }] : []),
+    { name: s.breadcrumb, url },
+  ];
+  return [
+    SERVICE_SCHEMA({ name: s.h1, description, image: s.heroImage, url }),
+    BREADCRUMB_SCHEMA(crumbs),
+    ...(s.faqs?.length ? [FAQ_SCHEMA(s.faqs.map((f) => ({ question: f.q, answer: f.a })))] : []),
+  ];
+}
+
 function serviceRoutes() {
   return Object.values(SERVICES_DATA).map((s) => {
     const blocks = s.blocks.map((b) => `<h2>${esc(b.h2)}</h2>${p(b.p)}`).join("");
@@ -81,12 +100,28 @@ function serviceRoutes() {
       ? `<h2>${esc(s.deliverablesListTitle ?? "Entregables")}</h2>${ul(s.deliverablesList.map(esc))}`
       : "";
     const rag = s.ragSnippet ? `<h2>${esc(s.ragSnippet.h2)}</h2>${p(s.ragSnippet.p)}` : "";
-    return route(
+    const guide = (s.guide ?? [])
+      .map((g) => {
+        const items = g.items?.length ? g.items.map((i) => `<li>${esc(i)}</li>`).join("") : "";
+        const list = items ? (g.ordered ? `<ol>${items}</ol>` : `<ul>${items}</ul>`) : "";
+        return `<h2>${esc(g.h2)}</h2>${p(g.p)}${list}`;
+      })
+      .join("");
+    const faqs = s.faqs?.length
+      ? `<h2>Preguntas frecuentes</h2>${s.faqs.map((f) => `<h3>${esc(f.q)}</h3>${p(f.a)}`).join("")}`
+      : "";
+    const related = s.related?.length ? `<h2>Servicios relacionados</h2>${ul(s.related.map((l) => a(l.href, l.label)))}` : "";
+    const r = route(
       s.href,
-      `<h1>${esc(s.h1)}</h1>${p(s.lead)}${p(s.intro)}${blocks}${deliverables}${list}${rag}${p(s.modalidades)}${p(s.nota)}<p>${a("/diagnostico", s.cta)}</p>`,
+      `<h1>${esc(s.h1)}</h1>${p(s.lead)}${p(s.intro)}${rag}${guide}${blocks}${deliverables}${list}${p(s.modalidades)}${p(s.nota)}${faqs}${related}<p>${a("/diagnostico", s.cta)}</p>`,
     );
+    return { ...r, jsonLd: serviceJsonLd(s, r.description) };
   });
 }
+
+/** En Morelos se enlazan los servicios presenciales con el nombre del lugar. */
+const featured = (slug: string, place: string) =>
+  slug === "morelos" ? `<h2>Servicios más solicitados en ${esc(place)}</h2>${ul(morelosFeatured(place).map((l) => a(l.href, l.label)))}` : "";
 
 function coverageRoutes() {
   const index = route("/cobertura", `<h1>Cobertura geográfica</h1>${p("Consultoría de seguridad institucional en México.")}${STATE_LINKS}`);
@@ -94,14 +129,14 @@ function coverageRoutes() {
     const cities = Object.entries(st.cities ?? {});
     const stateRoute = route(
       `/cobertura/${slug}`,
-      `<h1>Consultoría de Seguridad Institucional en ${esc(st.state)}</h1>${p(st.defaultContext)}${st.defaultSectors?.length ? `<h2>Sectores</h2>${ul(st.defaultSectors.map(esc))}` : ""}${
+      `<h1>Consultoría de Seguridad Institucional en ${esc(st.state)}</h1>${p(st.defaultContext)}${featured(slug, st.state)}${st.defaultSectors?.length ? `<h2>Sectores</h2>${ul(st.defaultSectors.map(esc))}` : ""}${
         cities.length ? `<h2>Ciudades</h2>${ul(cities.map(([c, v]) => a(`/cobertura/${slug}/${c}`, v.name)))}` : ""
       }<h2>Servicios</h2>${SERVICE_LINKS}${REMOTE}`,
     );
     const cityRoutes = cities.map(([c, v]) =>
       route(
         `/cobertura/${slug}/${c}`,
-        `<h1>Consultoría de Seguridad Institucional en ${esc(v.name)}</h1>${p(v.context)}<h2>Sectores</h2>${ul(v.sectors.map(esc))}<h2>Servicios</h2>${SERVICE_LINKS}${REMOTE}`,
+        `<h1>Consultoría de Seguridad Institucional en ${esc(v.name)}</h1>${p(v.context)}${featured(slug, v.name)}<h2>Sectores</h2>${ul(v.sectors.map(esc))}<h2>Servicios</h2>${SERVICE_LINKS}${REMOTE}`,
       ),
     );
     return [stateRoute, ...cityRoutes];

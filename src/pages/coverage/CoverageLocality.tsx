@@ -4,7 +4,7 @@ import { ContactForm } from "@/components/ContactForm";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
-import { coverageData } from "@/data/coverageData";
+import { coverageData, morelosFeatured } from "@/data/coverageData";
 import { RemoteServices } from "@/components/services/RemoteServices";
 
 // Configuración de localidades por estado
@@ -101,6 +101,28 @@ export default function CoverageLocality() {
                 ))}
               </div>
             </motion.section>
+          )}
+
+          {/* Servicios presenciales más solicitados (solo Morelos) */}
+          {isMorelos && (
+            <section className="mb-16">
+              <h2 className="text-2xl font-light text-smoke mb-6">
+                Servicios más solicitados en {locality?.name ?? stateData?.state}
+              </h2>
+              <ul className="grid md:grid-cols-2 gap-3">
+                {morelosFeatured(locality?.name ?? stateData?.state ?? "Morelos").map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      to={l.href}
+                      className="flex items-center justify-between gap-3 border border-olive/30 bg-navy/40 px-5 py-4 text-smoke/85 font-light hover:border-olive hover:text-smoke transition-colors"
+                    >
+                      {l.label}
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {/* Servicios a distancia */}
