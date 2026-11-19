@@ -10,10 +10,16 @@ interface PageSEO {
   ogImage?: string;
   ogType?: string;
   canonicalUrl?: string;
+  /** Solo para páginas que no deben salir en buscadores (landings de campaña). */
+  robots?: string;
 }
+
+/** Valor de index.html; se restaura al salir de una página con noindex. */
+export const DEFAULT_ROBOTS = "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1";
 
 import { SERVICES_DATA } from "@/data/servicesData";
 import { coverageData } from "@/data/coverageData";
+import { LANDINGS } from "@/data/landings";
 
 const baseUrl = "https://www.stratecsecurity.com";
 const defaultImage = "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/3948a78b-768d-4148-942e-e912d324102d";
@@ -256,6 +262,27 @@ const serviceConfig: Record<string, PageSEO> = Object.fromEntries(
     ]),
 );
 
+/**
+ * Landings de campaña: noindex, follow. Son para tráfico de redes y anuncios;
+ * el contenido que debe posicionar en Google ya está en
+ * /servicios/protocolos-seguridad. Así no compiten entre sí y las visitas de la
+ * landing son solo de campañas, lo que hace confiable la medición. "follow" deja
+ * que Google siga los enlaces del pie de página.
+ */
+const landingConfig: Record<string, PageSEO> = Object.fromEntries(
+  Object.values(LANDINGS).map((l) => [
+    l.ruta,
+    {
+      title: l.seo.title,
+      description: l.seo.description,
+      keywords: l.seo.keywords,
+      ogType: "website",
+      canonicalUrl: `${baseUrl}${l.ruta}`,
+      robots: "noindex, follow",
+    },
+  ]),
+);
+
 /** Metadatos de cada estado y ciudad de cobertura sin entrada propia arriba. */
 const coverageConfig: Record<string, PageSEO> = Object.fromEntries(
   Object.entries(coverageData).flatMap(([slug, st]) => {
@@ -284,7 +311,7 @@ const coverageConfig: Record<string, PageSEO> = Object.fromEntries(
   }),
 );
 
-export const seoConfig: Record<string, PageSEO> = { ...coverageConfig, ...serviceConfig, ...staticConfig };
+export const seoConfig: Record<string, PageSEO> = { ...coverageConfig, ...serviceConfig, ...landingConfig, ...staticConfig };
 
 const normalizePath = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
 
@@ -311,6 +338,7 @@ export const updateMetaTags = (seo: PageSEO) => {
   const image = seo.ogImage ?? defaultImage;
 
   document.title = seo.title;
+  setAttr('meta[name="robots"]', "content", seo.robots ?? DEFAULT_ROBOTS);
   setAttr('meta[name="description"]', "content", seo.description);
   setAttr('meta[name="keywords"]', "content", seo.keywords.join(", "));
   setAttr('link[rel="canonical"]', "href", url);

@@ -1,7 +1,9 @@
 // Botón flotante de WhatsApp
 // Número: +52 220 648 86 88
 
+import { useLocation } from "react-router-dom";
 import { track } from "@/lib/analytics";
+import { esLanding } from "@/data/landings";
 
 const WA_NUMBER = "522206488688";
 const WA_MESSAGE = encodeURIComponent(
@@ -9,6 +11,10 @@ const WA_MESSAGE = encodeURIComponent(
 );
 
 export const WhatsAppFloat = () => {
+  const { pathname } = useLocation();
+  // Las landings tienen su propio botón de WhatsApp con mensaje y medición propios.
+  if (esLanding(pathname)) return null;
+
   const handleClick = () => {
     // Registrar evento de clic en WhatsApp
     track.whatsappClick();

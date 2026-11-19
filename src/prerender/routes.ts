@@ -8,6 +8,7 @@ import { REMOTE_GROUPS, remoteServices } from "@/data/remoteServices";
 import { AREAS_TEXT, INCLUDES, FAQ, FAQ_CASA, FAQ_EVENTO } from "@/data/diagnosticoLanding";
 import { DIAGNOSTICOS } from "@/data/diagnosticoPreguntas";
 import { BREADCRUMB_SCHEMA, FAQ_SCHEMA, SERVICE_SCHEMA, SITE_URL } from "@/lib/seo";
+import { LANDINGS } from "@/data/landings";
 
 export interface PrerenderRoute {
   path: string;
@@ -16,6 +17,8 @@ export interface PrerenderRoute {
   keywords: string;
   canonical: string;
   ogImage?: string;
+  /** Solo si la página no debe indexarse (landings de campaña). */
+  robots?: string;
   body: string;
   /** Datos estructurados propios de la página (se insertan en <head>). */
   jsonLd?: object[];
@@ -52,6 +55,7 @@ function route(path: string, content: string): PrerenderRoute {
     keywords: seo.keywords.join(", "),
     canonical: seo.canonicalUrl ?? `https://www.stratecsecurity.com${path}`,
     ogImage: seo.ogImage,
+    robots: seo.robots,
     body: `${content}<nav aria-label="Secciones">${NAV}</nav>`,
   };
 }
@@ -162,6 +166,21 @@ ${previas.length ? `<h2>Antes de empezar</h2>${ul(previas.map((c) => esc(c.label
   );
 }
 
+/** Landing de campaña: el mismo texto que ve el visitante, sin el formulario. */
+function landingRoutes(): PrerenderRoute[] {
+  return Object.values(LANDINGS).map((l) =>
+    route(
+      l.ruta,
+      `<p>${esc(l.hero.eyebrow)}</p><h1>${esc(l.hero.titulo)}</h1>${p(l.hero.problema)}${p(l.hero.solucion)}${ul(l.hero.confianza.map(esc))}
+<h2>${esc(l.beneficios.titulo)}</h2>${l.beneficios.items.map((b) => `<h3>${esc(b.titulo)}</h3>${p(b.texto)}`).join("")}
+<h2>${esc(l.pasos.titulo)}</h2><ol>${l.pasos.items.map((x) => `<li><strong>${esc(x.titulo)}:</strong> ${esc(x.texto)}</li>`).join("")}</ol>
+<h2>${esc(l.formulario.titulo)}</h2>${p(l.formulario.texto)}
+<h2>${esc(l.faq.titulo)}</h2>${l.faq.items.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}
+<h2>${esc(l.cierre.titulo)}</h2>${p(l.cierre.texto)}`,
+    ),
+  );
+}
+
 export function buildRoutes(): PrerenderRoute[] {
   const heading = (path: string) => getSEOConfig(path).title.split(" | ")[0];
   return [
@@ -182,6 +201,7 @@ export function buildRoutes(): PrerenderRoute[] {
     ),
     diagnosticoRoute("casa", FAQ_CASA),
     diagnosticoRoute("evento", FAQ_EVENTO),
+    ...landingRoutes(),
     route(
       "/schedule",
       `<h1>Agende un diagnóstico estratégico confidencial.</h1>${p("Una sesión privada de 30 minutos para evaluar el contexto institucional de su organización y proponer un marco de actuación alineado a sus objetivos.")}`,

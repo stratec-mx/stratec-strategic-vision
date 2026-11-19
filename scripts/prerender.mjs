@@ -55,6 +55,7 @@ function render(r) {
     html = setValue(html, meta("property", "og:image"), r.ogImage, "og:image");
     html = setValue(html, meta("name", "twitter:image"), r.ogImage, "twitter:image");
   }
+  if (r.robots) html = setValue(html, meta("name", "robots"), r.robots, "robots");
   html = html.replace(/(<link rel="alternate" hreflang="[^"]+" href=")[^"]*(")/g, (_, a, b) => `${a}${attr(r.canonical)}${b}`);
 
   // El FAQPage general de index.html describe la página de inicio: en las demás

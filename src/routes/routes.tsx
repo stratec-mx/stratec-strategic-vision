@@ -23,6 +23,7 @@ import {
   EstudioAnalisisRiesgo,
   GpsMonitoreoVehicular,
   Index,
+  LandingExtorsion,
   IntegracionTecnologica,
   Nom035ViolenciaLaboral,
   NotFound,
@@ -70,6 +71,9 @@ export const routeElements = (
     <Route path="/diagnostico-eventos" element={<DiagnosticoEventos />} />
     {/* Dirección de campañas: el diagnóstico empresarial es /diagnostico */}
     <Route path="/diagnostico-empresarial" element={<Navigate to="/diagnostico" replace />} />
+
+    {/* Landings de campaña (sin menú; textos en src/data/landings.ts) */}
+    <Route path="/extorsion" element={<LandingExtorsion />} />
 
     {/* Coverage routes */}
     <Route path="/cobertura" element={<CoverageIndex />} />

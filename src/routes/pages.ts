@@ -33,3 +33,4 @@ export const ProteccionCivilEventosMasivos = lazyWithPreload(() => import("../pa
 export const AcompanamientoMensual = lazyWithPreload(() => import("../pages/services/AcompanamientoMensual.tsx"));
 export const ProtocolosSeguridad = lazyWithPreload(() => import("../pages/services/ProtocolosSeguridad.tsx"));
 export const Nom035ViolenciaLaboral = lazyWithPreload(() => import("../pages/services/Nom035ViolenciaLaboral.tsx"));
+export const LandingExtorsion = lazyWithPreload(() => import("../pages/landing/LandingExtorsion.tsx"));

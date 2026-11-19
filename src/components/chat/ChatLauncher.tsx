@@ -1,6 +1,7 @@
 // Botón del agente en línea (arriba del de WhatsApp). La ventana del chat se
 // carga solo cuando el visitante la abre. No aparece en el panel interno.
 import { lazy, Suspense, useEffect, useState } from "react";
+import { esLanding } from "@/data/landings";
 import { useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 import { track } from "@/lib/analytics";
@@ -53,7 +54,8 @@ export const ChatLauncher = () => {
     track.chatOpen(origen);
   };
 
-  if (!disponible || OCULTO_EN.some((r) => r.test(pathname))) return null;
+  // En las landings no se muestra: el visitante ya tiene el formulario y WhatsApp.
+  if (!disponible || OCULTO_EN.some((r) => r.test(pathname)) || esLanding(pathname)) return null;
 
   return (
     <>

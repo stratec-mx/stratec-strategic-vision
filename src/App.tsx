@@ -44,8 +44,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <CookieBanner />
-      <WhatsAppFloat />
       <BrowserRouter>
+        <WhatsAppFloat />
         <AppRoutes />
         <ChatLauncher />
       </BrowserRouter>

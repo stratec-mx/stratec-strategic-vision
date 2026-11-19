@@ -71,6 +71,23 @@ export const track = {
   },
 
   /**
+   * Dejó sus datos en una landing de campaña (/extorsion, ...).
+   * Solo se envían la landing y la campaña, nunca nombre, empresa o teléfono.
+   */
+  landingLead: (landing: string, campaign: { utm_source?: string; utm_medium?: string; utm_campaign?: string; utm_content?: string } = {}) => {
+    trackEvent("generate_lead", {
+      category: "lead",
+      label: `landing_${landing}`,
+      landing,
+      campaign_source: campaign.utm_source || "directo",
+      campaign_medium: campaign.utm_medium || "ninguno",
+      campaign_name: campaign.utm_campaign || "ninguna",
+      campaign_content: campaign.utm_content || "ninguno",
+    });
+    track.metaLead();
+  },
+
+  /**
    * Descargó el PDF de su diagnóstico
    */
   diagnosticoPdf: (nivel: string, tipo: string = "negocio") =>

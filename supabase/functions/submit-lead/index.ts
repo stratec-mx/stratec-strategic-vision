@@ -11,6 +11,17 @@ const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 const SITE = "https://www.stratecsecurity.com";
 
+/**
+ * Las landings de campaña (/extorsion, ...) no piden correo y mandan esta
+ * dirección. Con ella no se envía la confirmación al cliente ni se ofrece
+ * responder por correo. Debe coincidir con SIN_CORREO de src/lib/landingLead.ts.
+ */
+export const SIN_CORREO = "sin-correo@stratecsecurity.com";
+const tieneCorreo = (email: unknown) => {
+  const e = String(email ?? "").trim().toLowerCase();
+  return !!e && e !== SIN_CORREO;
+};
+
 // ── Aviso de Telegram ──────────────────────────────────────────────────────
 // Función pura: arma el texto (HTML de Telegram) y los botones del aviso.
 // Los botones son enlaces: no necesitan servidor que reciba respuestas.
@@ -42,6 +53,8 @@ export interface LeadAviso {
   servicio?: string | null;
   message?: string | null;
   diagnostico?: LeadDiagnostico | null;
+  /** Página de campaña de donde vino, p. ej. "Landing extorsión". */
+  origen?: string | null;
 }
 
 type Boton = { text: string; url: string };
@@ -114,7 +127,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
         (d.quiereContacto ? `⭐ <b>Pidió que lo contacte un asesor</b>` : `ℹ️ Solo descargó su diagnóstico; no pidió contacto`),
     );
   } else {
-    bloques.push(`🔔 <b>Nuevo contacto desde el sitio</b>`);
+    bloques.push(lead.origen ? `🔔 <b>Nuevo contacto · ${esc(lead.origen, 80)}</b>` : `🔔 <b>Nuevo contacto desde el sitio</b>`);
   }
 
   // Contacto
@@ -125,7 +138,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
         [esEvento ? "Evento u organizador" : "Empresa", lead.organization],
         [d ? "Giro" : "Cargo", d ? d.giro : lead.role],
         ["Teléfono", lead.telefono ? telLegible(lead.telefono) : ""],
-        ["Correo", lead.email],
+        ["Correo", tieneCorreo(lead.email) ? lead.email : ""],
       ]),
   );
 
@@ -169,7 +182,7 @@ export function buildLeadAviso(lead: LeadAviso, leadId: string | null, hora: str
   const asunto = d ? "Tu diagnóstico de seguridad · STRATEC" : "Tu mensaje a STRATEC Security";
   const fila1: Boton[] = [];
   if (wa) fila1.push({ text: "💬 WhatsApp al cliente", url: `https://wa.me/${wa}?text=${encodeURIComponent(waTexto)}` });
-  if (lead.email) {
+  if (tieneCorreo(lead.email)) {
     fila1.push({
       text: "✉️ Responder por correo",
       url: `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(asunto)}`,
@@ -274,7 +287,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const { name, email, organization, role, message, honeypot, telefono, servicio, diagnostico, correo, mensaje } = body;
+    const { name, email, organization, role, message, honeypot, telefono, servicio, diagnostico, correo, mensaje, origen } = body;
 
     // Honeypot check (secondary server-side defence)
     if (honeypot) {
@@ -387,6 +400,7 @@ serve(async (req: Request) => {
           servicio: servicio ?? null,
           message: message ?? null,
           diagnostico: diagnostico && typeof diagnostico === "object" ? (diagnostico as LeadDiagnostico) : null,
+          origen: typeof origen === "string" && origen.trim() ? origen.trim() : null,
         },
         (inserted as { id?: string } | null)?.id ?? null,
         hora,
@@ -420,9 +434,10 @@ serve(async (req: Request) => {
         { name: String(name), email: String(email), organization: String(organization), role, telefono, servicio, mensaje },
         hora,
       );
+      // Sin correo real (landings) solo sale el aviso interno.
       await Promise.all([
         enviarCorreo(EMAILJS.interno, params, "contacto@stratecsecurity.com", privateKey),
-        enviarCorreo(EMAILJS.confirmacion, params, String(email), privateKey),
+        tieneCorreo(email) ? enviarCorreo(EMAILJS.confirmacion, params, String(email), privateKey) : Promise.resolve(true),
       ]);
     } else if (correo === true) {
       console.warn("[submit-lead] falta EMAILJS_PRIVATE_KEY: no se enviaron correos");
