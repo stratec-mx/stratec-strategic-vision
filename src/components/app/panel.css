@@ -1,0 +1,116 @@
+/* Sistema visual del panel /app (diseño aprobado "Panel general").
+   AppShell pone la clase .panel-theme en <html> mientras el panel está abierto,
+   así también alcanza a menús y ventanas que se abren fuera del contenido.
+   Paleta: azul marino #0B1F3A · gris acero #5E646E · verde oliva #7B7F42 ·
+   blanco cálido #F7F7F5 · fondo #EEF1F4 · superficies #FFFFFF · bordes #DCE1E6 ·
+   texto #172333 / #667085 · alerta #B42318 · advertencia #B7791F · favorable #287A59.
+   Sin sombras ni degradados. */
+
+html.panel-theme {
+  --background: 210 21% 95%;
+  --foreground: 214 38% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 214 38% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 214 38% 15%;
+  --primary: 214 68% 14%;
+  --primary-foreground: 60 11% 96%;
+  --secondary: 210 21% 95%;
+  --secondary-foreground: 214 38% 15%;
+  --muted: 210 21% 95%;
+  --muted-foreground: 221 13% 46%;
+  --accent: 210 21% 95%;
+  --accent-foreground: 214 38% 15%;
+  --destructive: 4 76% 40%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 17% 88%;
+  --input: 210 17% 88%;
+  --ring: 214 68% 14%;
+  --radius: 0.375rem;
+  --navy: 214 68% 14%;
+  --steel: 218 8% 40%;
+  --olive: 64 32% 38%;
+  --shadow-card: none;
+  --shadow-elevated: none;
+}
+
+html.panel-theme body {
+  background: #EEF1F4;
+  color: #172333;
+  font-family: Inter, system-ui, sans-serif;
+  font-feature-settings: normal;
+}
+
+/* Sin sombras */
+html.panel-theme *,
+html.panel-theme *::before,
+html.panel-theme *::after {
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+}
+
+/* Cifras tabulares en tablas, indicadores y montos */
+html.panel-theme .tnum,
+html.panel-theme td,
+html.panel-theme .font-mono { font-variant-numeric: tabular-nums; }
+html.panel-theme .font-mono { font-family: Inter, system-ui, sans-serif; }
+
+/* Títulos: Inter seminegrita, sin el estilo delgado del sitio público */
+html.panel-theme .panel-main .font-display { font-weight: 600; letter-spacing: -0.01em; color: #172333; }
+html.panel-theme .panel-main .font-display.text-xl,
+html.panel-theme .panel-main .font-display.text-2xl,
+html.panel-theme .panel-main .font-display.text-lg { font-size: 15px; line-height: 1.4; }
+html.panel-theme [role="dialog"] .font-display { font-weight: 600; letter-spacing: -0.01em; color: #172333; font-size: 18px; }
+html.panel-theme .panel-main .font-display.text-3xl { font-size: 28px; }
+
+/* Sin mayúsculas espaciadas fuera de los encabezados de tabla */
+html.panel-theme .uppercase { text-transform: none; }
+html.panel-theme [class*="tracking-[0."],
+html.panel-theme .tracking-wider,
+html.panel-theme .tracking-widest,
+html.panel-theme .tracking-wide { letter-spacing: normal; }
+html.panel-theme .text-\[10px\] { font-size: 11.5px; }
+html.panel-theme .eyebrow { font-size: 12px; color: #667085; font-weight: 500; text-transform: none; letter-spacing: normal; }
+
+/* Esquinas: controles 6px, tarjetas 8px */
+html.panel-theme .rounded-none { border-radius: 6px; }
+html.panel-theme .panel-main .border.bg-card { border-radius: 8px; }
+html.panel-theme .panel-main .border.bg-card.overflow-x-auto,
+html.panel-theme .panel-main .border.bg-card.overflow-hidden { overflow: hidden; overflow-x: auto; }
+
+/* Botones e insumos con la medida del diseño */
+html.panel-theme .panel-main button.text-xs { font-size: 13px; font-weight: 500; }
+
+/* Tablas */
+html.panel-theme .panel-main thead { background: #F7F7F5; }
+html.panel-theme .panel-main thead th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #667085;
+  border-bottom: 1px solid #DCE1E6;
+  white-space: nowrap;
+}
+html.panel-theme .panel-main tbody td { font-size: 13px; }
+
+/* Barra de desplazamiento discreta en el menú lateral */
+.panel-nav::-webkit-scrollbar { width: 6px; }
+.panel-nav::-webkit-scrollbar-thumb { background: rgba(247, 247, 245, 0.15); border-radius: 3px; }
+
+/* Avisos y estados con la paleta del diseño (advertencia y favorable) */
+html.panel-theme .bg-amber-50 { background-color: #FDF6E7; }
+html.panel-theme .border-amber-200,
+html.panel-theme .border-amber-300 { border-color: #E9CF9D; }
+html.panel-theme .text-amber-600 { color: #B7791F; }
+html.panel-theme .text-amber-700,
+html.panel-theme .text-amber-800,
+html.panel-theme .text-amber-900 { color: #8A5A12; }
+html.panel-theme .bg-emerald-50 { background-color: #EAF4EE; }
+html.panel-theme .border-emerald-200 { border-color: #AFD2BF; }
+html.panel-theme .text-emerald-700,
+html.panel-theme .text-emerald-800 { color: #287A59; }
+html.panel-theme .bg-destructive\/10 { background-color: #FCEEEC; }
+
+/* El botón flotante de WhatsApp es para visitantes del sitio, no para el panel */
+html.panel-theme a[aria-label="Contactar por WhatsApp"] { display: none !important; }

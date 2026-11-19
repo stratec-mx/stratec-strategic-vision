@@ -83,7 +83,6 @@ const Pipeline = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Pipeline comercial"
         title="Embudo de negociación"
         description="Seguimiento visual de oportunidades por etapa institucional."
         actions={

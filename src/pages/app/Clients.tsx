@@ -51,7 +51,6 @@ const Clients = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Cartera institucional"
         title="Clientes"
         description="Cartera activa de organizaciones bajo cobertura STRATEC."
         actions={

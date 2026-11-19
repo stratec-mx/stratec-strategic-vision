@@ -36,6 +36,21 @@ export default {
         olive: "hsl(var(--olive))",
         smoke: "hsl(var(--smoke))",
         carbon: "hsl(var(--carbon))",
+        // Panel /app (diseño aprobado "Panel general")
+        pn: {
+          navy: "#0B1F3A",
+          acero: "#5E646E",
+          oliva: "#7B7F42",
+          calido: "#F7F7F5",
+          fondo: "#EEF1F4",
+          borde: "#DCE1E6",
+          texto: "#172333",
+          sub: "#667085",
+          menu: "#C9CFD8",
+          alerta: "#B42318",
+          aviso: "#B7791F",
+          ok: "#287A59",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

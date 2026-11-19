@@ -142,7 +142,7 @@ export const Settings = () => {
   if (!isAdmin) {
     return (
       <div>
-        <PageHeader eyebrow="Configuración" title="Ajustes" description="Roles, permisos y preferencias de la firma." />
+        <PageHeader title="Ajustes" description="Roles, permisos y preferencias de la firma." />
         <div className="border border-border bg-card p-10 text-center">
           <ShieldCheck className="h-8 w-8 text-olive mx-auto mb-3" />
           <div className="font-display text-lg text-navy">Acceso restringido</div>
@@ -157,7 +157,6 @@ export const Settings = () => {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Configuración · Acceso institucional"
         title="Usuarios y permisos"
         description="Asigne roles a los colaboradores registrados y controle el acceso al panel operativo."
       />

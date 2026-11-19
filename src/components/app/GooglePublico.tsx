@@ -41,10 +41,10 @@ export const GooglePublico = () => {
   const sinConfigurar = error === "sin_funcion" || (datos && motivoDe(datos.gsc) === "sin_configurar" && motivoDe(datos.ga4) === "sin_configurar");
 
   return (
-    <section className="mt-10">
+    <section className="mt-2">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
-          <div className="eyebrow mb-1">— Tu público en Google</div>
+          <div className="eyebrow mb-1">Tu público en Google</div>
           <div className="font-display text-xl text-navy">Qué buscan, de dónde llegan y qué hacen en tu sitio</div>
         </div>
         <div className="flex items-center gap-2">

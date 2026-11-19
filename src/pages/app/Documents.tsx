@@ -141,7 +141,6 @@ export const DocumentsList = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Entregables"
         title="Documentos"
         description="Diagnósticos, análisis de riesgo, dictámenes y demás documentos que se entregan al cliente."
         actions={

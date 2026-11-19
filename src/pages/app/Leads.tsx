@@ -106,11 +106,13 @@ const Leads = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Gestión comercial"
-        title="Leads"
+        title="Prospectos"
         description="Captación, calificación y conversión de oportunidades."
         actions={
           <>
+            {can("pipeline") && (
+              <Button asChild variant="outline" className="rounded-none h-10 text-xs"><Link to="/app/pipeline">Ver embudo de negociación</Link></Button>
+            )}
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-44 rounded-none h-10 border-border"><Filter className="h-3.5 w-3.5 mr-2" /><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -124,10 +126,10 @@ const Leads = () => {
             </Select>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10"><Plus className="h-4 w-4 mr-1" /> Nuevo lead</Button>
+                <Button className="rounded-none bg-navy hover:bg-navy-deep text-smoke text-xs uppercase tracking-wider h-10"><Plus className="h-4 w-4 mr-1" /> Nuevo prospecto</Button>
               </SheetTrigger>
               <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-                <SheetHeader><SheetTitle className="font-display text-2xl text-navy font-light">Registrar lead</SheetTitle></SheetHeader>
+                <SheetHeader><SheetTitle className="font-display text-2xl text-navy font-light">Registrar prospecto</SheetTitle></SheetHeader>
                 <form onSubmit={onCreate} className="mt-6 space-y-4">
                   <Field name="full_name" label="Nombre completo" required />
                   <div className="grid grid-cols-2 gap-3">
@@ -178,7 +180,7 @@ const Leads = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-steel">Sin leads registrados.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-steel">Sin prospectos registrados.</td></tr>}
             {rows.map((l) => (
               <tr key={l.id} className="hover:bg-secondary/30 transition">
                 <td className="py-3 px-4">

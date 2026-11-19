@@ -611,7 +611,6 @@ const Quotes = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Comercial"
         title="Cotizaciones"
         description="Generación y seguimiento de propuestas económicas institucionales."
         actions={

@@ -98,7 +98,6 @@ const Agenda = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Operación"
         title="Agenda ejecutiva"
         description="Citas institucionales y disponibilidad consolidada."
         actions={
@@ -158,7 +157,7 @@ const Agenda = () => {
 
       <div className="space-y-10">
         <section>
-          <div className="eyebrow mb-4">— Próximas</div>
+          <div className="eyebrow mb-4">Próximas</div>
           {upcoming.length === 0 ? (
             <div className="border border-dashed border-border p-12 text-center">
               <CalendarDays className="h-7 w-7 text-olive mx-auto mb-2" />
@@ -173,7 +172,7 @@ const Agenda = () => {
 
         {past.length > 0 && (
           <section>
-            <div className="eyebrow mb-4">— Histórico</div>
+            <div className="eyebrow mb-4">Histórico</div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {past.slice(0, 12).map(a => <Card key={a.id} a={a} dim />)}
             </div>

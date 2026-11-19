@@ -24,7 +24,7 @@ export const Historico = ({ leads, cotizaciones }: { leads: FilaFecha[]; cotizac
     <div className="border border-border bg-card p-6 mb-6">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
         <div>
-          <div className="eyebrow mb-1">— Histórico</div>
+          <div className="eyebrow mb-1">Histórico</div>
           <div className="font-display text-xl text-navy">Leads y cotizaciones por {escala === "dia" ? "día (últimos 31)" : escala === "mes" ? "mes" : "año"}</div>
         </div>
         <div className="flex border border-border" role="group" aria-label="Escala del histórico">

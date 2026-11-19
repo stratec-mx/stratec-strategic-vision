@@ -70,7 +70,6 @@ const Analytics = () => {
   return (
     <div>
       <PageHeader
-        eyebrow="Inteligencia"
         title="Analítica corporativa"
         description="Histórico por día, mes y año; funnel de conversión, etapas y origen de la demanda."
       />
@@ -86,7 +85,7 @@ const Analytics = () => {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="border border-border bg-card p-6">
-          <div className="eyebrow mb-1">— Funnel</div>
+          <div className="eyebrow mb-1">Embudo</div>
           <div className="font-display text-xl text-navy mb-6">Conversión de leads</div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -102,7 +101,7 @@ const Analytics = () => {
         </div>
 
         <div className="border border-border bg-card p-6">
-          <div className="eyebrow mb-1">— Pipeline</div>
+          <div className="eyebrow mb-1">Negocios</div>
           <div className="font-display text-xl text-navy mb-6">Deals por etapa</div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -118,7 +117,7 @@ const Analytics = () => {
         </div>
 
         <div className="border border-border bg-card p-6 lg:col-span-2">
-          <div className="eyebrow mb-1">— Origen</div>
+          <div className="eyebrow mb-1">Origen</div>
           <div className="font-display text-xl text-navy mb-6">Distribución por fuente de lead</div>
           {bySource.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-sm text-steel">Sin datos suficientes.</div>
