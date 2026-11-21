@@ -70,6 +70,14 @@ export const track = {
     track.metaLead();
   },
 
+  /** Visita a una landing de campaña */
+  landingView: (landing: string) =>
+    trackEvent("landing_view", { category: "engagement", label: `landing_${landing}`, landing }),
+
+  /** Empezó a llenar el formulario de una landing (una vez por visita) */
+  leadFormStart: (landing: string) =>
+    trackEvent("lead_form_start", { category: "engagement", label: `landing_${landing}`, landing }),
+
   /**
    * Dejó sus datos en una landing de campaña (/extorsion, ...).
    * Solo se envían la landing y la campaña, nunca nombre, empresa o teléfono.

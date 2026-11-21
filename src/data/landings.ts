@@ -33,6 +33,8 @@ export interface LandingData {
   };
   beneficios: { titulo: string; items: { icon: LandingIcon; titulo: string; texto: string }[] };
   pasos: { titulo: string; items: { titulo: string; texto: string }[] };
+  /** Lo que el cliente recibe: convierte la promesa en un servicio tangible. */
+  entregables: { titulo: string; items: string[] };
   formulario: {
     titulo: string;
     texto: string;
@@ -67,7 +69,7 @@ export const LANDINGS = {
       problema:
         "La llamada puede entrar por recepción, por caja o al celular de un gerente. Si quien contesta tiene que improvisar, el miedo decide por él.",
       solucion:
-        "Preparamos a tu personal con protocolos claros y una capacitación práctica, para que nadie caiga en el engaño y todos sepan a quién avisar.",
+        "Diseñamos protocolos de prevención y respuesta, y capacitamos a tu personal para reconocer intentos de extorsión y fraude y actuar de forma coordinada.",
       cta: "Quiero proteger a mi equipo",
       confianza: [
         "Más de 300 personas capacitadas",
@@ -80,23 +82,23 @@ export const LANDINGS = {
       items: [
         {
           icon: "phone",
-          titulo: "Nadie improvisa",
-          texto: "Cada persona sabe reconocer una llamada de extorsión, qué responder y qué nunca decir.",
+          titulo: "Respuestas claras ante una llamada sospechosa",
+          texto: "Tu personal aprende a identificar señales de extorsión, a no dar información sensible y a seguir un procedimiento para actuar y avisar.",
         },
         {
           icon: "users",
-          titulo: "Todos saben a quién avisar",
-          texto: "Quién decide, a quién se informa y cómo se verifica la situación queda definido antes de que pase.",
+          titulo: "Responsabilidades definidas",
+          texto: "Queda claro quién recibe el reporte, quién verifica la información y quién toma las decisiones, antes de que pase.",
         },
         {
           icon: "shield",
-          titulo: "Personal entrenado, no solo informado",
-          texto: "Capacitación práctica con casos y ejercicios, para que el protocolo se aplique bajo presión. Al concluir, se entrega la constancia DC-3.",
+          titulo: "Capacitación práctica",
+          texto: "Ejercicios basados en situaciones que pueden presentarse en tu negocio, para reducir errores bajo presión.",
         },
         {
           icon: "alert",
-          titulo: "También contra fraudes",
-          texto: "Tu equipo aprende a detectar solicitudes falsas de pago y a quien se hace pasar por un proveedor o un directivo.",
+          titulo: "Prevención de fraudes",
+          texto: "También se atienden las solicitudes falsas de pago, la suplantación de proveedores y quien se hace pasar por un directivo.",
         },
       ],
     },
@@ -104,8 +106,8 @@ export const LANDINGS = {
       titulo: "Cómo funciona",
       items: [
         {
-          titulo: "Platicamos de tu empresa",
-          texto: "Una llamada breve para entender cómo opera tu negocio, quién contesta el teléfono y a qué riesgos está expuesto tu personal.",
+          titulo: "Revisamos tu operación",
+          texto: "Una llamada para entender cómo opera tu negocio, quién contesta el teléfono y en qué puntos está expuesto tu personal.",
         },
         {
           titulo: "Diseñamos tu protocolo",
@@ -113,8 +115,18 @@ export const LANDINGS = {
         },
         {
           titulo: "Capacitamos a tu equipo",
-          texto: "Una sesión práctica para que todos conozcan el protocolo y sepan aplicarlo. Al concluir, se entrega la constancia DC-3.",
+          texto: "Una sesión práctica para que todos conozcan el protocolo y sepan aplicarlo.",
         },
+      ],
+    },
+    entregables: {
+      titulo: "Lo que recibe tu empresa",
+      items: [
+        "Protocolo de prevención y respuesta adaptado a tu operación.",
+        "Procedimientos para actuar y avisar, para quienes contestan el teléfono y para quienes deciden.",
+        "Responsables y canales de comunicación definidos.",
+        "Capacitación práctica para tu personal, con constancia DC-3 al concluir.",
+        "Recomendaciones para poner en marcha el protocolo.",
       ],
     },
     formulario: {
@@ -150,7 +162,7 @@ export const LANDINGS = {
     },
     cierre: {
       titulo: "La mejor respuesta a una extorsión se prepara antes de que suene el teléfono.",
-      texto: "Prepara hoy a tu equipo para que nadie caiga.",
+      texto: "Prepara a tu equipo y fortalece la seguridad de tu empresa.",
     },
   },
 } satisfies Record<string, LandingData>;

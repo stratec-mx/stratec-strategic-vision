@@ -174,6 +174,7 @@ function landingRoutes(): PrerenderRoute[] {
       `<p>${esc(l.hero.eyebrow)}</p><h1>${esc(l.hero.titulo)}</h1>${p(l.hero.problema)}${p(l.hero.solucion)}${ul(l.hero.confianza.map(esc))}
 <h2>${esc(l.beneficios.titulo)}</h2>${l.beneficios.items.map((b) => `<h3>${esc(b.titulo)}</h3>${p(b.texto)}`).join("")}
 <h2>${esc(l.pasos.titulo)}</h2><ol>${l.pasos.items.map((x) => `<li><strong>${esc(x.titulo)}:</strong> ${esc(x.texto)}</li>`).join("")}</ol>
+<h2>${esc(l.entregables.titulo)}</h2>${ul(l.entregables.items.map(esc))}
 <h2>${esc(l.formulario.titulo)}</h2>${p(l.formulario.texto)}
 <h2>${esc(l.faq.titulo)}</h2>${l.faq.items.map((x) => `<h3>${esc(x.q)}</h3>${p(x.a)}`).join("")}
 <h2>${esc(l.cierre.titulo)}</h2>${p(l.cierre.texto)}`,

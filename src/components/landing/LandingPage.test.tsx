@@ -156,3 +156,21 @@ describe("Datos del lead de landing", () => {
     expect(esLanding("/servicios/protocolos-seguridad")).toBe(false);
   });
 });
+
+describe("Medición de la landing", () => {
+  it("registra la visita y el inicio del formulario una sola vez", () => {
+    const gtag = vi.fn();
+    Object.assign(window, { gtag, fbq: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={["/extorsion"]}>
+        <LandingPage data={data} />
+      </MemoryRouter>,
+    );
+    expect(gtag).toHaveBeenCalledWith("event", "landing_view", expect.objectContaining({ landing: "extorsion" }));
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "X" } });
+    const inicios = gtag.mock.calls.filter((c) => c[1] === "lead_form_start");
+    expect(inicios).toHaveLength(1);
+    data.entregables.items.forEach((t) => expect(screen.getByText(t)).toBeInTheDocument());
+  });
+});

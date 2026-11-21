@@ -46,9 +46,19 @@ export function LandingPage({ data }: { data: LandingData }) {
   const [enviado, setEnviado] = useState(false);
   const graciasRef = useRef<HTMLDivElement>(null);
 
+  const formIniciado = useRef(false);
+
   useEffect(() => {
+    track.landingView(data.slug);
     track.metaPageView();
-  }, []);
+  }, [data.slug]);
+
+  // lead_form_start: la primera vez que escribe en el formulario
+  const iniciarFormulario = () => {
+    if (formIniciado.current) return;
+    formIniciado.current = true;
+    track.leadFormStart(data.slug);
+  };
 
   useEffect(() => {
     if (enviado) graciasRef.current?.focus();
@@ -63,6 +73,7 @@ export function LandingPage({ data }: { data: LandingData }) {
 
   const cambiar = (campo: keyof LandingLeadForm) => (ev: React.ChangeEvent<HTMLInputElement>) => {
     const valor = ev.target.value;
+    if (campo !== "honeypot") iniciarFormulario();
     setForm((f) => ({ ...f, [campo]: valor }));
     if (errores[campo as keyof Errores]) setErrores((e) => ({ ...e, [campo]: undefined }));
   };
@@ -183,6 +194,21 @@ export function LandingPage({ data }: { data: LandingData }) {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        {/* Lo que recibe: el servicio en concreto, justo antes de pedir datos */}
+        <section className="py-14 sm:py-20" aria-labelledby="entregables-titulo">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+            <h2 id="entregables-titulo" className="text-2xl sm:text-3xl font-semibold tracking-tight">{data.entregables.titulo}</h2>
+            <ul className="mt-6 space-y-3">
+              {data.entregables.items.map((t) => (
+                <li key={t} className="flex items-start gap-3 bg-white border border-steel/15 px-4 py-3.5">
+                  <FileCheck2 className="h-5 w-5 text-[#C4A04A] shrink-0 mt-0.5" aria-hidden />
+                  <span className="text-[15px] leading-relaxed">{t}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
