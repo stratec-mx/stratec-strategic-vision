@@ -18,7 +18,7 @@ export const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "STRATEC",
-  "alternateName": "STRATEC Security & Consulting",
+  "alternateName": ["STRATEC Security", "STRATEC Security & Consulting", "Stratec", "Estratec", "Startec", "Strateck", "Stratek", "Estratec Security"],
   "url": SITE_URL,
   "logo": `${SITE_URL}/logo.png`,
   "description": "Consultoría estratégica en seguridad institucional, nearshoring y protección civil en México",
