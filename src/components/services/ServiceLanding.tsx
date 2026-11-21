@@ -8,7 +8,7 @@ import { NetworkBackground } from "@/components/NetworkBackground";
 import { ServiceBlock, ServiceData, RagDeliverable } from "@/data/servicesData";
 import { SeoHelmet } from "@/components/SEO/SeoHelmet";
 import { SchemaMarkup } from "@/components/SEO/SchemaMarkup";
-import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL, SITE_CONSULTANT, PERSON_SCHEMA } from "@/lib/seo";
+import { SERVICE_SCHEMA, BREADCRUMB_SCHEMA, SITE_URL, SITE_METHODOLOGIES } from "@/lib/seo";
 
 interface ServiceLandingProps {
   data: ServiceData;
@@ -62,7 +62,6 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
       />
       <SchemaMarkup schema={serviceSchema} />
       <SchemaMarkup schema={breadcrumbSchema} />
-      <SchemaMarkup schema={PERSON_SCHEMA(SITE_CONSULTANT)} />
       <Navbar />
 
       <main id="main-content">
@@ -413,12 +412,9 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
           </div>
         </section>
 
-        {/* ══ BLOQUE E-E-A-T — Metodología y Autoría ═══════════════
-             Señal de confianza YMYL: normas citadas en texto plano
-             + autor identificable con enlace externo verificable.
-             Google y los LLMs usan este bloque para evaluar E-E-A-T. ══ */}
+        {/* ══ Metodología: normas citadas en texto plano ══ */}
         <section
-          aria-label="Metodología y equipo consultor"
+          aria-label="Metodología y estándares"
           className="py-14 md:py-20 bg-[#0D0D18] border-t border-[rgba(196,160,74,0.1)]"
         >
           <div className="container-wide max-w-4xl">
@@ -437,8 +433,8 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
               </div>
 
               {/* Chips de normas — texto plano con alt semántico */}
-              <div className="flex flex-wrap gap-3 mb-10" role="list" aria-label="Marcos normativos aplicados">
-                {SITE_CONSULTANT.methodologies.map((m) => (
+              <div className="flex flex-wrap gap-3" role="list" aria-label="Marcos normativos aplicados">
+                {SITE_METHODOLOGIES.map((m) => (
                   <div
                     key={m.label}
                     role="listitem"
@@ -455,51 +451,6 @@ export default function ServiceLanding({ data }: ServiceLandingProps) {
                 ))}
               </div>
 
-              {/* Bloque de autoría — señal de autoría para Google */}
-              <div className="border border-[rgba(196,160,74,0.15)] bg-[rgba(196,160,74,0.02)] p-6 md:p-8">
-                <p className="font-condensed text-[0.65rem] uppercase tracking-[0.35em] text-[#C4A04A]/40 mb-5">
-                  Metodología avalada por
-                </p>
-                <div className="flex items-start gap-5">
-                  {/* Avatar placeholder */}
-                  <div
-                    className="shrink-0 w-11 h-11 rounded-full border border-[rgba(196,160,74,0.3)] flex items-center justify-center bg-[rgba(196,160,74,0.06)]"
-                    aria-hidden="true"
-                  >
-                    <span className="font-serif text-[#C4A04A]/60 text-lg">S</span>
-                  </div>
-
-                  <div className="min-w-0">
-                    {/* Nombre del consultor — actualizar en src/lib/seo.ts → SITE_CONSULTANT.name */}
-                    <p className="font-condensed font-medium text-[0.92rem] text-white/85 mb-1">
-                      {SITE_CONSULTANT.name}
-                    </p>
-                    <p
-                      className="font-condensed text-[0.82rem] leading-relaxed mb-3"
-                      style={{ color: "rgba(230,228,224,0.50)" }}
-                    >
-                      {SITE_CONSULTANT.title}
-                    </p>
-                    <p
-                      className="font-condensed font-light text-[0.82rem] leading-[1.75] mb-4 max-w-2xl"
-                      style={{ color: "rgba(230,228,224,0.45)" }}
-                    >
-                      {SITE_CONSULTANT.bio}
-                    </p>
-                    {/* Enlace externo con rel="noopener" — señal E-E-A-T de verificabilidad */}
-                    <a
-                      href={SITE_CONSULTANT.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 font-condensed text-[0.72rem] uppercase tracking-[0.18em] text-[#C4A04A]/65 hover:text-[#C4A04A] transition-colors duration-300"
-                      aria-label={`Ver perfil profesional de ${SITE_CONSULTANT.name} en LinkedIn`}
-                    >
-                      Ver perfil profesional
-                      <ArrowRight className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              </div>
             </motion.div>
           </div>
         </section>

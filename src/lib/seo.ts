@@ -4,38 +4,15 @@ export const SITE_NAME = "STRATEC";
 export const SITE_URL = "https://www.stratecsecurity.com";
 export const SITE_DOMAIN = "www.stratecsecurity.com";
 
-// ── Datos del consultor/autor — actualizar con nombre real y LinkedIn ────────
-// E-E-A-T: señal de autoría para Google y agentes de IA (YMYL)
-export const SITE_CONSULTANT = {
-  name: "Juan Carlos González",
-  title: "Coordinador General · STRATEC",
-  bio: "12 años de trayectoria en seguridad institucional, implementación de Programas Internos de Protección Civil, auditorías de seguridad y gestión de riesgos para organizaciones públicas y privadas en México.",
-  linkedin: "https://www.linkedin.com/in/carlos-gonz%C3%A1lez-04b27b13a/",
-  methodologies: [
-    { label: "ISO 31000:2018", desc: "Gestión del Riesgo" },
-    { label: "ISO 22301",       desc: "Continuidad de Negocio" },
-    { label: "LGPC",            desc: "Ley General de Protección Civil" },
-    { label: "NOM-002-STPS",    desc: "Prevención y Protección contra Incendios" },
-    { label: "NOM-030-STPS",    desc: "Servicios Preventivos de Seguridad y Salud" },
-  ],
-};
-
-// ── Schema.org Person — para la señal de autoría E-E-A-T ─────────────────────
-export const PERSON_SCHEMA = (consultant: typeof SITE_CONSULTANT) => ({
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "name": consultant.name,
-  "jobTitle": consultant.title,
-  "description": consultant.bio,
-  "url": consultant.linkedin,
-  "sameAs": [consultant.linkedin],
-  "worksFor": {
-    "@type": "Organization",
-    "name": "STRATEC",
-    "url": SITE_URL,
-  },
-  "knowsAbout": consultant.methodologies.map((m) => `${m.label} — ${m.desc}`),
-});
+// ── Marcos normativos que se muestran en las páginas de servicio ─────────────
+// Sin datos personales: el sitio habla en nombre de STRATEC.
+export const SITE_METHODOLOGIES = [
+  { label: "ISO 31000:2018", desc: "Gestión del Riesgo" },
+  { label: "ISO 22301",       desc: "Continuidad de Negocio" },
+  { label: "LGPC",            desc: "Ley General de Protección Civil" },
+  { label: "NOM-002-STPS",    desc: "Prevención y Protección contra Incendios" },
+  { label: "NOM-030-STPS",    desc: "Servicios Preventivos de Seguridad y Salud" },
+];
 
 export const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
