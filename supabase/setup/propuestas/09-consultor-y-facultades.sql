@@ -10,15 +10,24 @@
 --   · Crea public.user_capabilities_log: bitácora de quién dio o quitó qué
 --     facultad y cuándo (la llena un trigger; nadie la edita a mano).
 --   · Crea la función public.has_capability(usuario, facultad).
---   · Si existe access_rules (script 02): agrega los permisos iniciales del
---     Consultor y deja al Ejecutivo como rol comercial (ve todo; modifica todo
---     menos documentos técnicos). Si no
+--   · Crea public.user_roles_log: bitácora de cambios de rol (quién dio o
+--     quitó qué rol y cuándo), incluido el admin que se asigna un rol a sí
+--     mismo. Agrega un trigger a user_roles; no cambia sus políticas.
+--   · Si existe access_rules (script 02): agrega las filas del Consultor (sin
+--     acceso general a módulos: verá sus proyectos por el script 10) y las del
+--     Ejecutivo como rol comercial, sin pisar lo ajustado en el panel. Si no
 --     existe, se salta ese paso sin error.
 --
--- Criterio del titular sobre el Administrador (sustituye al del 21-nov):
+-- Matriz definitiva del titular (Documento 02, §5.2 y §5.8):
 --   · "El Administrador tiene facultades técnicas por su rol": trae las 12
---     facultades, incluida mdesr.reassign (reasignar clientes o proyectos a
---     otros asesores o consultores).
+--     facultades, incluida admin.reassign_clients_projects (reasignar
+--     clientes o proyectos a otros asesores o consultores). Su aprobación se
+--     registra como "aprobación del Administrador" (script 10), no como
+--     validación independiente de un Consultor.
+--   · Consultor: elaborar, revisar, validar, aprobar, rechazar, devolver,
+--     cerrar, administrar instrumentos y asignar revisor.
+--   · Analista: elaborar, comentar y enviar. Revisar, solo si se le autoriza.
+--   · Asesor y demás roles: ninguna por defecto.
 --   · mdesr.validate, mdesr.approve y mdesr.close exigen el rol 'consultant'
 --     o 'admin', además de la facultad. La regla de no ser autor ni revisor
 --     del diagnóstico y el registro del acto como "administrador" van en el
@@ -31,7 +40,7 @@
 -- Funciona en la producción actual (solo user_roles, has_role() y el CRM) y
 -- también en una base donde ya se corrió 02. Es aditivo e idempotente: se
 -- puede correr más de una vez, no borra datos y no toca políticas de otras
--- tablas. Únicamente reemplaza las políticas de sus dos tablas nuevas.
+-- tablas. Únicamente reemplaza las políticas de sus tres tablas nuevas.
 --
 -- IMPORTANTE: va en DOS consultas separadas en el SQL Editor (Postgres no
 -- deja usar un valor de enum recién agregado en la misma transacción, y el
@@ -48,6 +57,9 @@
 --   drop table if exists public.user_capabilities_log;
 --   drop function if exists public.user_capabilities_audit();
 --   drop function if exists public.user_capabilities_stamp();
+--   drop trigger if exists user_roles_audit on public.user_roles;
+--   drop table if exists public.user_roles_log;
+--   drop function if exists public.user_roles_audit();
 --   -- Si se corrió con access_rules: quitar las filas del Consultor
 --   -- delete from public.access_rules where role = 'consultant';
 --   -- (los permisos del Ejecutivo se ajustan desde el panel: Usuarios → matriz)
@@ -97,7 +109,8 @@ alter table public.user_capabilities drop constraint if exists user_capabilities
 alter table public.user_capabilities add constraint user_capabilities_capability_check check (capability in (
   'mdesr.prepare', 'mdesr.review', 'mdesr.comment', 'mdesr.submit',
   'mdesr.validate', 'mdesr.approve', 'mdesr.reject', 'mdesr.return_for_correction',
-  'mdesr.close', 'mdesr.manage_instruments', 'mdesr.assign_reviewer', 'mdesr.reassign'
+  'mdesr.close', 'mdesr.manage_instruments', 'mdesr.assign_reviewer',
+  'admin.reassign_clients_projects'
 ));
 
 -- grant = se le da; deny = se le retira aunque la traiga su rol (deny gana).
@@ -199,11 +212,55 @@ grant select, insert, update, delete on public.user_capabilities to authenticate
 grant select on public.user_capabilities_log to authenticated;
 grant all on public.user_capabilities, public.user_capabilities_log to service_role;
 
+-- 2.3b Bitácora de cambios de rol (user_roles). Solo agrega un trigger; no
+-- toca las políticas de user_roles. Registra también cuando el admin se
+-- asigna un rol a sí mismo (p. ej. consultant).
+create table if not exists public.user_roles_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null,
+  role text not null,
+  action text not null check (action in ('grant', 'revoke')),
+  changed_by uuid,
+  self_assigned boolean not null default false,
+  changed_at timestamptz not null default now()
+);
+create index if not exists user_roles_log_user_idx on public.user_roles_log (user_id, changed_at desc);
+
+create or replace function public.user_roles_audit()
+returns trigger language plpgsql security definer set search_path = public
+as $$
+begin
+  if tg_op in ('INSERT', 'UPDATE') then
+    insert into public.user_roles_log (user_id, role, action, changed_by, self_assigned)
+    values (new.user_id, new.role::text, 'grant', auth.uid(), coalesce(new.user_id = auth.uid(), false));
+  end if;
+  if tg_op in ('DELETE', 'UPDATE') then
+    insert into public.user_roles_log (user_id, role, action, changed_by, self_assigned)
+    values (old.user_id, old.role::text, 'revoke', auth.uid(), coalesce(old.user_id = auth.uid(), false));
+  end if;
+  return coalesce(new, old);
+end $$;
+revoke execute on function public.user_roles_audit() from public, anon, authenticated;
+
+drop trigger if exists user_roles_audit on public.user_roles;
+create trigger user_roles_audit after insert or update or delete on public.user_roles
+  for each row execute function public.user_roles_audit();
+
+alter table public.user_roles_log enable row level security;
+drop policy if exists "roles log admin read" on public.user_roles_log;
+create policy "roles log admin read" on public.user_roles_log for select to authenticated
+  using (public.has_role(auth.uid(), 'admin'));
+revoke all on public.user_roles_log from anon;
+grant select on public.user_roles_log to authenticated;
+grant all on public.user_roles_log to service_role;
+
 -- 2.4 Facultades que trae cada rol (deben coincidir con src/lib/capabilities.ts)
 --   Administrador: las 12.
---   Consultor: revisar, validar, aprobar, rechazar, devolver para corrección,
---              cerrar, administrar instrumentos y asignar revisor.
---   Analista:  elaborar, revisar, comentar y enviar a validación.
+--   Consultor: elaborar, revisar, validar, aprobar, rechazar, devolver para
+--              corrección, cerrar, administrar instrumentos y asignar revisor.
+--   Analista:  elaborar, comentar y enviar a validación (revisar: solo si se
+--              le autoriza en user_capabilities).
+--   Asesor y demás: ninguna.
 -- Se compara como texto para que no dependa del orden de los valores del enum.
 create or replace function public.role_capabilities(_role text)
 returns text[] language sql immutable set search_path = public
@@ -212,11 +269,12 @@ as $$
     when 'admin' then array['mdesr.prepare', 'mdesr.review', 'mdesr.comment', 'mdesr.submit',
                             'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
                             'mdesr.return_for_correction', 'mdesr.close',
-                            'mdesr.manage_instruments', 'mdesr.assign_reviewer', 'mdesr.reassign']
-    when 'consultant' then array['mdesr.review', 'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
+                            'mdesr.manage_instruments', 'mdesr.assign_reviewer',
+                            'admin.reassign_clients_projects']
+    when 'consultant' then array['mdesr.prepare', 'mdesr.review', 'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
                                  'mdesr.return_for_correction', 'mdesr.close',
                                  'mdesr.manage_instruments', 'mdesr.assign_reviewer']
-    when 'analyst' then array['mdesr.prepare', 'mdesr.review', 'mdesr.comment', 'mdesr.submit']
+    when 'analyst' then array['mdesr.prepare', 'mdesr.comment', 'mdesr.submit']
     else array[]::text[]
   end
 $$;
@@ -248,13 +306,14 @@ grant execute on function public.has_capability(uuid, text) to authenticated, se
 grant execute on function public.role_capabilities(text) to authenticated, service_role;
 
 -- 2.5 Niveles de acceso por módulo (solo si ya se corrió 02 y existe access_rules)
---   Consultor: ve clientes, agenda y documentos; edita documentos. Lo comercial
---              (leads, contactos, pipeline, cotizaciones, analítica) queda cerrado.
---              "do nothing": no pisa lo que ya se haya ajustado en el panel.
---   Ejecutivo: rol comercial. Ve todo y modifica lo comercial y operativo
---              (leads, clientes, contactos, pipeline, agenda, cotizaciones,
---              analítica). Ve los documentos pero NO modifica diagnósticos ni
---              valoraciones técnicas ("do update": se fija aunque ya exista).
+--   Consultor: sin acceso general a ningún módulo, salvo ver la agenda. Verá
+--              clientes y documentos de SUS proyectos por las políticas del
+--              script 10, no por esta tabla.
+--   Ejecutivo: rol comercial. Ve y modifica lo comercial y operativo (leads,
+--              clientes, contactos, pipeline, agenda, cotizaciones, analítica).
+--              Documentos: lectura, que el script 10 limita a los asignados;
+--              nunca modifica diagnósticos.
+--   Ambos con "do nothing": no pisan lo que ya se haya ajustado en el panel.
 do $$
 begin
   if to_regclass('public.access_rules') is null then
@@ -264,9 +323,9 @@ begin
 
   execute $sql$
     insert into public.access_rules (role, resource, can_read, can_write) values
-      ('consultant','leads',false,false), ('consultant','clients',true,false), ('consultant','contactos',false,false),
+      ('consultant','leads',false,false), ('consultant','clients',false,false), ('consultant','contactos',false,false),
       ('consultant','pipeline',false,false), ('consultant','agenda',true,false), ('consultant','quotes',false,false),
-      ('consultant','documents',true,true), ('consultant','analytics',false,false)
+      ('consultant','documents',false,false), ('consultant','analytics',false,false)
     on conflict (role, resource) do nothing
   $sql$;
 
@@ -275,8 +334,7 @@ begin
       ('executive','leads',true,true), ('executive','clients',true,true), ('executive','contactos',true,true),
       ('executive','pipeline',true,true), ('executive','agenda',true,true), ('executive','quotes',true,true),
       ('executive','documents',true,false), ('executive','analytics',true,true)
-    on conflict (role, resource) do update
-      set can_read = excluded.can_read, can_write = excluded.can_write, updated_at = now()
+    on conflict (role, resource) do nothing
   $sql$;
 end $$;
 
@@ -287,9 +345,10 @@ select 'rol consultant' as objeto,
                where t.typname = 'app_role' and e.enumlabel = 'consultant') as ok
 union all select 'tabla user_capabilities', to_regclass('public.user_capabilities') is not null
 union all select 'tabla user_capabilities_log', to_regclass('public.user_capabilities_log') is not null
+union all select 'tabla user_roles_log', to_regclass('public.user_roles_log') is not null
 union all select 'función has_capability', to_regprocedure('public.has_capability(uuid, text)') is not null
-union all select 'políticas (3)', (select count(*) = 3 from pg_policies where schemaname = 'public'
-                                     and tablename in ('user_capabilities', 'user_capabilities_log'))
+union all select 'políticas (4)', (select count(*) = 4 from pg_policies where schemaname = 'public'
+                                     and tablename in ('user_capabilities', 'user_capabilities_log', 'user_roles_log'))
 union all select 'access_rules (solo si ya se corrió 02)', to_regclass('public.access_rules') is not null;
 
 -- Opcional, solo si ya se corrió 02: deben salir 8 filas de consultant y 8 de executive

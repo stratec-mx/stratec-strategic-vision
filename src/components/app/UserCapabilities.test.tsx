@@ -40,7 +40,10 @@ describe("UserCapabilities", () => {
     render(<UserCapabilities userId="u2" email="a@x.com" role="analyst" />);
     expect(await screen.findByText("Elaboración")).toBeInTheDocument();
     expect(screen.getByText("Validación")).toBeInTheDocument();
+    expect(screen.getByText("Administración")).toBeInTheDocument();
     expect(casilla("Elaborar diagnósticos").checked).toBe(true);
+    expect(casilla("Revisar el trabajo de otro analista").checked).toBe(false);
+    expect(casilla("Revisar el trabajo de otro analista").disabled).toBe(false);
     expect(casilla("Elaborar diagnósticos").disabled).toBe(false);
     expect(casilla("Rechazar").disabled).toBe(false);
     // Validar, aprobar y cerrar: solo Consultor o Administrador

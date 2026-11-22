@@ -48,11 +48,11 @@ describe("useAuth.hasCapability", () => {
     expect(screen.getByTestId("missing")).toHaveTextContent("false");
   });
 
-  it("consultor aprueba pero no elabora", async () => {
+  it("consultor aprueba y elabora", async () => {
     tables.user_roles = { data: [{ role: "consultant" }], error: null };
     montar();
     await waitFor(() => expect(screen.getByTestId("approve")).toHaveTextContent("true"));
-    expect(screen.getByTestId("prepare")).toHaveTextContent("false");
+    expect(screen.getByTestId("prepare")).toHaveTextContent("true");
   });
 
   it("admin: trae las facultades técnicas por su rol", async () => {

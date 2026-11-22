@@ -24,8 +24,12 @@ export const CAPABILITY_GROUPS = [
       { id: "mdesr.close", label: "Cerrar el diagnóstico" },
       { id: "mdesr.manage_instruments", label: "Administrar instrumentos" },
       { id: "mdesr.assign_reviewer", label: "Asignar revisor" },
-      { id: "mdesr.reassign", label: "Reasignar clientes o proyectos" },
     ],
+  },
+  {
+    id: "administracion",
+    label: "Administración",
+    items: [{ id: "admin.reassign_clients_projects", label: "Reasignar clientes o proyectos" }],
   },
 ] as const;
 
@@ -38,13 +42,14 @@ export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> =
   admin: [
     "mdesr.prepare", "mdesr.review", "mdesr.comment", "mdesr.submit",
     "mdesr.validate", "mdesr.approve", "mdesr.reject", "mdesr.return_for_correction",
-    "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer", "mdesr.reassign",
+    "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer", "admin.reassign_clients_projects",
   ],
   consultant: [
-    "mdesr.review", "mdesr.validate", "mdesr.approve", "mdesr.reject",
+    "mdesr.prepare", "mdesr.review", "mdesr.validate", "mdesr.approve", "mdesr.reject",
     "mdesr.return_for_correction", "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer",
   ],
-  analyst: ["mdesr.prepare", "mdesr.review", "mdesr.comment", "mdesr.submit"],
+  // Revisar: solo si se le autoriza a la persona.
+  analyst: ["mdesr.prepare", "mdesr.comment", "mdesr.submit"],
 };
 
 /** Solo un Consultor o un admin puede tenerlas, aunque se le asignen (igual que has_capability). */

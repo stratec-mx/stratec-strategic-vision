@@ -7,22 +7,24 @@ describe("capabilitiesFromRoles", () => {
     const c = capabilitiesFromRoles(["admin"]);
     expect(c.size).toBe(12);
     expect(CAPABILITIES).toHaveLength(12);
-    expect(c.has("mdesr.reassign")).toBe(true);
+    expect(c.has("admin.reassign_clients_projects")).toBe(true);
     expect(c.has("mdesr.approve")).toBe(true);
   });
-  it("el consultor valida y aprueba, pero no elabora ni reasigna", () => {
+  it("el consultor elabora, revisa, valida y aprueba, pero no reasigna", () => {
     const c = capabilitiesFromRoles(["consultant"]);
     expect(c.has("mdesr.approve")).toBe(true);
     expect(c.has("mdesr.validate")).toBe(true);
-    expect(c.has("mdesr.prepare")).toBe(false);
-    expect(c.has("mdesr.reassign")).toBe(false);
+    expect(c.has("mdesr.prepare")).toBe(true);
+    expect(c.has("mdesr.review")).toBe(true);
+    expect(c.has("admin.reassign_clients_projects")).toBe(false);
   });
-  it("el analista elabora y revisa, pero no aprueba", () => {
+  it("el analista elabora, comenta y envía; revisar solo si se le autoriza", () => {
     const c = capabilitiesFromRoles(["analyst"]);
-    expect([...c].sort()).toEqual(["mdesr.comment", "mdesr.prepare", "mdesr.review", "mdesr.submit"]);
+    expect([...c].sort()).toEqual(["mdesr.comment", "mdesr.prepare", "mdesr.submit"]);
+    expect(effectiveCapabilities(["analyst"], [{ capability: "mdesr.review", effect: "grant" }]).has("mdesr.review")).toBe(true);
   });
-  it("otros roles no traen facultades", () => {
-    expect(capabilitiesFromRoles(["executive", "viewer"]).size).toBe(0);
+  it("asesor y otros roles no traen facultades", () => {
+    expect(capabilitiesFromRoles(["advisor", "executive", "viewer", "operations"]).size).toBe(0);
   });
 });
 
