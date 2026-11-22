@@ -32,6 +32,7 @@
 --   · Facultad admin.reassign_clients_projects (la agrega 09): asignar y
 --     reasignar clientes, proyectos, analistas y revisores, con quién, cuándo,
 --     responsable anterior, nuevo y motivo.
+--   · Rechazar un diagnóstico: SOLO el Administrador (ni el Consultor).
 --   · Visibilidad: admin global; Consultor, Analista y Operaciones, solo
 --     proyectos asignados; Asesor, clientes y oportunidades asignados;
 --     Ejecutivo, documentos de su cartera.
@@ -1598,9 +1599,11 @@ begin
     nuevo := 'aprobado';
   elsif _action = 'rechazar' then
     if v_status not in ('enviado','en_revision','revisado','validado') then raise exception 'No hay nada que rechazar.'; end if;
+    -- Decisión del titular: rechazar un diagnóstico es SOLO del Administrador
+    -- (ni siquiera el Consultor). El Consultor puede devolver para corrección.
     base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.reject', uid);
-    if base is null then
-      raise exception 'Solo el consultor validador rechaza.';
+    if base is distinct from 'administrador' then
+      raise exception 'Solo el Administrador puede rechazar un diagnóstico. El Consultor puede devolverlo para corrección.';
     end if;
     if es_autor then raise exception 'No puedes rechazar una versión de la que eres autor.'; end if;
     if revisor = uid then raise exception 'Revisaste esta versión: el rechazo debe hacerla otra persona.'; end if;

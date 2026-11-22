@@ -222,7 +222,11 @@ Las facultades se toman del script [`09-consultor-y-facultades.sql`](../../supab
 | Asignar proyectos a Consultores | Sí | No | No | No |
 | Gestionar usuarios y permisos | Sí | No | No | No |
 
-Además: rechazar, devolver para corrección y cerrar van con validar y aprobar. Administrar instrumentos es del Consultor y del Administrador.
+Además:
+
+- **rechazar un diagnóstico es solo del Administrador**, ni siquiera del Consultor; el Consultor puede devolverlo para corrección;
+- devolver para corrección y cerrar van con validar y aprobar;
+- administrar instrumentos es del Consultor y del Administrador.
 
 **Visibilidad:**
 
@@ -283,9 +287,9 @@ stateDiagram-v2
     revisado --> devuelto: devolver
     validado --> devuelto: devolver
     devuelto --> borrador: corregir (versión nueva)
-    enviado --> rechazado: rechazar
-    revisado --> rechazado: rechazar
-    validado --> rechazado: rechazar
+    enviado --> rechazado: rechazar (solo Administrador)
+    revisado --> rechazado: rechazar (solo Administrador)
+    validado --> rechazado: rechazar (solo Administrador)
     aprobado --> cerrado: cerrar
     aprobado --> borrador: reabrir por cambio sustancial (versión nueva, aprobación anulada)
     cerrado --> [*]
@@ -1516,7 +1520,7 @@ Cuidados de la migración:
 | D-26 | ~~Visibilidad del CRM por asignación~~ | **Decidido (23-nov):** sí. Está en el borrador 10, sin tocar el 02 |
 | D-23 | ¿Qué es un documento “asignado” al Ejecutivo? | Propuesta aplicada en el borrador 10: de un proyecto donde está asignado, de un cliente a su cargo o creado por él. Confirmar |
 | D-24 | ¿El Administrador puede aprobar lo que él mismo elaboró o modificó? | No, como cualquier persona. Si lo elabora, aprueba un Consultor. Confirmar |
-| D-22 | ~~¿Rechazar solo del Consultor?~~ | **Resuelto por la matriz:** rechazar va con validar y aprobar, por facultad (Consultor, Administrador o quien la reciba) |
+| D-22 | ~~¿Quién rechaza?~~ | **Decidido:** solo el Administrador, ni siquiera el Consultor. El 10 lo exige; en el 09, `mdesr.reject` debe salir de las facultades del Consultor |
 
 ---
 
