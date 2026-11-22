@@ -1469,6 +1469,7 @@ Cuidados de la migración:
 | D-19 | Ejecutivo y documentos actuales: ¿consulta **todos** los documentos de todos los clientes? | Que vea los documentos por asignación y finalidad, no todos. Los entregables de M-DESR ya quedan así (H-02) |
 | D-20 | ¿Hace falta quitar a una persona una facultad que trae su rol, sin cambiarle el rol? | Si sí, agregar al script 09 un “retiro por persona” (H-06) |
 | D-21 | ~~Analista con `mdesr.approve` expresa~~ | **Resuelto en 09 (`da728e8`):** la base no deja dar validar, aprobar ni cerrar a quien no es Consultor |
+| D-22 | ¿**Rechazar** también es solo del Consultor? El criterio del titular nombra validar, aprobar y cerrar. El 09 exige el rol Consultor solo para esas tres; el borrador 10 lo exige también para rechazar | Sí: rechazar termina el diagnóstico sin vuelta atrás y es una decisión técnica final. Si el titular dice que no, se quita esa comprobación del 10 |
 
 ---
 
