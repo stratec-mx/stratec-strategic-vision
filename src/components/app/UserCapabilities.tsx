@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
-  CAN_VALIDATE_ROLES,
   CAPABILITY_GROUPS,
-  CONSULTANT_ONLY,
   MISSING_09,
   capabilitiesFromRoles,
   isMissingTable,
+  restrictionFor,
   type Capability,
 } from "@/lib/capabilities";
 
@@ -20,7 +19,8 @@ type Effect = "grant" | "deny";
  * - Las que trae su rol aparecen marcadas; quitarlas guarda un "deny" (se le
  *   retiran aunque las traiga el rol) y volver a marcarlas lo borra.
  * - Las demás se dan (grant) o se quitan al instante.
- * - Validar, aprobar y cerrar solo se pueden dar a un Consultor o Administrador.
+ * - Validar, aprobar y cerrar solo se pueden dar a un Consultor o Administrador;
+ *   rechazar, solo al Administrador.
  * La base guarda quién hizo cada cambio y cuándo (user_capabilities_log).
  */
 export const UserCapabilities = ({ userId, email, role }: { userId: string; email: string; role: string }) => {
@@ -32,7 +32,6 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
   const [saving, setSaving] = useState<Capability | null>(null);
 
   const fromRole = capabilitiesFromRoles(role === "none" ? [] : [role]);
-  const canValidate = CAN_VALIDATE_ROLES.includes(role);
 
   useEffect(() => {
     let alive = true;
@@ -94,7 +93,7 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
   return (
     <div className="space-y-3" aria-label={`Facultades M-DESR de ${email}`}>
       <p className="text-[11px] text-steel">
-        Las que trae el rol se pueden retirar a esta persona. Validar, aprobar y cerrar diagnósticos son solo para Consultores y Administradores.
+        Las que trae el rol se pueden retirar a esta persona. Validar, aprobar y cerrar diagnósticos son solo para Consultores y Administradores; rechazar, solo para el Administrador.
       </p>
       {loading ? (
         <div className="text-xs text-steel">Cargando facultades…</div>
@@ -108,10 +107,10 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
                   const row = rows.get(it.id);
                   const byRole = fromRole.has(it.id);
                   const denied = row === "deny";
-                  const onlyConsultant = !canValidate && CONSULTANT_ONLY.includes(it.id);
-                  // A quien no es Consultor ni admin no se le pueden dar; si tuviera una vieja, se puede quitar.
-                  const locked = onlyConsultant && !row;
-                  const checked = !onlyConsultant ? (byRole ? !denied : row === "grant") : row === "grant";
+                  const restriction = restrictionFor(it.id, role);
+                  // Si su rol no permite darla, queda bloqueada; si tuviera una vieja, se puede quitar.
+                  const locked = !!restriction && !row;
+                  const checked = !restriction ? (byRole ? !denied : row === "grant") : row === "grant";
                   return (
                     <li key={it.id} className="flex items-center gap-2 text-xs">
                       {saving === it.id ? (
@@ -131,7 +130,7 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
                       </label>
                       {byRole && !denied && <span className="text-[10px] text-olive">(viene con el rol)</span>}
                       {byRole && denied && <span className="text-[10px] text-amber-700">(retirada a esta persona)</span>}
-                      {onlyConsultant && <span className="text-[10px] text-steel">(solo Consultor o Administrador)</span>}
+                      {restriction && <span className="text-[10px] text-steel">({restriction})</span>}
                     </li>
                   );
                 })}

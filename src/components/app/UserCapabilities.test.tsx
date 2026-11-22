@@ -45,13 +45,24 @@ describe("UserCapabilities", () => {
     expect(casilla("Revisar el trabajo de otro analista").checked).toBe(false);
     expect(casilla("Revisar el trabajo de otro analista").disabled).toBe(false);
     expect(casilla("Elaborar diagnósticos").disabled).toBe(false);
-    expect(casilla("Rechazar").disabled).toBe(false);
+    // Rechazar: solo Administrador
+    expect(casilla("Rechazar").disabled).toBe(true);
+    expect(screen.getAllByText("(solo Administrador)")).toHaveLength(1);
     // Validar, aprobar y cerrar: solo Consultor o Administrador
     expect(casilla("Aprobar").checked).toBe(false);
     expect(casilla("Aprobar").disabled).toBe(true);
     expect(casilla("Validar").disabled).toBe(true);
     expect(casilla("Cerrar el diagnóstico").disabled).toBe(true);
     expect(screen.getAllByText("(solo Consultor o Administrador)")).toHaveLength(3);
+  });
+
+  it("consultor: rechazar bloqueado (solo Administrador); validar y aprobar con el rol", async () => {
+    render(<UserCapabilities userId="u3" email="c@x.com" role="consultant" />);
+    await screen.findByText("Validación");
+    expect(casilla("Rechazar").checked).toBe(false);
+    expect(casilla("Rechazar").disabled).toBe(true);
+    expect(casilla("Aprobar").checked).toBe(true);
+    expect(screen.queryByText("(solo Consultor o Administrador)")).toBeNull();
   });
 
   it("admin: trae las 12, incluida reasignar, y nada está bloqueado", async () => {
@@ -90,9 +101,9 @@ describe("UserCapabilities", () => {
     await screen.findByText("Validación");
     expect(casilla("Asignar revisor").checked).toBe(true);
 
-    fireEvent.click(casilla("Rechazar"));
-    await waitFor(() => expect(casilla("Rechazar").checked).toBe(true));
-    expect(calls).toContainEqual({ op: "upsert", args: [{ user_id: "u2", capability: "mdesr.reject", effect: "grant" }] });
+    fireEvent.click(casilla("Revisar el trabajo de otro analista"));
+    await waitFor(() => expect(casilla("Revisar el trabajo de otro analista").checked).toBe(true));
+    expect(calls).toContainEqual({ op: "upsert", args: [{ user_id: "u2", capability: "mdesr.review", effect: "grant" }] });
 
     fireEvent.click(casilla("Asignar revisor"));
     await waitFor(() => expect(casilla("Asignar revisor").checked).toBe(false));
@@ -120,8 +131,8 @@ describe("UserCapabilities", () => {
     writeRes = { data: null, error: { code: "42501", message: "permiso denegado" } };
     render(<UserCapabilities userId="u2" email="a@x.com" role="viewer" />);
     await screen.findByText("Validación");
-    fireEvent.click(casilla("Rechazar"));
+    fireEvent.click(casilla("Comentar"));
     await waitFor(() => expect(toast).toHaveBeenCalled());
-    expect(casilla("Rechazar").checked).toBe(false);
+    expect(casilla("Comentar").checked).toBe(false);
   });
 });

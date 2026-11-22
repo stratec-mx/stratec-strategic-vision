@@ -24,8 +24,10 @@
 --     clientes o proyectos a otros asesores o consultores). Su aprobación se
 --     registra como "aprobación del Administrador" (script 10), no como
 --     validación independiente de un Consultor.
---   · Consultor: elaborar, revisar, validar, aprobar, rechazar, devolver,
---     cerrar, administrar instrumentos y asignar revisor.
+--   · Consultor: elaborar, revisar, validar, aprobar, devolver, cerrar,
+--     administrar instrumentos y asignar revisor.
+--   · Rechazar un diagnóstico (mdesr.reject): SOLO el Administrador.
+--   · D-25: a un Analista no se le puede dar validar, aprobar ni cerrar.
 --   · Analista: elaborar, comentar y enviar. Revisar, solo si se le autoriza.
 --   · Asesor y demás roles: ninguna por defecto.
 --   · mdesr.validate, mdesr.approve y mdesr.close exigen el rol 'consultant'
@@ -148,6 +150,12 @@ begin
     raise exception 'Solo un Consultor o un Administrador puede tener la facultad %.', new.capability
       using errcode = 'check_violation', hint = 'Asigna primero el rol Consultor a esa persona.';
   end if;
+  if new.effect = 'grant' and new.capability = 'mdesr.reject'
+     and not exists (select 1 from public.user_roles ur
+                     where ur.user_id = new.user_id and ur.role::text = 'admin') then
+    raise exception 'Solo el Administrador puede rechazar diagnósticos (mdesr.reject).'
+      using errcode = 'check_violation';
+  end if;
   new.granted_by := coalesce(auth.uid(), new.granted_by);
   new.granted_at := now();
   return new;
@@ -256,8 +264,8 @@ grant all on public.user_roles_log to service_role;
 
 -- 2.4 Facultades que trae cada rol (deben coincidir con src/lib/capabilities.ts)
 --   Administrador: las 12.
---   Consultor: elaborar, revisar, validar, aprobar, rechazar, devolver para
---              corrección, cerrar, administrar instrumentos y asignar revisor.
+--   Consultor: elaborar, revisar, validar, aprobar, devolver para corrección,
+--              cerrar, administrar instrumentos y asignar revisor (no rechaza).
 --   Analista:  elaborar, comentar y enviar a validación (revisar: solo si se
 --              le autoriza en user_capabilities).
 --   Asesor y demás: ninguna.
@@ -271,7 +279,7 @@ as $$
                             'mdesr.return_for_correction', 'mdesr.close',
                             'mdesr.manage_instruments', 'mdesr.assign_reviewer',
                             'admin.reassign_clients_projects']
-    when 'consultant' then array['mdesr.prepare', 'mdesr.review', 'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
+    when 'consultant' then array['mdesr.prepare', 'mdesr.review', 'mdesr.validate', 'mdesr.approve',
                                  'mdesr.return_for_correction', 'mdesr.close',
                                  'mdesr.manage_instruments', 'mdesr.assign_reviewer']
     when 'analyst' then array['mdesr.prepare', 'mdesr.comment', 'mdesr.submit']
@@ -299,6 +307,10 @@ as $$
     and (
          _cap not in ('mdesr.validate', 'mdesr.approve', 'mdesr.close')
       or exists (select 1 from public.user_roles ur where ur.user_id = _user and ur.role::text in ('consultant', 'admin'))
+    )
+    and (
+         _cap <> 'mdesr.reject'
+      or exists (select 1 from public.user_roles ur where ur.user_id = _user and ur.role::text = 'admin')
     )
 $$;
 revoke execute on function public.has_capability(uuid, text) from public, anon;

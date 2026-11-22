@@ -45,7 +45,7 @@ export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> =
     "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer", "admin.reassign_clients_projects",
   ],
   consultant: [
-    "mdesr.prepare", "mdesr.review", "mdesr.validate", "mdesr.approve", "mdesr.reject",
+    "mdesr.prepare", "mdesr.review", "mdesr.validate", "mdesr.approve",
     "mdesr.return_for_correction", "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer",
   ],
   // Revisar: solo si se le autoriza a la persona.
@@ -55,6 +55,15 @@ export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> =
 /** Solo un Consultor o un admin puede tenerlas, aunque se le asignen (igual que has_capability). */
 export const CONSULTANT_ONLY: readonly Capability[] = ["mdesr.validate", "mdesr.approve", "mdesr.close"];
 export const CAN_VALIDATE_ROLES: readonly string[] = ["consultant", "admin"];
+/** Rechazar un diagnóstico: solo el Administrador. */
+export const ADMIN_ONLY: readonly Capability[] = ["mdesr.reject"];
+
+/** Por qué no se le puede dar esta facultad a alguien con este rol (null = sí se puede). */
+export const restrictionFor = (cap: Capability, role: string): string | null => {
+  if (ADMIN_ONLY.includes(cap) && role !== "admin") return "solo Administrador";
+  if (CONSULTANT_ONLY.includes(cap) && !CAN_VALIDATE_ROLES.includes(role)) return "solo Consultor o Administrador";
+  return null;
+};
 
 export type CapabilityRow = { capability: string; effect?: string | null };
 
@@ -77,6 +86,7 @@ export const effectiveCapabilities = (roles: readonly string[], rows: Iterable<C
   for (const r of list) if ((r.effect ?? "grant") === "grant") out.add(r.capability as Capability);
   for (const r of list) if (r.effect === "deny") out.delete(r.capability as Capability);
   if (!roles.some((r) => CAN_VALIDATE_ROLES.includes(r))) for (const c of CONSULTANT_ONLY) out.delete(c);
+  if (!roles.includes("admin")) for (const c of ADMIN_ONLY) out.delete(c);
   return out;
 };
 

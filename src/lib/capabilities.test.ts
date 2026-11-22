@@ -10,8 +10,9 @@ describe("capabilitiesFromRoles", () => {
     expect(c.has("admin.reassign_clients_projects")).toBe(true);
     expect(c.has("mdesr.approve")).toBe(true);
   });
-  it("el consultor elabora, revisa, valida y aprueba, pero no reasigna", () => {
+  it("el consultor elabora, revisa, valida y aprueba, pero no rechaza ni reasigna", () => {
     const c = capabilitiesFromRoles(["consultant"]);
+    expect(c.has("mdesr.reject")).toBe(false);
     expect(c.has("mdesr.approve")).toBe(true);
     expect(c.has("mdesr.validate")).toBe(true);
     expect(c.has("mdesr.prepare")).toBe(true);
@@ -36,14 +37,20 @@ describe("effectiveCapabilities", () => {
   });
   it("el deny gana aunque también haya grant", () => {
     const c = effectiveCapabilities(["analyst"], [
-      { capability: "mdesr.reject", effect: "grant" },
-      { capability: "mdesr.reject", effect: "deny" },
+      { capability: "mdesr.review", effect: "grant" },
+      { capability: "mdesr.review", effect: "deny" },
     ]);
-    expect(c.has("mdesr.reject")).toBe(false);
+    expect(c.has("mdesr.review")).toBe(false);
   });
   it("un grant suma; sin effect cuenta como grant", () => {
-    const c = effectiveCapabilities(["analyst"], [{ capability: "mdesr.reject" }]);
-    expect(c.has("mdesr.reject")).toBe(true);
+    const c = effectiveCapabilities(["analyst"], [{ capability: "mdesr.review" }]);
+    expect(c.has("mdesr.review")).toBe(true);
+  });
+  it("rechazar solo cuenta para el Administrador", () => {
+    const g = [{ capability: "mdesr.reject", effect: "grant" }];
+    expect(effectiveCapabilities(["consultant"], g).has("mdesr.reject")).toBe(false);
+    expect(effectiveCapabilities(["analyst"], g).has("mdesr.reject")).toBe(false);
+    expect(effectiveCapabilities(["admin"], []).has("mdesr.reject")).toBe(true);
   });
   it("validar, aprobar y cerrar solo cuentan para Consultor o admin", () => {
     const a = effectiveCapabilities(["analyst"], ["mdesr.validate", "mdesr.approve", "mdesr.close"].map((capability) => ({ capability, effect: "grant" })));
