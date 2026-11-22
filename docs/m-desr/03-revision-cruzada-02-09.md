@@ -5,7 +5,7 @@
 | Fecha | 22 de noviembre de 2026 |
 | Revisado | `supabase/setup/02-tablas-y-permisos.sql` y `supabase/setup/propuestas/09-consultor-y-facultades.sql` (en `main`, commit `efc4546`), contra [`02-modelo-logico.md`](02-modelo-logico.md) v0.2 y el borrador [`10-m-desr-modelo.sql`](../../supabase/setup/propuestas/10-m-desr-modelo.sql) |
 | Método | Lectura de código. **Ningún script se ejecutó en ninguna base.** Las pruebas del panel (vitest y build) no prueban la base de datos |
-| Actualización | 23-nov-2026: decisiones del titular. El Administrador tiene facultades técnicas por su rol; su aprobación permite emitir; la revisión es opcional; el Consultor solo ve sus proyectos; el Ejecutivo solo los documentos asignados; hay retiro de facultades por persona y una facultad nueva de reasignación |
+| Actualización | 23-nov-2026: matriz definitiva del titular (dos vías de aprobación, asignaciones independientes de las facultades y la facultad `admin.reassign_clients_projects`). Decisiones previas del mismo día: El Administrador tiene facultades técnicas por su rol; su aprobación permite emitir; la revisión es opcional; el Consultor solo ve sus proyectos; el Ejecutivo solo los documentos asignados; hay retiro de facultades por persona y una facultad nueva de reasignación |
 | Dictamen | **No ejecutar todavía en producción.** Primero hay que resolver H-01 a H-05 y correr las pruebas de la sección 4 en Supabase de pruebas |
 
 ## 1. Respuesta a los cuatro puntos del revisor
@@ -96,7 +96,11 @@ Cuentas: **Admin**, **Consultor 1**, **Consultor 2**, **Analista A**, **Analista
 | 11 | Admin | Aprobar P1 sin estar asignado | Pasa, con `authority_basis = 'administrador'` y `approval_basis = 'administrador'`. El entregable se puede emitir |
 | 12 | Admin | Editar un hallazgo en borrador y luego aprobar esa versión | Error: es autor |
 | 12c | Admin | Aprobar una versión `enviado` de un proyecto sin revisor | Pasa |
-| 12d | Analista A | Reasignar un proyecto (`mdesr_reassign_member`) | Error: falta `mdesr.reassign` |
+| 12d | Analista A | Reasignar un proyecto (`mdesr_reassign_member`) | Error: falta `admin.reassign_clients_projects` |
+| 12f | Admin | Reasignar el cliente X del Asesor 1 al Asesor 2 sin motivo | Error: falta el motivo |
+| 12g | Asesor 1 | Ver el cliente X después de la reasignación | 0 filas; el historial muestra quién, cuándo, de quién a quién y el motivo |
+| 12h | Consultor 1 | Asignar a otro Consultor como validador de P1 | Error: solo asigna revisores |
+| 12i | Consultor 1 | Validar una versión `enviado` de P1 sin revisor asignado | Pasa (vía A sin segundo Analista) |
 | 12e | Ejecutivo | Leer un documento de un cliente que no está a su cargo | 0 filas |
 | 12b | Consultor 1 | Validar una versión que él revisó, con `requires_independence = false` | Error: nunca puede validar lo que revisó |
 | 13 | Consultor 1 | Validar una versión que él mismo revisó (`requires_independence`) | Error |

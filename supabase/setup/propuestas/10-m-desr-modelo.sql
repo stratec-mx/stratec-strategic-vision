@@ -15,22 +15,26 @@
 -- 09-consultor-y-facultades.sql (rol 'consultant', user_capabilities,
 -- role_capabilities). Este script NO redefine nada de esos tres.
 --
--- Criterio del titular (23-nov-2026), sustituye al del 22-nov:
---   · El Administrador TIENE las facultades técnicas por su rol (las da
---     has_capability() de 09 por role_capabilities('admin')). Puede elaborar,
---     validar, aprobar, rechazar y cerrar en cualquier proyecto, asignado o no.
---   · Su aprobación permite emitir el entregable.
---   · Cada acto suyo queda con authority_basis = 'administrador': el expediente
---     distingue siempre al Administrador del Consultor.
---   · Sigue sin poder aprobar lo que él mismo elaboró o modificó (regla de
---     autoría, igual para todos).
---   · Tiene además la facultad de reasignar clientes y proyectos a otros
---     asesores o consultores (mdesr.reassign, la agrega 09).
---   · La revisión técnica es opcional: si el proyecto tiene revisor asignado,
---     la versión pasa por él; si no, va directo a validación o aprobación.
---   · El Consultor solo ve sus proyectos; el Ejecutivo solo ve los documentos
---     asignados (políticas restrictivas sobre clients y documents, E5).
---   · El CRM no cambia para el admin: ve y hace todo.
+-- Criterio del titular (23-nov-2026, matriz definitiva; sustituye al del 22-nov):
+--   · El Administrador tiene facultades administrativas y técnicas POR SU ROL
+--     (las da has_capability() de 09 por role_capabilities('admin')).
+--   · Dos vías para autorizar un entregable:
+--       A) Consultor: el analista elabora; el Consultor decide si hace falta
+--          un segundo analista (asigna revisor); valida y aprueba.
+--       B) Administrador: revisa el expediente, puede asignar revisor si
+--          quiere, y aprueba. La revisión secundaria no es obligatoria.
+--     La aprobación del Administrador queda con authority_basis =
+--     'administrador': nunca como validación independiente de un Consultor.
+--   · Nadie aprueba lo que él mismo elaboró o modificó (también el admin).
+--   · Las asignaciones son entidades propias, independientes de las
+--     facultades: project_members (proyectos) y client_assignments (clientes).
+--     Tener facultad de validar no da acceso a expedientes no asignados.
+--   · Facultad admin.reassign_clients_projects (la agrega 09): asignar y
+--     reasignar clientes, proyectos, analistas y revisores, con quién, cuándo,
+--     responsable anterior, nuevo y motivo.
+--   · Visibilidad: admin global; Consultor, Analista y Operaciones, solo
+--     proyectos asignados; Asesor, clientes y oportunidades asignados;
+--     Ejecutivo, documentos de su cartera.
 --
 -- Es aditivo: crea tablas, funciones, triggers y políticas nuevas. A la tabla
 -- existente `documents` solo le agrega columnas opcionales y políticas
@@ -100,11 +104,41 @@ create table if not exists public.project_members (
   assigned_at timestamptz not null default now(),
   removed_at timestamptz,
   removed_by uuid references auth.users(id),
+  reason text,          -- motivo de la asignación
+  removal_reason text,  -- motivo de la baja o reasignación
   notes text
 );
 create unique index if not exists project_members_active_key
   on public.project_members (project_id, user_id, project_function) where removed_at is null;
 create index if not exists project_members_user_idx on public.project_members (user_id) where removed_at is null;
+
+-- Asignación de clientes a Asesores (uno o varios), Ejecutivos o Consultores.
+-- Las filas no se borran: la baja llena removed_at; así queda el historial.
+create table if not exists public.client_assignments (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references public.clients(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  assignment_role text not null default 'asesor' check (assignment_role in ('asesor','ejecutivo','consultor')),
+  is_primary boolean not null default false,
+  assigned_by uuid references auth.users(id) default auth.uid(),
+  assigned_at timestamptz not null default now(),
+  reason text not null check (length(btrim(reason)) >= 5),
+  removed_at timestamptz,
+  removed_by uuid references auth.users(id),
+  removal_reason text,
+  check (removed_at is null or coalesce(length(btrim(removal_reason)), 0) >= 5)
+);
+create unique index if not exists client_assignments_active_key
+  on public.client_assignments (client_id, user_id, assignment_role) where removed_at is null;
+create index if not exists client_assignments_user_idx on public.client_assignments (user_id) where removed_at is null;
+
+create or replace function public.mdesr_client_assigned(_client uuid, _user uuid default auth.uid())
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (select 1 from public.client_assignments
+                 where client_id = _client and user_id = _user and removed_at is null)
+      or exists (select 1 from public.clients where id = _client and owner_id = _user)
+$$;
 
 create table if not exists public.project_phases (
   project_id uuid not null references public.projects(id) on delete cascade,
@@ -362,8 +396,7 @@ begin
   if (new.project_function in ('elaborador','apoyo_campo') and not public.mdesr_has_faculty('mdesr.prepare', new.user_id))
      or (new.project_function = 'revisor' and not public.mdesr_has_faculty('mdesr.review', new.user_id))
      or (new.project_function = 'consultor_validador'
-         and not ((public.has_role(new.user_id, 'consultant') or public.has_role(new.user_id, 'admin'))
-                  and (public.mdesr_has_faculty('mdesr.validate', new.user_id) or public.mdesr_has_faculty('mdesr.approve', new.user_id)))) then
+         and not (public.mdesr_has_faculty('mdesr.validate', new.user_id) or public.mdesr_has_faculty('mdesr.approve', new.user_id))) then
     raise exception 'La persona no tiene la facultad que requiere la función %.', new.project_function;
   end if;
   return new;
@@ -1530,25 +1563,20 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador asignado o el Administrador validan.';
     end if;
-    if not (public.has_role(uid, 'consultant') or base = 'administrador') then
-      raise exception 'Validar un diagnóstico formal requiere el rol Consultor o Administrador.';
-    end if;
     if es_autor then raise exception 'No puedes validar una versión de la que eres autor.'; end if;
     if revisor = uid then raise exception 'Revisaste esta versión: la validación debe hacerla otra persona.'; end if;
     nuevo := 'validado';
   elsif _action = 'aprobar' then
     base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.approve', uid);
-    -- Consultor: aprueba una versión validada. Administrador: también una revisada,
-    -- o una enviada si el proyecto no tiene revisor (su aprobación permite emitir).
+    -- Vía A (Consultor u otro con la facultad): aprueba una versión validada.
+    -- Vía B (Administrador): aprueba en cualquier estado previo; la revisión
+    -- secundaria no es obligatoria y su aprobación autoriza el entregable.
     if not (v_status = 'validado'
-            or (base = 'administrador' and (v_status = 'revisado' or (v_status = 'enviado' and not hay_revisor)))) then
+            or (base = 'administrador' and v_status in ('enviado','en_revision','revisado'))) then
       raise exception 'Esta versión todavía no se puede aprobar en su estado actual (%).', v_status;
     end if;
     if base is null then
       raise exception 'Solo el consultor validador asignado o el Administrador aprueban.';
-    end if;
-    if not (public.has_role(uid, 'consultant') or base = 'administrador') then
-      raise exception 'Aprobar un diagnóstico formal requiere el rol Consultor o Administrador.';
     end if;
     if es_autor then raise exception 'No puedes aprobar una versión de la que eres autor.'; end if;
     if revisor = uid then raise exception 'Revisaste esta versión: la aprobación debe hacerla otra persona.'; end if;
@@ -1563,9 +1591,6 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador rechaza.';
     end if;
-    if not (public.has_role(uid, 'consultant') or base = 'administrador') then
-      raise exception 'Rechazar un diagnóstico formal requiere el rol Consultor o Administrador.';
-    end if;
     if es_autor then raise exception 'No puedes rechazar una versión de la que eres autor.'; end if;
     if revisor = uid then raise exception 'Revisaste esta versión: el rechazo debe hacerla otra persona.'; end if;
     nuevo := 'rechazado';
@@ -1574,9 +1599,6 @@ begin
     base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.close', uid);
     if base is null then
       raise exception 'Solo el consultor validador cierra.';
-    end if;
-    if not (public.has_role(uid, 'consultant') or base = 'administrador') then
-      raise exception 'Cerrar un diagnóstico formal requiere el rol Consultor o Administrador.';
     end if;
     if es_autor then raise exception 'No puedes cerrar una versión de la que eres autor.'; end if;
     if revisor = uid then raise exception 'Revisaste esta versión: el cierre debe hacerla otra persona.'; end if;
@@ -1738,7 +1760,7 @@ create trigger mdesr_guard_document before insert or update on public.documents
 
 -- ── E5 · políticas de documents ──────────────────────────────────────────
 -- ⚠ Volver a pegar este bloque después de cada ejecución de 02-tablas-y-permisos.sql,
--- que borra todas las políticas de documents y de clients.
+-- que borra todas las políticas de documents, clients, leads y deals.
 -- RESTRICTIVAS: se suman (con AND) a las políticas actuales por módulo. Para los
 -- documentos fuera de M-DESR (project_id nulo) no cambian nada.
 drop policy if exists "mdesr entregables leer" on public.documents;
@@ -1771,12 +1793,25 @@ create policy "mdesr documentos ejecutivo" on public.documents as restrictive fo
   using (not public.has_role(auth.uid(), 'executive') or public.has_role(auth.uid(), 'admin')
          or (project_id is not null and public.mdesr_is_member(project_id))
          or owner_id = auth.uid()
-         or exists (select 1 from public.clients c where c.id = client_id and c.owner_id = auth.uid()));
+         or (client_id is not null and public.mdesr_client_assigned(client_id)));
 -- D-16: el Consultor solo ve los clientes de sus proyectos.
 drop policy if exists "mdesr clientes consultor" on public.clients;
 create policy "mdesr clientes consultor" on public.clients as restrictive for select to authenticated
   using (not public.has_role(auth.uid(), 'consultant') or public.has_role(auth.uid(), 'admin')
          or exists (select 1 from public.projects p where p.client_id = clients.id and public.mdesr_is_member(p.id)));
+-- Asesor: solo clientes y oportunidades asignados.
+drop policy if exists "mdesr clientes asesor" on public.clients;
+create policy "mdesr clientes asesor" on public.clients as restrictive for select to authenticated
+  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
+         or public.mdesr_client_assigned(id));
+drop policy if exists "mdesr prospectos asesor" on public.leads;
+create policy "mdesr prospectos asesor" on public.leads as restrictive for select to authenticated
+  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
+         or owner_id = auth.uid());
+drop policy if exists "mdesr oportunidades asesor" on public.deals;
+create policy "mdesr oportunidades asesor" on public.deals as restrictive for select to authenticated
+  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
+         or owner_id = auth.uid() or (client_id is not null and public.mdesr_client_assigned(client_id)));
 -- Permisiva adicional: los miembros ven los entregables de su proyecto aunque su
 -- rol no tenga el módulo Documentos en access_rules (el Consultor empieza sin él).
 drop policy if exists "mdesr entregables miembros" on public.documents;
@@ -2193,7 +2228,7 @@ begin
   end loop;
 end $$;
 
--- Proyectos (D-03: el admin ve la ficha y el equipo; no el contenido técnico)
+-- Proyectos (el admin ve y opera todo; los demás, solo sus proyectos asignados)
 create policy "mdesr leer" on public.projects for select to authenticated
   using (public.mdesr_can_read(id) or public.has_role(auth.uid(), 'admin'));
 create policy "mdesr alta" on public.projects for insert to authenticated
@@ -2204,17 +2239,20 @@ create policy "mdesr editar" on public.projects for update to authenticated
 
 create policy "mdesr leer" on public.project_members for select to authenticated
   using (public.mdesr_can_read(project_id) or public.has_role(auth.uid(), 'admin'));
+-- Asignar cualquier función: quien tiene admin.reassign_clients_projects.
+-- Asignar o quitar al revisor (segundo analista): también el consultor
+-- validador del proyecto con mdesr.assign_reviewer (RF-05).
 create policy "mdesr asignar" on public.project_members for insert to authenticated
-  with check (public.has_role(auth.uid(), 'admin')
-              or (project_function in ('revisor','consultor_validador')
+  with check (public.has_capability(auth.uid(), 'admin.reassign_clients_projects')
+              or (project_function = 'revisor'
                   and public.mdesr_has_faculty('mdesr.assign_reviewer')
                   and 'consultor_validador' = any(public.mdesr_functions(project_id))));
 create policy "mdesr dar de baja" on public.project_members for update to authenticated
-  using (public.has_role(auth.uid(), 'admin')
-         or (project_function in ('revisor','consultor_validador')
+  using (public.has_capability(auth.uid(), 'admin.reassign_clients_projects')
+         or (project_function = 'revisor'
              and public.mdesr_has_faculty('mdesr.assign_reviewer')
              and 'consultor_validador' = any(public.mdesr_functions(project_id))))
-  with check (true);
+  with check (removed_at is null or coalesce(length(btrim(removal_reason)), 0) >= 5);
 
 create policy "mdesr leer" on public.project_phases for select to authenticated using (public.mdesr_can_read(project_id));
 create policy "mdesr editar" on public.project_phases for update to authenticated
@@ -2327,48 +2365,118 @@ create policy "mdesr escribir" on public.indicator_measurements for insert to au
   with check (public.mdesr_has_faculty('mdesr.prepare')
               and public.mdesr_can_read((select i.project_id from public.indicators i where i.id = indicator_id)));
 
--- ── Reasignación de proyectos y clientes (facultad mdesr.reassign) ─────────
+-- ── Asignación y reasignación (facultad admin.reassign_clients_projects) ──
 -- Mueve una función de proyecto de una persona a otra, o el cliente (y sus
 -- proyectos activos) a otro responsable. Deja la baja, el alta y el motivo en
 -- audit_log y en la bitácora del proyecto.
-create or replace function public.mdesr_reassign_member(
-  _project uuid, _from uuid, _to uuid, _function text, _reason text)
+create or replace function public.mdesr_require_reassign(_reason text)
+returns void language plpgsql stable security definer set search_path = public
+as $$
+begin
+  if not public.has_capability(auth.uid(), 'admin.reassign_clients_projects') then
+    raise exception 'Se requiere la facultad admin.reassign_clients_projects.';
+  end if;
+  if coalesce(length(btrim(_reason)), 0) < 5 then
+    raise exception 'Escribe el motivo.';
+  end if;
+end $$;
+
+-- Proyecto: asignar una función (consultor validador, elaborador, revisor…).
+create or replace function public.mdesr_assign_member(_project uuid, _user uuid, _function text, _reason text)
 returns void language plpgsql security definer set search_path = public
 as $$
 begin
-  if not public.has_capability(auth.uid(), 'mdesr.reassign') then
-    raise exception 'Se requiere la facultad mdesr.reassign.';
-  end if;
-  if coalesce(length(btrim(_reason)), 0) < 10 then
-    raise exception 'Escribe el motivo de la reasignación.';
-  end if;
-  update public.project_members set removed_at = now(), removed_by = auth.uid()
+  perform public.mdesr_require_reassign(_reason);
+  insert into public.project_members (project_id, user_id, project_function, reason)
+  values (_project, _user, _function, _reason);
+  insert into public.project_log_entries (project_id, entry_type, summary, details)
+  values (_project, 'decision', 'Asignación de ' || _function, _reason);
+end $$;
+
+-- Proyecto: pasar una función de una persona a otra (responsable anterior → nuevo).
+create or replace function public.mdesr_reassign_member(_project uuid, _from uuid, _to uuid, _function text, _reason text)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  perform public.mdesr_require_reassign(_reason);
+  update public.project_members set removed_at = now(), removed_by = auth.uid(), removal_reason = _reason
    where project_id = _project and user_id = _from and project_function = _function and removed_at is null;
   if not found then raise exception 'Esa persona no tiene esa función en el proyecto.'; end if;
-  insert into public.project_members (project_id, user_id, project_function, notes)
+  insert into public.project_members (project_id, user_id, project_function, reason)
   values (_project, _to, _function, 'Reasignación: ' || _reason);
   insert into public.project_log_entries (project_id, entry_type, summary, details)
   values (_project, 'decision', 'Reasignación de ' || _function, _reason);
 end $$;
 
-create or replace function public.mdesr_reassign_client(_client uuid, _to uuid, _reason text)
+-- Proyecto: retirar una asignación sin reemplazo.
+create or replace function public.mdesr_unassign_member(_project uuid, _user uuid, _function text, _reason text)
 returns void language plpgsql security definer set search_path = public
 as $$
-declare anterior uuid;
 begin
-  if not public.has_capability(auth.uid(), 'mdesr.reassign') then
-    raise exception 'Se requiere la facultad mdesr.reassign.';
-  end if;
-  if coalesce(length(btrim(_reason)), 0) < 10 then
-    raise exception 'Escribe el motivo de la reasignación.';
-  end if;
-  select owner_id into anterior from public.clients where id = _client for update;
-  update public.clients set owner_id = _to where id = _client;
-  update public.projects set owner_id = _to where client_id = _client and status in ('propuesta','activo','suspendido');
-  insert into public.audit_log (table_name, record_id, operation, old_data, new_data, changed_fields)
-  values ('clients', _client::text, 'UPDATE', jsonb_build_object('owner_id', anterior),
-          jsonb_build_object('owner_id', _to, 'motivo', _reason), array['owner_id']);
+  perform public.mdesr_require_reassign(_reason);
+  update public.project_members set removed_at = now(), removed_by = auth.uid(), removal_reason = _reason
+   where project_id = _project and user_id = _user and project_function = _function and removed_at is null;
+  if not found then raise exception 'Esa persona no tiene esa función en el proyecto.'; end if;
 end $$;
+
+-- Cliente: asignar a un Asesor (o Ejecutivo o Consultor). Puede haber varios.
+create or replace function public.mdesr_assign_client(_client uuid, _user uuid, _role text, _reason text, _primary boolean default false)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  perform public.mdesr_require_reassign(_reason);
+  insert into public.client_assignments (client_id, user_id, assignment_role, is_primary, reason)
+  values (_client, _user, coalesce(_role, 'asesor'), _primary, _reason);
+  if _primary then
+    update public.clients set owner_id = _user where id = _client;
+  end if;
+end $$;
+
+-- Cliente: pasar de un responsable a otro (y sus proyectos activos, si era el principal).
+create or replace function public.mdesr_reassign_client(_client uuid, _from uuid, _to uuid, _role text, _reason text)
+returns void language plpgsql security definer set search_path = public
+as $$
+declare era_principal boolean;
+begin
+  perform public.mdesr_require_reassign(_reason);
+  update public.client_assignments
+     set removed_at = now(), removed_by = auth.uid(), removal_reason = _reason
+   where client_id = _client and user_id = _from and assignment_role = coalesce(_role, 'asesor') and removed_at is null
+   returning is_primary into era_principal;
+  if not found then raise exception 'Esa persona no está asignada a ese cliente con ese papel.'; end if;
+  insert into public.client_assignments (client_id, user_id, assignment_role, is_primary, reason)
+  values (_client, _to, coalesce(_role, 'asesor'), coalesce(era_principal, false), 'Reasignación: ' || _reason);
+  if era_principal then
+    update public.clients set owner_id = _to where id = _client;
+    update public.projects set owner_id = _to where client_id = _client and status in ('propuesta','activo','suspendido');
+  end if;
+end $$;
+
+-- Cliente: retirar una asignación sin reemplazo.
+create or replace function public.mdesr_unassign_client(_client uuid, _user uuid, _role text, _reason text)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  perform public.mdesr_require_reassign(_reason);
+  update public.client_assignments
+     set removed_at = now(), removed_by = auth.uid(), removal_reason = _reason
+   where client_id = _client and user_id = _user and assignment_role = coalesce(_role, 'asesor') and removed_at is null;
+  if not found then raise exception 'Esa persona no está asignada a ese cliente con ese papel.'; end if;
+end $$;
+
+alter table public.client_assignments enable row level security;
+drop policy if exists "mdesr leer" on public.client_assignments;
+create policy "mdesr leer" on public.client_assignments for select to authenticated
+  using (user_id = auth.uid() or public.has_capability(auth.uid(), 'admin.reassign_clients_projects'));
+-- Sin políticas de escritura: solo las funciones mdesr_*assign_client escriben.
+grant select on public.client_assignments to authenticated;
+grant all on public.client_assignments to service_role;
+drop trigger if exists mdesr_audit on public.client_assignments;
+create trigger mdesr_audit after insert or update or delete on public.client_assignments
+  for each row execute function public.mdesr_audit('', '');
+drop trigger if exists mdesr_append_only_del on public.client_assignments;
+create trigger mdesr_append_only_del before delete on public.client_assignments
+  for each row execute function public.mdesr_append_only();
 
 -- ── Permisos de ejecución de funciones ─────────────────────────────────────
 do $$
