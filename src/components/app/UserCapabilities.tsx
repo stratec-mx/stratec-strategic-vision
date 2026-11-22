@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
+  CAN_VALIDATE_ROLES,
   CAPABILITY_GROUPS,
   CONSULTANT_ONLY,
   MISSING_09,
@@ -12,30 +13,32 @@ import {
   type Capability,
 } from "@/lib/capabilities";
 
+type Effect = "grant" | "deny";
+
 /**
  * Facultades M-DESR de una persona (solo admin, en Usuarios; también las suyas).
- * Las que trae su rol aparecen marcadas y no se pueden quitar; las demás se
- * dan o quitan al instante en public.user_capabilities. La base guarda quién
- * hizo el cambio y cuándo (user_capabilities_log).
- * Ser admin no da facultades técnicas. Validar, aprobar y cerrar son solo
- * para Consultores: a los demás se les muestran deshabilitadas.
+ * - Las que trae su rol aparecen marcadas; quitarlas guarda un "deny" (se le
+ *   retiran aunque las traiga el rol) y volver a marcarlas lo borra.
+ * - Las demás se dan (grant) o se quitan al instante.
+ * - Validar, aprobar y cerrar solo se pueden dar a un Consultor o Administrador.
+ * La base guarda quién hizo cada cambio y cuándo (user_capabilities_log).
  */
 export const UserCapabilities = ({ userId, email, role }: { userId: string; email: string; role: string }) => {
   const { toast } = useToast();
   const { user, refreshAccess } = useAuth();
-  const [granted, setGranted] = useState<Set<Capability>>(new Set());
+  const [rows, setRows] = useState<Map<Capability, Effect>>(new Map());
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
   const [saving, setSaving] = useState<Capability | null>(null);
 
   const fromRole = capabilitiesFromRoles(role === "none" ? [] : [role]);
-  const isConsultant = role === "consultant";
+  const canValidate = CAN_VALIDATE_ROLES.includes(role);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase.from("user_capabilities").select("capability").eq("user_id", userId);
+      const { data, error } = await supabase.from("user_capabilities").select("capability, effect").eq("user_id", userId);
       if (!alive) return;
       if (error) {
         setMissing(isMissingTable(error));
@@ -43,7 +46,7 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
           toast({ title: "No se pudieron cargar las facultades", description: error.message, variant: "destructive" });
       } else {
         setMissing(false);
-        setGranted(new Set((data ?? []).map((x) => x.capability as Capability)));
+        setRows(new Map((data ?? []).map((x) => [x.capability as Capability, (x.effect === "deny" ? "deny" : "grant") as Effect])));
       }
       setLoading(false);
     })();
@@ -51,11 +54,15 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = async (cap: Capability) => {
-    const had = granted.has(cap);
+    const row = rows.get(cap);
+    // Qué fila debe quedar: undefined = ninguna
+    const next: Effect | undefined = fromRole.has(cap)
+      ? (row === "deny" ? undefined : "deny")
+      : (row ? undefined : "grant");
     setSaving(cap);
-    const { error } = had
-      ? await supabase.from("user_capabilities").delete().eq("user_id", userId).eq("capability", cap)
-      : await supabase.from("user_capabilities").insert({ user_id: userId, capability: cap });
+    const { error } = next
+      ? await supabase.from("user_capabilities").upsert({ user_id: userId, capability: cap, effect: next }, { onConflict: "user_id,capability" })
+      : await supabase.from("user_capabilities").delete().eq("user_id", userId).eq("capability", cap);
     setSaving(null);
     if (error) {
       toast({
@@ -65,10 +72,10 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
       });
       return;
     }
-    setGranted((g) => {
-      const n = new Set(g);
-      if (had) n.delete(cap);
-      else n.add(cap);
+    setRows((m) => {
+      const n = new Map(m);
+      if (next) n.set(cap, next);
+      else n.delete(cap);
       return n;
     });
     if (userId === user?.id) refreshAccess();
@@ -86,11 +93,9 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
 
   return (
     <div className="space-y-3" aria-label={`Facultades M-DESR de ${email}`}>
-      {!isConsultant && (
-        <p className="text-[11px] text-steel">
-          Validar, aprobar y cerrar diagnósticos son solo para Consultores. Ser administrador no da facultades técnicas.
-        </p>
-      )}
+      <p className="text-[11px] text-steel">
+        Las que trae el rol se pueden retirar a esta persona. Validar, aprobar y cerrar diagnósticos son solo para Consultores y Administradores.
+      </p>
       {loading ? (
         <div className="text-xs text-steel">Cargando facultades…</div>
       ) : (
@@ -100,11 +105,13 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
               <legend className="px-1 text-[11px] font-medium uppercase tracking-wider text-navy">{g.label}</legend>
               <ul className="space-y-1.5">
                 {g.items.map((it) => {
+                  const row = rows.get(it.id);
                   const byRole = fromRole.has(it.id);
-                  const onlyConsultant = !isConsultant && CONSULTANT_ONLY.includes(it.id);
-                  // A quien no es Consultor no se le pueden dar; si tuviera una vieja, se puede quitar.
-                  const locked = byRole || (onlyConsultant && !granted.has(it.id));
-                  const checked = byRole || granted.has(it.id);
+                  const denied = row === "deny";
+                  const onlyConsultant = !canValidate && CONSULTANT_ONLY.includes(it.id);
+                  // A quien no es Consultor ni admin no se le pueden dar; si tuviera una vieja, se puede quitar.
+                  const locked = onlyConsultant && !row;
+                  const checked = !onlyConsultant ? (byRole ? !denied : row === "grant") : row === "grant";
                   return (
                     <li key={it.id} className="flex items-center gap-2 text-xs">
                       {saving === it.id ? (
@@ -122,8 +129,9 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
                       <label htmlFor={`${userId}-${it.id}`} className={locked ? "text-steel" : "text-navy cursor-pointer"}>
                         {it.label}
                       </label>
-                      {byRole && <span className="text-[10px] text-olive">(viene con el rol)</span>}
-                      {onlyConsultant && <span className="text-[10px] text-steel">(solo Consultor)</span>}
+                      {byRole && !denied && <span className="text-[10px] text-olive">(viene con el rol)</span>}
+                      {byRole && denied && <span className="text-[10px] text-amber-700">(retirada a esta persona)</span>}
+                      {onlyConsultant && <span className="text-[10px] text-steel">(solo Consultor o Administrador)</span>}
                     </li>
                   );
                 })}

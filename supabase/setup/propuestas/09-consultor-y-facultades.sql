@@ -5,7 +5,8 @@
 --   · Agrega el rol 'consultant' (Consultor): máxima autoridad técnica y
 --     metodológica; valida y aprueba diagnósticos. No administra usuarios.
 --   · Crea la tabla public.user_capabilities: facultades M-DESR que el
---     administrador da a cada persona, además de las que trae su rol.
+--     administrador da (grant) o retira (deny) a cada persona, además de las
+--     que trae su rol. Un "deny" gana siempre.
 --   · Crea public.user_capabilities_log: bitácora de quién dio o quitó qué
 --     facultad y cuándo (la llena un trigger; nadie la edita a mano).
 --   · Crea la función public.has_capability(usuario, facultad).
@@ -14,17 +15,17 @@
 --     menos documentos técnicos). Si no
 --     existe, se salta ese paso sin error.
 --
--- Criterio del titular (21-nov-2026) sobre el Administrador:
---   · Puede conceder, modificar y revocar facultades M-DESR de cualquier
---     usuario, incluido él mismo. Todo queda en la bitácora.
---   · El rol admin NO trae facultades técnicas: has_capability() no le
---     responde verdadero por ser admin. Si se asigna facultades de
---     elaboración (prepare, comment, submit…), puede elaborar.
---   · Nunca valida, aprueba ni cierra por ser admin: mdesr.validate,
---     mdesr.approve y mdesr.close exigen el rol 'consultant' además de la
---     facultad. La regla de no ser autor ni revisor del diagnóstico va en el
---     script 10 (tablas de flujo M-DESR), que también registra la
---     "intervención administrativa".
+-- Criterio del titular sobre el Administrador (sustituye al del 21-nov):
+--   · "El Administrador tiene facultades técnicas por su rol": trae las 12
+--     facultades, incluida mdesr.reassign (reasignar clientes o proyectos a
+--     otros asesores o consultores).
+--   · mdesr.validate, mdesr.approve y mdesr.close exigen el rol 'consultant'
+--     o 'admin', además de la facultad. La regla de no ser autor ni revisor
+--     del diagnóstico y el registro del acto como "administrador" van en el
+--     script 10 (tablas de flujo M-DESR).
+--   · Puede conceder, retirar (deny, aunque la traiga el rol) y revocar
+--     facultades de cualquier usuario, incluido él mismo. Todo queda en la
+--     bitácora.
 --   · Sus permisos de módulos del CRM no cambian (siguen siendo totales).
 --
 -- Funciona en la producción actual (solo user_roles, has_role() y el CRM) y
@@ -96,31 +97,42 @@ alter table public.user_capabilities drop constraint if exists user_capabilities
 alter table public.user_capabilities add constraint user_capabilities_capability_check check (capability in (
   'mdesr.prepare', 'mdesr.review', 'mdesr.comment', 'mdesr.submit',
   'mdesr.validate', 'mdesr.approve', 'mdesr.reject', 'mdesr.return_for_correction',
-  'mdesr.close', 'mdesr.manage_instruments', 'mdesr.assign_reviewer'
+  'mdesr.close', 'mdesr.manage_instruments', 'mdesr.assign_reviewer', 'mdesr.reassign'
 ));
+
+-- grant = se le da; deny = se le retira aunque la traiga su rol (deny gana).
+alter table public.user_capabilities add column if not exists effect text not null default 'grant';
+alter table public.user_capabilities drop constraint if exists user_capabilities_effect_check;
+alter table public.user_capabilities add constraint user_capabilities_effect_check check (effect in ('grant', 'deny'));
 
 -- 2.2 Bitácora de cambios (solo la escribe el trigger)
 create table if not exists public.user_capabilities_log (
   id bigint generated always as identity primary key,
   user_id uuid not null,
   capability text not null,
-  action text not null check (action in ('grant', 'revoke', 'update')),
+  action text not null,
   changed_by uuid,
   changed_at timestamptz not null default now(),
   note text
 );
+-- grant/deny = alta de la fila; update = cambio; revoke = se borra la fila.
+alter table public.user_capabilities_log drop constraint if exists user_capabilities_log_action_check;
+alter table public.user_capabilities_log add constraint user_capabilities_log_action_check
+  check (action in ('grant', 'deny', 'revoke', 'update'));
 create index if not exists user_capabilities_log_user_idx on public.user_capabilities_log (user_id, changed_at desc);
 
 -- Quién la dio y cuándo: lo pone la base, no lo que mande el panel.
--- Validar, aprobar y cerrar solo se pueden dar a quien tiene rol Consultor.
+-- Validar, aprobar y cerrar solo se pueden dar (grant) a un Consultor o admin.
+-- Retirarlas (deny) se puede a cualquiera.
 create or replace function public.user_capabilities_stamp()
 returns trigger language plpgsql security definer set search_path = public
 as $$
 begin
-  if new.capability in ('mdesr.validate', 'mdesr.approve', 'mdesr.close')
+  if new.effect = 'grant'
+     and new.capability in ('mdesr.validate', 'mdesr.approve', 'mdesr.close')
      and not exists (select 1 from public.user_roles ur
-                     where ur.user_id = new.user_id and ur.role::text = 'consultant') then
-    raise exception 'Solo un Consultor puede tener la facultad %.', new.capability
+                     where ur.user_id = new.user_id and ur.role::text in ('consultant', 'admin')) then
+    raise exception 'Solo un Consultor o un Administrador puede tener la facultad %.', new.capability
       using errcode = 'check_violation', hint = 'Asigna primero el rol Consultor a esa persona.';
   end if;
   new.granted_by := coalesce(auth.uid(), new.granted_by);
@@ -134,11 +146,12 @@ as $$
 begin
   if tg_op = 'INSERT' then
     insert into public.user_capabilities_log (user_id, capability, action, changed_by, note)
-    values (new.user_id, new.capability, 'grant', coalesce(auth.uid(), new.granted_by), new.note);
+    values (new.user_id, new.capability, new.effect, coalesce(auth.uid(), new.granted_by), new.note);
     return new;
   elsif tg_op = 'UPDATE' then
     insert into public.user_capabilities_log (user_id, capability, action, changed_by, note)
-    values (new.user_id, new.capability, 'update', coalesce(auth.uid(), new.granted_by), new.note);
+    values (new.user_id, new.capability, 'update', coalesce(auth.uid(), new.granted_by),
+            concat_ws(' · ', 'efecto: ' || new.effect, new.note));
     return new;
   else
     insert into public.user_capabilities_log (user_id, capability, action, changed_by, note)
@@ -187,6 +200,7 @@ grant select on public.user_capabilities_log to authenticated;
 grant all on public.user_capabilities, public.user_capabilities_log to service_role;
 
 -- 2.4 Facultades que trae cada rol (deben coincidir con src/lib/capabilities.ts)
+--   Administrador: las 12.
 --   Consultor: revisar, validar, aprobar, rechazar, devolver para corrección,
 --              cerrar, administrar instrumentos y asignar revisor.
 --   Analista:  elaborar, revisar, comentar y enviar a validación.
@@ -195,6 +209,10 @@ create or replace function public.role_capabilities(_role text)
 returns text[] language sql immutable set search_path = public
 as $$
   select case _role
+    when 'admin' then array['mdesr.prepare', 'mdesr.review', 'mdesr.comment', 'mdesr.submit',
+                            'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
+                            'mdesr.return_for_correction', 'mdesr.close',
+                            'mdesr.manage_instruments', 'mdesr.assign_reviewer', 'mdesr.reassign']
     when 'consultant' then array['mdesr.review', 'mdesr.validate', 'mdesr.approve', 'mdesr.reject',
                                  'mdesr.return_for_correction', 'mdesr.close',
                                  'mdesr.manage_instruments', 'mdesr.assign_reviewer']
@@ -203,23 +221,26 @@ as $$
   end
 $$;
 
--- Verdadero si el rol del usuario trae la facultad o si se la dieron en
--- user_capabilities. Ser admin NO da facultades técnicas. Validar, aprobar y
--- cerrar exigen además el rol Consultor (si alguien deja de ser Consultor,
--- las pierde aunque su fila siga en la tabla). SECURITY DEFINER: lee
--- user_roles y user_capabilities sin pasar por sus políticas.
+-- Verdadero si NO se le retiró (deny) y además su rol la trae o se la dieron
+-- (grant). Validar, aprobar y cerrar exigen además el rol Consultor o admin
+-- (si alguien deja de serlo, las pierde aunque su fila siga en la tabla).
+-- SECURITY DEFINER: lee user_roles y user_capabilities sin pasar por sus
+-- políticas.
 create or replace function public.has_capability(_user uuid, _cap text)
 returns boolean language sql stable security definer set search_path = public
 as $$
   select _user is not null
+    and not exists (select 1 from public.user_capabilities c
+                    where c.user_id = _user and c.capability = _cap and c.effect = 'deny')
     and (
-         exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _cap)
+         exists (select 1 from public.user_capabilities c
+                 where c.user_id = _user and c.capability = _cap and c.effect = 'grant')
       or exists (select 1 from public.user_roles ur
                  where ur.user_id = _user and _cap = any (public.role_capabilities(ur.role::text)))
     )
     and (
          _cap not in ('mdesr.validate', 'mdesr.approve', 'mdesr.close')
-      or exists (select 1 from public.user_roles ur where ur.user_id = _user and ur.role::text = 'consultant')
+      or exists (select 1 from public.user_roles ur where ur.user_id = _user and ur.role::text in ('consultant', 'admin'))
     )
 $$;
 revoke execute on function public.has_capability(uuid, text) from public, anon;

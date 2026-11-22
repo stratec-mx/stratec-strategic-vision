@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, ReactNode 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { RESOURCES, type Action, type Permissions, type Resource } from "@/lib/access";
-import { effectiveCapabilities, isMissingTable, type Capability } from "@/lib/capabilities";
+import { effectiveCapabilities, isMissingTable, type Capability, type CapabilityRow } from "@/lib/capabilities";
 
 export type Role = "admin" | "consultant" | "analyst" | "operations" | "advisor" | "viewer" | "executive";
 
@@ -16,7 +16,7 @@ interface AuthCtx {
   /** Permisos efectivos por módulo (unión de los roles del usuario; admin = todo). */
   permissions: Permissions;
   can: (resource: Resource, action?: Action) => boolean;
-  /** Facultades M-DESR efectivas: las del rol más las asignadas. Ser admin no da facultades técnicas. */
+  /** Facultades M-DESR efectivas: las del rol más las dadas, menos las retiradas (el admin trae todas). */
   capabilities: Set<Capability>;
   hasCapability: (cap: Capability) => boolean;
   /** true si la tabla user_capabilities aún no existe (falta correr el script 09). */
@@ -67,17 +67,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setPermissions({});
       }
 
-      // Facultades M-DESR: las del rol + las asignadas a la persona (también
-      // al admin, que puede asignárselas). Si la tabla no existe todavía
-      // (script 09 sin correr), solo las del rol.
-      let granted: string[] = [];
+      // Facultades M-DESR: las del rol + las dadas − las retiradas (deny).
+      // Si la tabla no existe todavía (script 09 sin correr), solo las del rol.
+      let rows: CapabilityRow[] = [];
       if (r.length) {
-        const { data: own, error: capErr } = await supabase.from("user_capabilities").select("capability").eq("user_id", uid);
+        const { data: own, error: capErr } = await supabase.from("user_capabilities").select("capability, effect").eq("user_id", uid);
         setCapabilitiesMissing(isMissingTable(capErr));
         if (capErr && !isMissingTable(capErr)) console.warn("[useAuth] No se pudieron cargar las facultades:", capErr.message);
-        granted = (own ?? []).map((c) => c.capability as string);
+        rows = own ?? [];
       }
-      setCapabilities(effectiveCapabilities(r, granted));
+      setCapabilities(effectiveCapabilities(r, rows));
     } catch (err: any) {
       console.warn("[useAuth] Error inesperado cargando accesos:", err.message);
       setRoles([]);

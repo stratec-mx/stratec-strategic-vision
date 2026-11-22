@@ -1,21 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { capabilitiesFromRoles, effectiveCapabilities, isMissingTable } from "./capabilities";
+import { CAPABILITIES, capabilitiesFromRoles, effectiveCapabilities, isMissingTable } from "./capabilities";
 import { missingRoleMessage } from "./access";
 
 describe("capabilitiesFromRoles", () => {
-  it("ser admin no da facultades técnicas", () => {
-    expect(capabilitiesFromRoles(["admin"]).size).toBe(0);
+  it("el admin trae las 12 facultades, incluida reasignar", () => {
+    const c = capabilitiesFromRoles(["admin"]);
+    expect(c.size).toBe(12);
+    expect(CAPABILITIES).toHaveLength(12);
+    expect(c.has("mdesr.reassign")).toBe(true);
+    expect(c.has("mdesr.approve")).toBe(true);
   });
-  it("el consultor valida y aprueba, pero no elabora", () => {
+  it("el consultor valida y aprueba, pero no elabora ni reasigna", () => {
     const c = capabilitiesFromRoles(["consultant"]);
     expect(c.has("mdesr.approve")).toBe(true);
     expect(c.has("mdesr.validate")).toBe(true);
     expect(c.has("mdesr.prepare")).toBe(false);
+    expect(c.has("mdesr.reassign")).toBe(false);
   });
   it("el analista elabora y revisa, pero no aprueba", () => {
     const c = capabilitiesFromRoles(["analyst"]);
     expect([...c].sort()).toEqual(["mdesr.comment", "mdesr.prepare", "mdesr.review", "mdesr.submit"]);
-    expect(c.has("mdesr.approve")).toBe(false);
   });
   it("otros roles no traen facultades", () => {
     expect(capabilitiesFromRoles(["executive", "viewer"]).size).toBe(0);
@@ -23,19 +27,30 @@ describe("capabilitiesFromRoles", () => {
 });
 
 describe("effectiveCapabilities", () => {
-  it("el admin puede elaborar si se asigna la facultad", () => {
-    const c = effectiveCapabilities(["admin"], ["mdesr.prepare", "mdesr.submit"]);
-    expect(c.has("mdesr.prepare")).toBe(true);
+  it("un deny retira una facultad que trae el rol", () => {
+    const c = effectiveCapabilities(["admin"], [{ capability: "mdesr.approve", effect: "deny" }]);
     expect(c.has("mdesr.approve")).toBe(false);
+    expect(c.has("mdesr.validate")).toBe(true);
   });
-  it("validar, aprobar y cerrar solo cuentan para un Consultor", () => {
-    const admin = effectiveCapabilities(["admin"], ["mdesr.validate", "mdesr.approve", "mdesr.close", "mdesr.reject"]);
-    expect(admin.has("mdesr.validate") || admin.has("mdesr.approve") || admin.has("mdesr.close")).toBe(false);
-    expect(admin.has("mdesr.reject")).toBe(true);
+  it("el deny gana aunque también haya grant", () => {
+    const c = effectiveCapabilities(["analyst"], [
+      { capability: "mdesr.reject", effect: "grant" },
+      { capability: "mdesr.reject", effect: "deny" },
+    ]);
+    expect(c.has("mdesr.reject")).toBe(false);
+  });
+  it("un grant suma; sin effect cuenta como grant", () => {
+    const c = effectiveCapabilities(["analyst"], [{ capability: "mdesr.reject" }]);
+    expect(c.has("mdesr.reject")).toBe(true);
+  });
+  it("validar, aprobar y cerrar solo cuentan para Consultor o admin", () => {
+    const a = effectiveCapabilities(["analyst"], ["mdesr.validate", "mdesr.approve", "mdesr.close"].map((capability) => ({ capability, effect: "grant" })));
+    expect(a.has("mdesr.validate") || a.has("mdesr.approve") || a.has("mdesr.close")).toBe(false);
     expect(effectiveCapabilities(["consultant"], []).has("mdesr.approve")).toBe(true);
+    expect(effectiveCapabilities(["admin"], []).has("mdesr.approve")).toBe(true);
   });
   it("ignora valores desconocidos", () => {
-    expect(effectiveCapabilities([], ["mdesr.volar"]).size).toBe(0);
+    expect(effectiveCapabilities([], [{ capability: "mdesr.volar", effect: "grant" }]).size).toBe(0);
   });
 });
 

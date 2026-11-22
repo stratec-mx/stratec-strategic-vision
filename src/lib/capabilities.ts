@@ -24,6 +24,7 @@ export const CAPABILITY_GROUPS = [
       { id: "mdesr.close", label: "Cerrar el diagnóstico" },
       { id: "mdesr.manage_instruments", label: "Administrar instrumentos" },
       { id: "mdesr.assign_reviewer", label: "Asignar revisor" },
+      { id: "mdesr.reassign", label: "Reasignar clientes o proyectos" },
     ],
   },
 ] as const;
@@ -34,6 +35,11 @@ export const CAPABILITIES: Capability[] = CAPABILITY_GROUPS.flatMap((g) => g.ite
 
 /** Facultades que trae cada rol por defecto (igual que public.role_capabilities). */
 export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> = {
+  admin: [
+    "mdesr.prepare", "mdesr.review", "mdesr.comment", "mdesr.submit",
+    "mdesr.validate", "mdesr.approve", "mdesr.reject", "mdesr.return_for_correction",
+    "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer", "mdesr.reassign",
+  ],
   consultant: [
     "mdesr.review", "mdesr.validate", "mdesr.approve", "mdesr.reject",
     "mdesr.return_for_correction", "mdesr.close", "mdesr.manage_instruments", "mdesr.assign_reviewer",
@@ -41,21 +47,31 @@ export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> =
   analyst: ["mdesr.prepare", "mdesr.review", "mdesr.comment", "mdesr.submit"],
 };
 
-/** Solo un Consultor puede tenerlas, aunque se le asignen (igual que has_capability). */
+/** Solo un Consultor o un admin puede tenerlas, aunque se le asignen (igual que has_capability). */
 export const CONSULTANT_ONLY: readonly Capability[] = ["mdesr.validate", "mdesr.approve", "mdesr.close"];
+export const CAN_VALIDATE_ROLES: readonly string[] = ["consultant", "admin"];
 
-/** Facultades que vienen con los roles dados. Ser admin NO da facultades técnicas. */
+export type CapabilityRow = { capability: string; effect?: string | null };
+
+/** Facultades que vienen con los roles dados (el admin trae todas). */
 export const capabilitiesFromRoles = (roles: readonly string[]): Set<Capability> => {
   const out = new Set<Capability>();
   for (const r of roles) for (const c of ROLE_CAPABILITIES[r] ?? []) out.add(c);
   return out;
 };
 
-/** Facultades efectivas: las del rol más las asignadas; validar, aprobar y cerrar solo si es Consultor. */
-export const effectiveCapabilities = (roles: readonly string[], granted: Iterable<string>): Set<Capability> => {
+/**
+ * Facultades efectivas (igual que has_capability): las del rol más las dadas
+ * (grant), menos las retiradas (deny, que gana). Validar, aprobar y cerrar
+ * solo si es Consultor o admin.
+ */
+export const effectiveCapabilities = (roles: readonly string[], rows: Iterable<CapabilityRow>): Set<Capability> => {
   const out = capabilitiesFromRoles(roles);
-  for (const c of granted) if ((CAPABILITIES as string[]).includes(c)) out.add(c as Capability);
-  if (!roles.includes("consultant")) for (const c of CONSULTANT_ONLY) out.delete(c);
+  const known = CAPABILITIES as string[];
+  const list = [...rows].filter((r) => known.includes(r.capability));
+  for (const r of list) if ((r.effect ?? "grant") === "grant") out.add(r.capability as Capability);
+  for (const r of list) if (r.effect === "deny") out.delete(r.capability as Capability);
+  if (!roles.some((r) => CAN_VALIDATE_ROLES.includes(r))) for (const c of CONSULTANT_ONLY) out.delete(c);
   return out;
 };
 

@@ -55,17 +55,16 @@ describe("useAuth.hasCapability", () => {
     expect(screen.getByTestId("prepare")).toHaveTextContent("false");
   });
 
-  it("admin: sin facultades técnicas por su rol", async () => {
+  it("admin: trae las facultades técnicas por su rol", async () => {
     tables.user_roles = { data: [{ role: "admin" }], error: null };
     montar();
-    await waitFor(() => expect(screen.getByTestId("missing")).toHaveTextContent("false"));
-    expect(screen.getByTestId("approve")).toHaveTextContent("false");
-    expect(screen.getByTestId("prepare")).toHaveTextContent("false");
+    await waitFor(() => expect(screen.getByTestId("approve")).toHaveTextContent("true"));
+    expect(screen.getByTestId("prepare")).toHaveTextContent("true");
   });
 
-  it("admin que se asignó elaborar puede elaborar, pero no aprobar", async () => {
+  it("un deny le retira al admin una facultad de su rol", async () => {
     tables.user_roles = { data: [{ role: "admin" }], error: null };
-    tables.user_capabilities = { data: [{ capability: "mdesr.prepare" }, { capability: "mdesr.approve" }], error: null };
+    tables.user_capabilities = { data: [{ capability: "mdesr.approve", effect: "deny" }], error: null };
     montar();
     await waitFor(() => expect(screen.getByTestId("prepare")).toHaveTextContent("true"));
     expect(screen.getByTestId("approve")).toHaveTextContent("false");

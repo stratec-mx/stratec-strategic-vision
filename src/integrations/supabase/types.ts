@@ -528,6 +528,7 @@ export type Database = {
       user_capabilities: {
         Row: {
           capability: string
+          effect: string
           granted_at: string
           granted_by: string | null
           note: string | null
@@ -535,6 +536,7 @@ export type Database = {
         }
         Insert: {
           capability: string
+          effect?: string
           granted_at?: string
           granted_by?: string | null
           note?: string | null
@@ -542,6 +544,7 @@ export type Database = {
         }
         Update: {
           capability?: string
+          effect?: string
           granted_at?: string
           granted_by?: string | null
           note?: string | null
