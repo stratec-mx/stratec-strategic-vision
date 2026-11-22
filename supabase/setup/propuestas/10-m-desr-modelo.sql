@@ -13,15 +13,21 @@
 --
 -- Requisitos, en este orden: 02-tablas-y-permisos.sql, 08-rol-asesor.sql y
 -- 09-consultor-y-facultades.sql (rol 'consultant', user_capabilities,
--- has_capability). Este script NO redefine nada de esos tres: usa
--- has_capability() como única fuente de facultades.
+-- role_capabilities). Este script NO redefine nada de esos tres.
 --
--- Administrador: has_capability() le da todas las facultades (decisión del
--- titular). Aquí puede operar cualquier proyecto, pero cada acto suyo que no
--- le corresponda por función asignada queda en approval_records con
--- authority_basis = 'intervencion_administrativa': nunca aparece como
--- validación técnica del Consultor. La regla de autoría (nadie aprueba su
--- propio trabajo) también aplica al Administrador.
+-- Criterio del titular (22-nov-2026) para el Administrador en M-DESR:
+--   · Concede, modifica y revoca facultades de cualquiera, incluido él mismo
+--     (eso vive en 09 y en su bitácora user_capabilities_log).
+--   · NO recibe facultades técnicas por su rol: aquí las facultades se calculan
+--     con mdesr_has_faculty(), que ignora el rol admin y solo cuenta las que
+--     trae un rol técnico o las dadas a la persona en user_capabilities.
+--   · Si se da facultades de elaboración y se asigna como elaborador, elabora.
+--   · Validar, aprobar, rechazar y cerrar exigen el rol 'consultant', la
+--     facultad, la función consultor_validador, y no ser autor ni revisor de
+--     la versión. Ser admin nunca basta.
+--   · Cada acto guarda su base de autoridad; si usa una facultad que se dio a
+--     sí mismo queda como 'facultad_autoconcedida'.
+--   · El CRM no cambia: ahí el admin sigue viendo y haciendo todo.
 --
 -- Es aditivo: crea tablas, funciones, triggers y políticas nuevas. A la tabla
 -- existente `documents` solo le agrega columnas opcionales y políticas
@@ -213,7 +219,15 @@ create index if not exists audit_log_project_idx on public.audit_log (project_id
 -- ── Funciones de facultades y membresía (security definer: sin recursión) ──
 create or replace function public.mdesr_has_faculty(_faculty text, _user uuid default auth.uid())
 returns boolean language sql stable security definer set search_path = public
-as $$ select public.has_capability(_user, _faculty) $$;
+as $$
+  -- No usa has_capability(): ese devuelve verdadero para el admin. En M-DESR el
+  -- rol admin no da facultades técnicas.
+  select _user is not null and (
+       exists (select 1 from public.user_roles ur
+               where ur.user_id = _user and ur.role::text <> 'admin'
+                 and _faculty = any (public.role_capabilities(ur.role::text)))
+    or exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty))
+$$;
 
 create or replace function public.mdesr_functions(_project uuid, _user uuid default auth.uid())
 returns text[] language sql stable security definer set search_path = public
@@ -233,10 +247,10 @@ returns boolean language sql stable security definer set search_path = public
 as $$ select _project is not null and (public.mdesr_is_member(_project) or public.has_role(auth.uid(), 'admin')) $$;
 
 -- ¿Con qué autoridad actúa _user para una facultad en un proyecto?
---   funcion_asignada            tiene la función en el proyecto y la facultad por su rol (no admin)
---   facultad_expresa            tiene la función y la facultad dada a su persona en user_capabilities
---   intervencion_administrativa es admin y no le corresponde por lo anterior
---   null                        no puede
+--   funcion_asignada        tiene la función en el proyecto y la facultad por su rol técnico
+--   facultad_expresa        tiene la función y la facultad se la dio otra persona (user_capabilities)
+--   facultad_autoconcedida  tiene la función y la facultad se la dio él mismo (admin)
+--   null                    no puede (ser admin no cuenta)
 create or replace function public.mdesr_authority(_project uuid, _functions text[], _faculty text, _user uuid default auth.uid())
 returns text language sql stable security definer set search_path = public
 as $$
@@ -247,9 +261,12 @@ as $$
                        and _faculty = any (public.role_capabilities(ur.role::text)))
       then 'funcion_asignada'
     when public.mdesr_functions(_project, _user) && _functions
-         and exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty)
+         and exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty
+                       and c.granted_by is distinct from _user)
       then 'facultad_expresa'
-    when public.has_role(_user, 'admin') then 'intervencion_administrativa'
+    when public.mdesr_functions(_project, _user) && _functions
+         and exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty)
+      then 'facultad_autoconcedida'
     else null
   end
 $$;
@@ -348,7 +365,8 @@ begin
   if (new.project_function in ('elaborador','apoyo_campo') and not public.mdesr_has_faculty('mdesr.prepare', new.user_id))
      or (new.project_function = 'revisor' and not public.mdesr_has_faculty('mdesr.review', new.user_id))
      or (new.project_function = 'consultor_validador'
-         and not (public.mdesr_has_faculty('mdesr.validate', new.user_id) or public.mdesr_has_faculty('mdesr.approve', new.user_id))) then
+         and not (public.has_role(new.user_id, 'consultant')
+                  and (public.mdesr_has_faculty('mdesr.validate', new.user_id) or public.mdesr_has_faculty('mdesr.approve', new.user_id)))) then
     raise exception 'La persona no tiene la facultad que requiere la función %.', new.project_function;
   end if;
   return new;
@@ -660,8 +678,8 @@ create table if not exists public.assessments (
   summary text,
   overall_level text check (overall_level in ('bajo','medio','alto','critico')),
   content_hash text,
-  validation_basis text check (validation_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa')),
-  approval_basis text check (approval_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa')),
+  validation_basis text check (validation_basis in ('funcion_asignada','facultad_expresa','facultad_autoconcedida')),
+  approval_basis text check (approval_basis in ('funcion_asignada','facultad_expresa','facultad_autoconcedida')),
   closed_at timestamptz,
   closed_by uuid references auth.users(id),
   created_by uuid references auth.users(id) default auth.uid(),
@@ -871,10 +889,7 @@ as $$ select project_id from public.assessments where id = _assessment $$;
 create or replace function public.mdesr_can_prepare(_assessment uuid)
 returns boolean language sql stable security definer set search_path = public
 as $$
-  select (public.has_role(auth.uid(), 'admin')
-          and exists (select 1 from public.assessments a join public.projects p on p.id = a.project_id
-                      where a.id = _assessment and a.status = 'borrador' and p.status = 'activo'))
-      or public.mdesr_has_faculty('mdesr.prepare')
+  select public.mdesr_has_faculty('mdesr.prepare')
      and exists (select 1
                  from public.assessments a
                  join public.projects p on p.id = a.project_id
@@ -1295,7 +1310,7 @@ create table if not exists public.approval_records (
   actor_id uuid references auth.users(id) default auth.uid(),
   actor_roles text[] not null default '{}',
   actor_function text,
-  authority_basis text not null default 'funcion_asignada' check (authority_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa','sistema')),
+  authority_basis text not null default 'funcion_asignada' check (authority_basis in ('funcion_asignada','facultad_expresa','facultad_autoconcedida','sistema')),
   methodology_version_label text not null,
   instrument_versions_applied jsonb not null default '[]',
   scale_version_label text,
@@ -1509,10 +1524,11 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador asignado valida.';
     end if;
-    if es_autor then raise exception 'No puedes validar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
-    if revisor = uid and (select requires_independence from public.projects where id = v_project) then
-      raise exception 'Revisaste esta versión: la validación debe hacerla otra persona.';
+    if not public.has_role(uid, 'consultant') then
+      raise exception 'Validar un diagnóstico formal requiere el rol Consultor (ser administrador no basta).';
     end if;
+    if es_autor then raise exception 'No puedes validar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
+    if revisor = uid then raise exception 'Revisaste esta versión: la validación debe hacerla otro Consultor.'; end if;
     nuevo := 'validado';
   elsif _action = 'aprobar' then
     if v_status <> 'validado' then raise exception 'Solo se aprueba una versión validada.'; end if;
@@ -1520,10 +1536,11 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador asignado, con la facultad mdesr.approve, aprueba.';
     end if;
-    if es_autor then raise exception 'No puedes aprobar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
-    if revisor = uid and (select requires_independence from public.projects where id = v_project) then
-      raise exception 'Revisaste esta versión: la aprobación debe hacerla otra persona.';
+    if not public.has_role(uid, 'consultant') then
+      raise exception 'Aprobar un diagnóstico formal requiere el rol Consultor (ser administrador no basta).';
     end if;
+    if es_autor then raise exception 'No puedes aprobar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
+    if revisor = uid then raise exception 'Revisaste esta versión: la aprobación debe hacerla otro Consultor.'; end if;
     if _type = 'document' and not exists (select 1 from public.assessments
                                           where id = v_assessment and status in ('aprobado','cerrado')) then
       raise exception 'El entregable se aprueba después de aprobar su diagnóstico.';
@@ -1535,7 +1552,11 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador rechaza.';
     end if;
-    if es_autor then raise exception 'No puedes rechazar una versión de la que eres autor.'; end if;
+    if not public.has_role(uid, 'consultant') then
+      raise exception 'Rechazar un diagnóstico formal requiere el rol Consultor (ser administrador no basta).';
+    end if;
+    if es_autor then raise exception 'No puedes rechazar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
+    if revisor = uid then raise exception 'Revisaste esta versión: el rechazo debe hacerla otro Consultor.'; end if;
     nuevo := 'rechazado';
   elsif _action = 'cerrar' then
     if _type <> 'assessment' or v_status <> 'aprobado' then raise exception 'Solo se cierra un diagnóstico aprobado.'; end if;
@@ -1543,6 +1564,11 @@ begin
     if base is null then
       raise exception 'Solo el consultor validador cierra.';
     end if;
+    if not public.has_role(uid, 'consultant') then
+      raise exception 'Cerrar un diagnóstico formal requiere el rol Consultor (ser administrador no basta).';
+    end if;
+    if es_autor then raise exception 'No puedes cerrar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
+    if revisor = uid then raise exception 'Revisaste esta versión: el cierre debe hacerla otro Consultor.'; end if;
     nuevo := 'cerrado';
   elsif _action = 'reabrir' then
     if v_status not in ('enviado','en_revision','revisado','validado','aprobado') then
@@ -1708,12 +1734,11 @@ create policy "mdesr entregables leer" on public.documents as restrictive for se
   using (project_id is null or public.mdesr_can_read(project_id));
 drop policy if exists "mdesr entregables alta" on public.documents;
 create policy "mdesr entregables alta" on public.documents as restrictive for insert to authenticated
-  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'));
+  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)));
 drop policy if exists "mdesr entregables editar" on public.documents;
 create policy "mdesr entregables editar" on public.documents as restrictive for update to authenticated
-  using (project_id is null or (('elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'))
-                                 and approval_status in ('borrador')))
-  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'));
+  using (project_id is null or ('elaborador' = any(public.mdesr_functions(project_id)) and approval_status in ('borrador')))
+  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)));
 drop policy if exists "mdesr entregables borrar" on public.documents;
 create policy "mdesr entregables borrar" on public.documents as restrictive for delete to authenticated
   using (project_id is null or approval_status = 'borrador');
@@ -2163,7 +2188,7 @@ create policy "mdesr editar" on public.project_phases for update to authenticate
 
 create policy "mdesr leer" on public.study_objects for select to authenticated using (public.mdesr_can_read_object(id));
 create policy "mdesr alta" on public.study_objects for insert to authenticated
-  with check (public.mdesr_has_faculty('mdesr.prepare') or public.has_role(auth.uid(), 'admin'));
+  with check (public.mdesr_has_faculty('mdesr.prepare'));
 create policy "mdesr editar" on public.study_objects for update to authenticated
   using (public.mdesr_can_edit_object(id)) with check (public.mdesr_can_edit_object(id));
 

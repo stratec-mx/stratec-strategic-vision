@@ -5,19 +5,25 @@
 | Fecha | 22 de noviembre de 2026 |
 | Revisado | `supabase/setup/02-tablas-y-permisos.sql` y `supabase/setup/propuestas/09-consultor-y-facultades.sql` (en `main`, commit `efc4546`), contra [`02-modelo-logico.md`](02-modelo-logico.md) v0.2 y el borrador [`10-m-desr-modelo.sql`](../../supabase/setup/propuestas/10-m-desr-modelo.sql) |
 | Método | Lectura de código. **Ningún script se ejecutó en ninguna base.** Las pruebas del panel (vitest y build) no prueban la base de datos |
+| Actualización | 22-nov-2026: incorpora el criterio final del Administrador (no recibe facultades técnicas por su rol) |
 | Dictamen | **No ejecutar todavía en producción.** Primero hay que resolver H-01 a H-05 y correr las pruebas de la sección 4 en Supabase de pruebas |
 
 ## 1. Respuesta a los cuatro puntos del revisor
 
-### A. Separación entre Administrador y Consultor
+### A. Separación entre Administrador y Consultor (criterio final del 22-nov)
 
-- **Script 09:** `has_capability()` devuelve verdadero para el Administrador en todo. Es lo que decidió el titular. El script deja anotado que la distinción entre intervención administrativa y validación técnica se resuelve en las tablas de flujo. Hoy esas tablas no existen, así que **en la base actual todavía no hay ninguna distinción**.
-- **Borrador 10 (este modelo):** lo resuelve así:
-  - cada acto del flujo guarda `authority_basis`: `funcion_asignada`, `facultad_expresa`, `intervencion_administrativa` o `sistema`;
-  - el diagnóstico guarda `validation_basis` y `approval_basis`;
-  - un Administrador que valida o aprueba sin tener el rol Consultor queda **siempre** como `intervencion_administrativa`, aunque se haya asignado como validador;
-  - la regla de autoría también le aplica: no aprueba lo que él mismo elaboró o modificó.
-- **Pendiente (D-18):** decidir si una aprobación por intervención administrativa permite cerrar el diagnóstico y emitir el entregable, o si necesita después la ratificación de un Consultor.
+- **Criterio:**
+  - el Administrador concede, modifica y revoca facultades de cualquiera, incluidas las suyas;
+  - no recibe facultades técnicas por su rol;
+  - si se da facultades de elaboración, elabora;
+  - nunca valida, aprueba ni cierra como Consultor;
+  - el CRM no cambia.
+- **Script 09 hoy:** `has_capability()` devuelve verdadero para el admin en todo. **Contradice el punto 2 del criterio.** Lo está ajustando la sesión del rol Consultor, junto con el panel (`capabilitiesFromRoles` da todas las facultades al admin).
+- **Borrador 10:** ya no depende de ese ajuste:
+  - `mdesr_has_faculty()` ignora el rol admin;
+  - validar, aprobar, rechazar y cerrar exigen el rol `consultant`, y no ser el autor ni el revisor de la versión, siempre;
+  - si el Administrador usa una facultad que se dio a sí mismo, el acto queda como `facultad_autoconcedida`;
+  - las facultades quedan en `user_capabilities_log`; los equipos, en `audit_log`; los actos, en `approval_records`.
 
 ### B. Alcance del Ejecutivo
 
@@ -53,6 +59,7 @@
 | H-04 | Media | Orden 02 → 09 | Si 09 se corre antes que 02, salta el paso 2.5 y el Consultor queda sin reglas de módulo. Correr 02 después no las agrega | Fijar el orden 02 → 03 → 08 → 09 en `supabase/setup/README.md`, o que 02 incluya también las filas del Consultor |
 | H-05 | Media | 09, `user_capabilities.note` | Dar `mdesr.approve` o `mdesr.validate` a un analista no exige justificación. El requisito pide “autorización expresa” | `check` o trigger: si la facultad es `mdesr.approve` o `mdesr.validate` y la persona no es `consultant`, la nota es obligatoria (mínimo 20 caracteres) |
 | H-06 | Media | 09, modelo de facultades | No se puede quitar a una sola persona una facultad que trae su rol. Por ejemplo, impedir que un Consultor apruebe sin cambiarle el rol | Si el titular lo necesita (D-20): columna `effect` (`grant` o `deny`) en `user_capabilities`, donde `deny` gana en `has_capability()` |
+| H-11 | **Alta** | 09, `has_capability()` y `src/lib/capabilities.ts` | Ambos dan todas las facultades al admin, contra el criterio final | Quitar el atajo de admin en las dos. El borrador 10 ya no lo usa. Lo atiende la sesión del rol Consultor |
 | H-07 | Baja | 09, `has_capability(_user, …)` | Cualquier usuario con sesión puede consultar las facultades de **otra** persona pasando su id | Limitar `_user` a `auth.uid()` salvo para el Administrador, o dar `execute` solo dentro de funciones `security definer` |
 | H-08 | Baja | 02, comentario de la línea 110 | Dice que convertir `executive` en `operations` “daría permiso de edición a quien se asignó como solo lectura”. El Ejecutivo ya no es de solo lectura | Actualizar el comentario |
 | H-09 | Baja | 09 y `src/lib/capabilities.ts` | Las facultades por rol están escritas dos veces: en SQL y en TypeScript | Una prueba que compare ambas listas, o leer `role_capabilities()` desde el panel |
@@ -61,7 +68,7 @@
 ## 3. Cambios hechos en el Documento 02 por esta revisión
 
 - Adopta el diseño del script 09 (`user_capabilities`, `has_capability()`) y retira `role_faculties` y `user_faculties`.
-- El Administrador tiene todas las facultades, y cada acto suyo queda con base de autoridad (5.6, R-04b).
+- Criterio final del Administrador: administra facultades, sin facultades técnicas por su rol. Validar, aprobar y cerrar exigen el rol Consultor y no ser autor ni revisor (5.6, R-04b).
 - El Ejecutivo queda en M-DESR solo por asignación.
 - El borrador SQL pasa a llamarse `10-m-desr-modelo.sql`, requiere 02, 08 y 09, y ya no toca `app_role` ni `access_rules`.
 - Decisiones nuevas: D-18, D-19 y D-20. D-03 queda decidida.
@@ -84,8 +91,9 @@ Cuentas: **Admin**, **Consultor 1**, **Consultor 2**, **Analista A**, **Analista
 | 8 | Admin | Quitar a C `mdesr.approve` y C intenta aprobar | Error, sin recargar nada |
 | 9 | Analista A | Editar un hallazgo con el diagnóstico `aprobado` | Error: hay que reabrir |
 | 10 | Consultor 1 | Reabrir, cambiar un hallazgo y aprobar sin nueva revisión | Error: la versión nueva está en `borrador` y exige el flujo completo |
-| 11 | Admin | Aprobar P1 sin estar asignado | Pasa, con `authority_basis = 'intervencion_administrativa'` y `approval_basis` igual |
-| 12 | Admin | Editar un hallazgo en borrador y luego aprobar esa versión | Error: es autor |
+| 11 | Admin | Aprobar P1, asignado o no, aun dándose `mdesr.approve` | Error: requiere el rol Consultor |
+| 12 | Admin | Darse `mdesr.prepare`, asignarse como elaborador y editar un hallazgo en borrador | Pasa. Queda como autor, el acto queda como `facultad_autoconcedida` y la concesión aparece en `user_capabilities_log` |
+| 12b | Consultor 1 | Validar una versión que él revisó, con `requires_independence = false` | Error: nunca puede validar lo que revisó |
 | 13 | Consultor 1 | Validar una versión que él mismo revisó (`requires_independence`) | Error |
 | 14 | Cualquiera | `update` o `delete` en `approval_records`, `audit_log` o `risk_evaluations` | Error |
 | 15 | Operaciones | Leer `user_capabilities` de otra persona | 0 filas |
