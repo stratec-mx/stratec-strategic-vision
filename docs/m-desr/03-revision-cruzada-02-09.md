@@ -18,7 +18,7 @@
   - si se da facultades de elaboración, elabora;
   - nunca valida, aprueba ni cierra como Consultor;
   - el CRM no cambia.
-- **Script 09 hoy:** `has_capability()` devuelve verdadero para el admin en todo. **Contradice el punto 2 del criterio.** Lo está ajustando la sesión del rol Consultor, junto con el panel (`capabilitiesFromRoles` da todas las facultades al admin).
+- **Script 09 (`da728e8`):** ya cumple el criterio. `has_capability()` no tiene atajo de admin y exige el rol `consultant` para validar, aprobar y cerrar. Su trigger impide dar esas tres facultades a quien no sea Consultor. El borrador 10 usa esa función y se detiene si encuentra la versión anterior.
 - **Borrador 10:** ya no depende de ese ajuste:
   - `mdesr_has_faculty()` ignora el rol admin;
   - validar, aprobar, rechazar y cerrar exigen el rol `consultant`, y no ser el autor ni el revisor de la versión, siempre;
@@ -58,8 +58,8 @@
 | H-03 | Media | 09, `do update` del Ejecutivo | Cada ejecución de 09 vuelve a fijar los permisos del Ejecutivo y borra los ajustes del panel. Además, amplía en el acto el acceso de quien ya tenga ese rol | Cambiar a `do nothing` tras la primera ejecución, o avisarlo en el encabezado. Antes de correrlo: `select u.email from public.user_roles r join auth.users u on u.id = r.user_id where r.role = 'executive';` |
 | H-04 | Media | Orden 02 → 09 | Si 09 se corre antes que 02, salta el paso 2.5 y el Consultor queda sin reglas de módulo. Correr 02 después no las agrega | Fijar el orden 02 → 03 → 08 → 09 en `supabase/setup/README.md`, o que 02 incluya también las filas del Consultor |
 | H-05 | Media | 09, `user_capabilities.note` | Dar `mdesr.approve` o `mdesr.validate` a un analista no exige justificación. El requisito pide “autorización expresa” | `check` o trigger: si la facultad es `mdesr.approve` o `mdesr.validate` y la persona no es `consultant`, la nota es obligatoria (mínimo 20 caracteres) |
-| H-06 | Media | 09, modelo de facultades | No se puede quitar a una sola persona una facultad que trae su rol. Por ejemplo, impedir que un Consultor apruebe sin cambiarle el rol | Si el titular lo necesita (D-20): columna `effect` (`grant` o `deny`) en `user_capabilities`, donde `deny` gana en `has_capability()` |
-| H-11 | **Alta** | 09, `has_capability()` y `src/lib/capabilities.ts` | Ambos dan todas las facultades al admin, contra el criterio final | Quitar el atajo de admin en las dos. El borrador 10 ya no lo usa. Lo atiende la sesión del rol Consultor |
+| H-06 | Media (ya no aplica al admin) | 09, modelo de facultades | No se puede quitar a una sola persona una facultad que trae su rol. Por ejemplo, impedir que un Consultor apruebe sin cambiarle el rol | Si el titular lo necesita (D-20): columna `effect` (`grant` o `deny`) en `user_capabilities`, donde `deny` gana en `has_capability()` |
+| H-11 | ~~Alta~~ **Resuelto** | 09 y el panel | Daban todas las facultades al admin | Corregido en `main` (`da728e8`) |
 | H-07 | Baja | 09, `has_capability(_user, …)` | Cualquier usuario con sesión puede consultar las facultades de **otra** persona pasando su id | Limitar `_user` a `auth.uid()` salvo para el Administrador, o dar `execute` solo dentro de funciones `security definer` |
 | H-08 | Baja | 02, comentario de la línea 110 | Dice que convertir `executive` en `operations` “daría permiso de edición a quien se asignó como solo lectura”. El Ejecutivo ya no es de solo lectura | Actualizar el comentario |
 | H-09 | Baja | 09 y `src/lib/capabilities.ts` | Las facultades por rol están escritas dos veces: en SQL y en TypeScript | Una prueba que compare ambas listas, o leer `role_capabilities()` desde el panel |

@@ -209,7 +209,7 @@ Una persona puede hacer un acto técnico en un proyecto solo si cumple **las tre
 | 2. Facultades por persona | `user_capabilities`, con bitácora en `user_capabilities_log` (script 09) | Facultades que el Administrador da a una persona además de las de su rol |
 | 3. Asignación al proyecto | `project_members.project_function` | En qué proyectos y con qué función |
 
-En M-DESR, las facultades se calculan con `mdesr_has_faculty()`. Cuenta las que trae un rol técnico (`role_capabilities()`) y las dadas a la persona en `user_capabilities`. **El rol `admin` no suma ninguna.** Hoy `has_capability()` del script 09 devuelve verdadero para el admin; la sesión del rol Consultor lo está ajustando a este criterio. M-DESR no depende de ese ajuste.
+`has_capability(usuario, facultad)` del script 09 (versión `da728e8`) es la única fuente de facultades. `mdesr_has_faculty()` la usa tal cual. Devuelve verdadero si la facultad está en `user_capabilities` o la trae el rol. Además, para `mdesr.validate`, `mdesr.approve` y `mdesr.close` exige el rol `consultant`. **El rol `admin` no suma ninguna**, y un trigger del 09 impide dar esas tres facultades a quien no sea Consultor.
 
 ### 5.2 Los siete roles
 
@@ -217,7 +217,7 @@ En M-DESR, las facultades se calculan con `mdesr_has_faculty()`. Cuenta las que 
 |---|---|---|
 | `admin` | Administrador | **Gobierno:** concede, modifica y revoca facultades de cualquiera, incluido él mismo; da de alta usuarios y arma equipos de proyecto. Todo queda en bitácora. **No recibe facultades técnicas por su rol.** Si se da facultades de elaboración y se asigna como elaborador, puede elaborar. **Nunca valida, aprueba, rechaza ni cierra como Consultor por ser Administrador.** Puede consultar los proyectos de M-DESR. En el CRM sigue viendo y haciendo todo |
 | `consultant` | Consultor | **Máxima autoridad técnica y metodológica.** Su rol trae: revisar, validar, aprobar, rechazar, devolver para corrección, cerrar, administrar instrumentos y asignar revisor. **No** trae elaborar (`mdesr.prepare`): normalmente no es autor y así nunca bloquea su propia aprobación. **Solo ve los proyectos donde está asignado. No administra usuarios** |
-| `analyst` | Analista | Su rol trae: elaborar, revisar, comentar y enviar. Aunque reciba `mdesr.approve` de forma expresa, **no puede aprobar un diagnóstico formal**, porque eso exige el rol Consultor (D-21) |
+| `analyst` | Analista | Su rol trae: elaborar, revisar, comentar y enviar. No se le pueden dar validar, aprobar ni cerrar: el script 09 lo impide |
 | `operations` | Operaciones | El script 09 no le da facultades. Puede apoyar en campo si se le dan `mdesr.prepare` o `mdesr.comment` |
 | `advisor` | Asesor | Sin facultades M-DESR por defecto |
 | `executive` | Ejecutivo | Rol comercial: consulta y modifica lo comercial y operativo (prospectos, clientes, contactos, pipeline, agenda, cotizaciones y analítica). Consulta documentos sin modificarlos. **En M-DESR solo ve los proyectos donde está asignado**, normalmente como `observador`: no ve evidencias, planos ni vulnerabilidades de proyectos ajenos |
@@ -1274,7 +1274,7 @@ Cada regla dice dónde se hace cumplir. **BD** quiere decir restricción, trigge
 |---|---|---|
 | R-01 | El objeto de estudio de un proyecto es del mismo cliente. Un diagnóstico solo se hace sobre un objeto ligado a su proyecto. Un proyecto demo solo usa objetos demo | BD (trigger) |
 | R-02 | Áreas, activos, hallazgos, vulnerabilidades y símbolos del plano solo apuntan a áreas y activos del mismo objeto de estudio. La sub-área está en la misma ubicación | BD (trigger) |
-| R-03 | Solo el Administrador da o quita facultades, con bitácora. Recomendado: dar `mdesr.approve` o `mdesr.validate` a quien no es Consultor exige nota escrita (H-05) | BD (script 09; la nota obligatoria está pendiente) |
+| R-03 | Solo el Administrador da o quita facultades, también las suyas, con bitácora. El script 09 impide dar validar, aprobar o cerrar a quien no es Consultor. Recomendado: dar `mdesr.approve` o `mdesr.validate` a quien no es Consultor exige nota escrita (H-05) | BD (script 09; la nota obligatoria está pendiente) |
 | R-04 | **Bloqueo de autoaprobación:** quien elaboró o cambió contenido en la versión no puede revisarla, validarla, aprobarla ni cerrarla. Incluye al Administrador | BD (`mdesr_transition`) |
 | R-04b | **Validación final del Consultor:** validar, aprobar, rechazar y cerrar exigen el rol `consultant`. El rol `admin` no da facultades técnicas en M-DESR. Cada acto guarda `authority_basis`, y las facultades que alguien se dio a sí mismo quedan como `facultad_autoconcedida` | BD (`mdesr_has_faculty`, `mdesr_authority`, `mdesr_transition`) |
 | R-05 | **Independencia:** quien revisó la versión nunca la valida, aprueba ni cierra. Si el Consultor es autor, aprueba otro Consultor asignado; si no lo hay, la versión queda pendiente | BD (`mdesr_transition`) |
@@ -1304,7 +1304,7 @@ Cada regla dice dónde se hace cumplir. **BD** quiere decir restricción, trigge
 
 | Función | Devuelve |
 |---|---|
-| `mdesr_has_faculty(faculty)` | Facultades del rol técnico más las de `user_capabilities`. **Ignora el rol admin** |
+| `mdesr_has_faculty(faculty)` | `has_capability(auth.uid(), faculty)` del script 09: sin atajo de admin; validar, aprobar y cerrar solo con el rol Consultor |
 | `mdesr_functions(project_id)` | Las funciones activas del usuario en el proyecto |
 | `mdesr_is_member(project_id)` | Si tiene alguna función activa |
 | `mdesr_can_read(project_id)` | Si es miembro o Administrador |
@@ -1468,7 +1468,7 @@ Cuidados de la migración:
 | D-18 | ~~Aprobación por intervención administrativa~~ | **Ya no aplica:** el Administrador no puede aprobar |
 | D-19 | Ejecutivo y documentos actuales: ¿consulta **todos** los documentos de todos los clientes? | Que vea los documentos por asignación y finalidad, no todos. Los entregables de M-DESR ya quedan así (H-02) |
 | D-20 | ¿Hace falta quitar a una persona una facultad que trae su rol, sin cambiarle el rol? | Si sí, agregar al script 09 un “retiro por persona” (H-06) |
-| D-21 | Un Analista con `mdesr.approve` expresa: con el criterio del 22-nov no puede aprobar un diagnóstico formal porque no es Consultor. ¿Para qué sirve entonces esa facultad en un Analista? | Reservarla para aprobaciones que no sean diagnósticos formales (por ejemplo, borradores internos) o quitarla de la lista. Requiere la decisión del titular |
+| D-21 | ~~Analista con `mdesr.approve` expresa~~ | **Resuelto en 09 (`da728e8`):** la base no deja dar validar, aprobar ni cerrar a quien no es Consultor |
 
 ---
 

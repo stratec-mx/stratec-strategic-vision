@@ -18,9 +18,9 @@
 -- Criterio del titular (22-nov-2026) para el Administrador en M-DESR:
 --   · Concede, modifica y revoca facultades de cualquiera, incluido él mismo
 --     (eso vive en 09 y en su bitácora user_capabilities_log).
---   · NO recibe facultades técnicas por su rol: aquí las facultades se calculan
---     con mdesr_has_faculty(), que ignora el rol admin y solo cuenta las que
---     trae un rol técnico o las dadas a la persona en user_capabilities.
+--   · NO recibe facultades técnicas por su rol: has_capability() de 09
+--     (da728e8) ya no tiene atajo de admin; mdesr_has_faculty() la usa tal cual.
+--     Este script se detiene si encuentra la versión anterior con el atajo.
 --   · Si se da facultades de elaboración y se asigna como elaborador, elabora.
 --   · Validar, aprobar, rechazar y cerrar exigen el rol 'consultant', la
 --     facultad, la función consultor_validador, y no ser autor ni revisor de
@@ -46,6 +46,9 @@ begin
   end if;
   if to_regclass('public.access_rules') is null then
     raise exception 'Falta ejecutar 02-tablas-y-permisos.sql (access_rules).';
+  end if;
+  if position('has_role(_user, ''admin'')' in pg_get_functiondef('public.has_capability(uuid, text)'::regprocedure)) > 0 then
+    raise exception 'has_capability() todavía da todas las facultades al admin: corre la versión actual de 09 (da728e8 o posterior).';
   end if;
 end $$;
 
@@ -220,13 +223,9 @@ create index if not exists audit_log_project_idx on public.audit_log (project_id
 create or replace function public.mdesr_has_faculty(_faculty text, _user uuid default auth.uid())
 returns boolean language sql stable security definer set search_path = public
 as $$
-  -- No usa has_capability(): ese devuelve verdadero para el admin. En M-DESR el
-  -- rol admin no da facultades técnicas.
-  select _user is not null and (
-       exists (select 1 from public.user_roles ur
-               where ur.user_id = _user and ur.role::text <> 'admin'
-                 and _faculty = any (public.role_capabilities(ur.role::text)))
-    or exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty))
+  -- Fuente única: has_capability() del script 09 (versión da728e8). Ya no tiene
+  -- atajo de admin y exige el rol consultant para validate, approve y close.
+  select public.has_capability(_user, _faculty)
 $$;
 
 create or replace function public.mdesr_functions(_project uuid, _user uuid default auth.uid())
