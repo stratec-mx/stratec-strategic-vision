@@ -39,12 +39,12 @@ const montar = () => render(<AuthProvider><Probe /></AuthProvider>);
 describe("useAuth.hasCapability", () => {
   beforeEach(() => { tables = { access_rules: { data: [], error: null } }; });
 
-  it("analista: facultades del rol más las asignadas", async () => {
+  it("analista: facultades del rol, y aprobar no aunque tenga una fila vieja", async () => {
     tables.user_roles = { data: [{ role: "analyst" }], error: null };
     tables.user_capabilities = { data: [{ capability: "mdesr.approve" }], error: null };
     montar();
     await waitFor(() => expect(screen.getByTestId("prepare")).toHaveTextContent("true"));
-    expect(screen.getByTestId("approve")).toHaveTextContent("true");
+    expect(screen.getByTestId("approve")).toHaveTextContent("false");
     expect(screen.getByTestId("missing")).toHaveTextContent("false");
   });
 
@@ -55,11 +55,20 @@ describe("useAuth.hasCapability", () => {
     expect(screen.getByTestId("prepare")).toHaveTextContent("false");
   });
 
-  it("admin tiene todo", async () => {
+  it("admin: sin facultades técnicas por su rol", async () => {
     tables.user_roles = { data: [{ role: "admin" }], error: null };
     montar();
-    await waitFor(() => expect(screen.getByTestId("approve")).toHaveTextContent("true"));
-    expect(screen.getByTestId("prepare")).toHaveTextContent("true");
+    await waitFor(() => expect(screen.getByTestId("missing")).toHaveTextContent("false"));
+    expect(screen.getByTestId("approve")).toHaveTextContent("false");
+    expect(screen.getByTestId("prepare")).toHaveTextContent("false");
+  });
+
+  it("admin que se asignó elaborar puede elaborar, pero no aprobar", async () => {
+    tables.user_roles = { data: [{ role: "admin" }], error: null };
+    tables.user_capabilities = { data: [{ capability: "mdesr.prepare" }, { capability: "mdesr.approve" }], error: null };
+    montar();
+    await waitFor(() => expect(screen.getByTestId("prepare")).toHaveTextContent("true"));
+    expect(screen.getByTestId("approve")).toHaveTextContent("false");
   });
 
   it("sin la tabla (falta 09) no se rompe: quedan las del rol", async () => {

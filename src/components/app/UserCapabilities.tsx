@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
   CAPABILITY_GROUPS,
+  CONSULTANT_ONLY,
   MISSING_09,
   capabilitiesFromRoles,
   isMissingTable,
@@ -12,10 +13,12 @@ import {
 } from "@/lib/capabilities";
 
 /**
- * Facultades M-DESR de una persona (solo admin, en Usuarios).
+ * Facultades M-DESR de una persona (solo admin, en Usuarios; también las suyas).
  * Las que trae su rol aparecen marcadas y no se pueden quitar; las demás se
  * dan o quitan al instante en public.user_capabilities. La base guarda quién
  * hizo el cambio y cuándo (user_capabilities_log).
+ * Ser admin no da facultades técnicas. Validar, aprobar y cerrar son solo
+ * para Consultores: a los demás se les muestran deshabilitadas.
  */
 export const UserCapabilities = ({ userId, email, role }: { userId: string; email: string; role: string }) => {
   const { toast } = useToast();
@@ -26,7 +29,7 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
   const [saving, setSaving] = useState<Capability | null>(null);
 
   const fromRole = capabilitiesFromRoles(role === "none" ? [] : [role]);
-  const isAdminRow = role === "admin";
+  const isConsultant = role === "consultant";
 
   useEffect(() => {
     let alive = true;
@@ -83,8 +86,10 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
 
   return (
     <div className="space-y-3" aria-label={`Facultades M-DESR de ${email}`}>
-      {isAdminRow && (
-        <p className="text-[11px] text-steel">El administrador tiene todas las facultades.</p>
+      {!isConsultant && (
+        <p className="text-[11px] text-steel">
+          Validar, aprobar y cerrar diagnósticos son solo para Consultores. Ser administrador no da facultades técnicas.
+        </p>
       )}
       {loading ? (
         <div className="text-xs text-steel">Cargando facultades…</div>
@@ -96,6 +101,9 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
               <ul className="space-y-1.5">
                 {g.items.map((it) => {
                   const byRole = fromRole.has(it.id);
+                  const onlyConsultant = !isConsultant && CONSULTANT_ONLY.includes(it.id);
+                  // A quien no es Consultor no se le pueden dar; si tuviera una vieja, se puede quitar.
+                  const locked = byRole || (onlyConsultant && !granted.has(it.id));
                   const checked = byRole || granted.has(it.id);
                   return (
                     <li key={it.id} className="flex items-center gap-2 text-xs">
@@ -107,14 +115,15 @@ export const UserCapabilities = ({ userId, email, role }: { userId: string; emai
                           id={`${userId}-${it.id}`}
                           className="h-4 w-4 accent-[#0B1E3C] cursor-pointer disabled:cursor-not-allowed"
                           checked={checked}
-                          disabled={byRole || saving !== null}
+                          disabled={locked || saving !== null}
                           onChange={() => toggle(it.id)}
                         />
                       )}
-                      <label htmlFor={`${userId}-${it.id}`} className={byRole ? "text-steel" : "text-navy cursor-pointer"}>
+                      <label htmlFor={`${userId}-${it.id}`} className={locked ? "text-steel" : "text-navy cursor-pointer"}>
                         {it.label}
                       </label>
                       {byRole && <span className="text-[10px] text-olive">(viene con el rol)</span>}
+                      {onlyConsultant && <span className="text-[10px] text-steel">(solo Consultor)</span>}
                     </li>
                   );
                 })}

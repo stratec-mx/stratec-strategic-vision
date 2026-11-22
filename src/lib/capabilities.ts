@@ -41,11 +41,21 @@ export const ROLE_CAPABILITIES: Partial<Record<string, readonly Capability[]>> =
   analyst: ["mdesr.prepare", "mdesr.review", "mdesr.comment", "mdesr.submit"],
 };
 
-/** Facultades que vienen con los roles dados. El admin las tiene todas. */
+/** Solo un Consultor puede tenerlas, aunque se le asignen (igual que has_capability). */
+export const CONSULTANT_ONLY: readonly Capability[] = ["mdesr.validate", "mdesr.approve", "mdesr.close"];
+
+/** Facultades que vienen con los roles dados. Ser admin NO da facultades técnicas. */
 export const capabilitiesFromRoles = (roles: readonly string[]): Set<Capability> => {
-  if (roles.includes("admin")) return new Set(CAPABILITIES);
   const out = new Set<Capability>();
   for (const r of roles) for (const c of ROLE_CAPABILITIES[r] ?? []) out.add(c);
+  return out;
+};
+
+/** Facultades efectivas: las del rol más las asignadas; validar, aprobar y cerrar solo si es Consultor. */
+export const effectiveCapabilities = (roles: readonly string[], granted: Iterable<string>): Set<Capability> => {
+  const out = capabilitiesFromRoles(roles);
+  for (const c of granted) if ((CAPABILITIES as string[]).includes(c)) out.add(c as Capability);
+  if (!roles.includes("consultant")) for (const c of CONSULTANT_ONLY) out.delete(c);
   return out;
 };
 

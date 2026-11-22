@@ -42,8 +42,24 @@ describe("UserCapabilities", () => {
     expect(screen.getByText("Validación")).toBeInTheDocument();
     expect(casilla("Elaborar diagnósticos").checked).toBe(true);
     expect(casilla("Elaborar diagnósticos").disabled).toBe(true);
+    expect(casilla("Rechazar").disabled).toBe(false);
+    // Validar, aprobar y cerrar: solo Consultor
     expect(casilla("Aprobar").checked).toBe(false);
-    expect(casilla("Aprobar").disabled).toBe(false);
+    expect(casilla("Aprobar").disabled).toBe(true);
+    expect(casilla("Validar").disabled).toBe(true);
+    expect(casilla("Cerrar el diagnóstico").disabled).toBe(true);
+    expect(screen.getAllByText("(solo Consultor)")).toHaveLength(3);
+  });
+
+  it("admin: sin facultades por su rol; puede asignarse las de elaboración", async () => {
+    render(<UserCapabilities userId="admin1" email="yo@x.com" role="admin" />);
+    await screen.findByText("Validación");
+    expect(casilla("Elaborar diagnósticos").checked).toBe(false);
+    expect(casilla("Elaborar diagnósticos").disabled).toBe(false);
+    expect(casilla("Aprobar").disabled).toBe(true);
+    fireEvent.click(casilla("Elaborar diagnósticos"));
+    await waitFor(() => expect(casilla("Elaborar diagnósticos").checked).toBe(true));
+    expect(calls).toContainEqual({ op: "insert", args: [{ user_id: "admin1", capability: "mdesr.prepare" }] });
   });
 
   it("consultor: validar y aprobar vienen con el rol", async () => {
@@ -55,18 +71,28 @@ describe("UserCapabilities", () => {
   });
 
   it("marca las asignadas y permite darlas y quitarlas", async () => {
-    selectRes = { data: [{ capability: "mdesr.close" }], error: null };
+    selectRes = { data: [{ capability: "mdesr.assign_reviewer" }], error: null };
     render(<UserCapabilities userId="u2" email="a@x.com" role="analyst" />);
     await screen.findByText("Validación");
-    expect(casilla("Cerrar el diagnóstico").checked).toBe(true);
+    expect(casilla("Asignar revisor").checked).toBe(true);
 
-    fireEvent.click(casilla("Aprobar"));
-    await waitFor(() => expect(casilla("Aprobar").checked).toBe(true));
-    expect(calls).toContainEqual({ op: "insert", args: [{ user_id: "u2", capability: "mdesr.approve" }] });
+    fireEvent.click(casilla("Rechazar"));
+    await waitFor(() => expect(casilla("Rechazar").checked).toBe(true));
+    expect(calls).toContainEqual({ op: "insert", args: [{ user_id: "u2", capability: "mdesr.reject" }] });
 
-    fireEvent.click(casilla("Cerrar el diagnóstico"));
-    await waitFor(() => expect(casilla("Cerrar el diagnóstico").checked).toBe(false));
+    fireEvent.click(casilla("Asignar revisor"));
+    await waitFor(() => expect(casilla("Asignar revisor").checked).toBe(false));
     expect(calls.some((c) => c.op === "delete")).toBe(true);
+  });
+
+  it("si alguien que no es Consultor tiene una de solo Consultor, se le puede quitar", async () => {
+    selectRes = { data: [{ capability: "mdesr.approve" }], error: null };
+    render(<UserCapabilities userId="u2" email="a@x.com" role="analyst" />);
+    await screen.findByText("Validación");
+    expect(casilla("Aprobar").checked).toBe(true);
+    expect(casilla("Aprobar").disabled).toBe(false);
+    fireEvent.click(casilla("Aprobar"));
+    await waitFor(() => expect(casilla("Aprobar").checked).toBe(false));
   });
 
   it("si falta el script 09 muestra el aviso", async () => {
@@ -80,8 +106,8 @@ describe("UserCapabilities", () => {
     writeRes = { data: null, error: { code: "42501", message: "permiso denegado" } };
     render(<UserCapabilities userId="u2" email="a@x.com" role="viewer" />);
     await screen.findByText("Validación");
-    fireEvent.click(casilla("Aprobar"));
+    fireEvent.click(casilla("Rechazar"));
     await waitFor(() => expect(toast).toHaveBeenCalled());
-    expect(casilla("Aprobar").checked).toBe(false);
+    expect(casilla("Rechazar").checked).toBe(false);
   });
 });
