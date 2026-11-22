@@ -214,9 +214,9 @@ Las facultades se toman del script [`09-consultor-y-facultades.sql`](../../supab
 | Revisar diagnósticos (`mdesr.review`) | Sí | Sí | Si está autorizado | No |
 | Determinar si hace falta un segundo Analista | Sí | Sí | No | No |
 | Asignar revisores (`mdesr.assign_reviewer`) | Sí | Sí | No, salvo delegación | No |
-| Validar técnicamente (`mdesr.validate`) | Sí | Sí | No por defecto | No |
-| Aprobar diagnósticos (`mdesr.approve`) | Sí | Sí | No por defecto | No |
-| Autorizar emisión de entregables | Sí | Sí, conforme a su facultad | No por defecto | No |
+| Validar técnicamente (`mdesr.validate`) | Sí | Sí | **No** (D-25) | No |
+| Aprobar diagnósticos (`mdesr.approve`) | Sí | Sí | **No** (D-25) | No |
+| Autorizar emisión de entregables | Sí | Sí, conforme a su facultad | **No** (D-25) | No |
 | Reasignar clientes y proyectos (`admin.reassign_clients_projects`) | Sí | No por defecto | No | No |
 | Asignar clientes a Asesores | Sí | No | No | No |
 | Asignar proyectos a Consultores | Sí | No | No | No |
@@ -242,7 +242,7 @@ Además: rechazar, devolver para corrección y cerrar van con validar y aprobar.
 - `role_capabilities('consultant')` debe sumar `mdesr.prepare`;
 - `role_capabilities('analyst')` debe quedar en `mdesr.prepare`, `mdesr.comment` y `mdesr.submit`: revisar “si está autorizado” pasa a ser facultad individual;
 - falta el retiro por persona (D-20);
-- su trigger hoy **impide** dar validar o aprobar a quien no es Consultor. La matriz dice “No por defecto” para el Analista (D-25).
+- el trigger del 09 impide dar validar, aprobar o cerrar a quien no es Consultor ni Administrador. Así queda: el titular decidió que no se le puede dar a un Analista (D-25).
 
 ### 5.3 Función de cada persona en el proyecto (`project_members.project_function`)
 
@@ -1512,7 +1512,7 @@ Cuidados de la migración:
 | D-19 | ~~Ejecutivo y documentos~~ | **Decidido (23-nov):** solo los asignados |
 | D-20 | ~~Retiro por persona~~ | **Decidido (23-nov):** sí, lo hace el Administrador. Le toca al script 09 |
 | D-21 | ~~Analista con `mdesr.approve` expresa~~ | **Resuelto en 09 (`da728e8`):** la base no deja dar validar, aprobar ni cerrar a quien no es Consultor |
-| D-25 | La matriz dice “No por defecto” para que un Analista valide y apruebe, o sea que se le podría conceder. El 09 hoy lo **impide** con un trigger. ¿Se permite concederlo? | El borrador 10 ya lo admite (vía A con `facultad_expresa`). Si se permite, el 09 quita ese bloqueo y exige una nota obligatoria (H-05) |
+| D-25 | ~~¿Validar o aprobar para un Analista?~~ | **Decidido (23-nov): no se puede.** Validar, aprobar y cerrar quedan solo para el Consultor y el Administrador. Lo hace cumplir el 09 (`has_capability` y su trigger) |
 | D-26 | ~~Visibilidad del CRM por asignación~~ | **Decidido (23-nov):** sí. Está en el borrador 10, sin tocar el 02 |
 | D-23 | ¿Qué es un documento “asignado” al Ejecutivo? | Propuesta aplicada en el borrador 10: de un proyecto donde está asignado, de un cliente a su cargo o creado por él. Confirmar |
 | D-24 | ¿El Administrador puede aprobar lo que él mismo elaboró o modificó? | No, como cualquier persona. Si lo elabora, aprueba un Consultor. Confirmar |
