@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useState, ReactNode 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { RESOURCES, type Action, type Permissions, type Resource } from "@/lib/access";
+import { capabilitiesFromRoles, isMissingTable, type Capability } from "@/lib/capabilities";
 
-export type Role = "admin" | "analyst" | "operations" | "advisor" | "viewer" | "executive";
+export type Role = "admin" | "consultant" | "analyst" | "operations" | "advisor" | "viewer" | "executive";
 
 interface AuthCtx {
   session: Session | null;
@@ -15,6 +16,11 @@ interface AuthCtx {
   /** Permisos efectivos por módulo (unión de los roles del usuario; admin = todo). */
   permissions: Permissions;
   can: (resource: Resource, action?: Action) => boolean;
+  /** Facultades M-DESR efectivas: las del rol más las asignadas a la persona (admin = todas). */
+  capabilities: Set<Capability>;
+  hasCapability: (cap: Capability) => boolean;
+  /** true si la tabla user_capabilities aún no existe (falta correr el script 09). */
+  capabilitiesMissing: boolean;
   /** Vuelve a leer roles y permisos (p. ej. después de cambiar la matriz de accesos). */
   refreshAccess: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permissions>({});
+  const [capabilities, setCapabilities] = useState<Set<Capability>>(new Set());
+  const [capabilitiesMissing, setCapabilitiesMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
@@ -58,10 +66,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setPermissions({});
       }
+
+      // Facultades M-DESR: las del rol + las asignadas a la persona.
+      // Si la tabla no existe todavía (script 09 sin correr), solo las del rol.
+      const caps = capabilitiesFromRoles(r);
+      if (r.length && !r.includes("admin")) {
+        const { data: own, error: capErr } = await supabase.from("user_capabilities").select("capability").eq("user_id", uid);
+        setCapabilitiesMissing(isMissingTable(capErr));
+        if (capErr && !isMissingTable(capErr)) console.warn("[useAuth] No se pudieron cargar las facultades:", capErr.message);
+        for (const c of own ?? []) caps.add(c.capability as Capability);
+      }
+      setCapabilities(caps);
     } catch (err: any) {
       console.warn("[useAuth] Error inesperado cargando accesos:", err.message);
       setRoles([]);
       setPermissions({});
+      setCapabilities(new Set());
     }
     setRolesLoaded(true);
   }, []);
@@ -76,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setRoles([]);
         setPermissions({});
+        setCapabilities(new Set());
         setRolesLoaded(true);
       }
     });
@@ -97,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => { await supabase.auth.signOut(); };
   const refreshAccess = useCallback(async () => { if (user) await loadAccess(user.id); }, [user, loadAccess]);
   const can = useCallback((resource: Resource, action: Action = "read") => !!permissions[resource]?.[action], [permissions]);
+  const hasCapability = useCallback((cap: Capability) => capabilities.has(cap), [capabilities]);
 
   return (
     <Ctx.Provider
@@ -109,6 +131,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin: roles.includes("admin"),
         permissions,
         can,
+        capabilities,
+        hasCapability,
+        capabilitiesMissing,
         refreshAccess,
         signOut,
       }}

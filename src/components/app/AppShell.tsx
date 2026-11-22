@@ -16,7 +16,7 @@ import { usePanelAvisos, type Contadores } from "./usePanelAvisos";
 import "./panel.css";
 
 const ROL: Record<Role, string> = {
-  admin: "Administrador", analyst: "Analista", operations: "Operaciones",
+  admin: "Administrador", consultant: "Consultor", analyst: "Analista", operations: "Operaciones",
   advisor: "Asesor", executive: "Ejecutivo", viewer: "Solo lectura",
 };
 const PRODUCCION = esProduccion(import.meta.env.VITE_SUPABASE_URL);

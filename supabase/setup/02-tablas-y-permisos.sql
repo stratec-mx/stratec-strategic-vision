@@ -107,7 +107,7 @@ begin
   end if;
 end $$;
 
--- El rol 'executive' (Ejecutivo, solo lectura) es un rol vigente en el
+-- El rol 'executive' (Ejecutivo) es un rol vigente en el
 -- dashboard: este script ya NO lo convierte a 'operations'. Esa conversión
 -- era de la migración de mayo de 2026 y, repetida hoy, daría permiso de
 -- edición a quien se asignó como solo lectura.
@@ -332,7 +332,9 @@ create table if not exists public.access_rules (
 alter table public.access_rules enable row level security;
 
 -- Valores iniciales (6-nov-2026): cotizaciones, documentos y datos de contacto
--- solo para admin. "on conflict do nothing": volver a correr el script no
+-- solo para admin, salvo el Ejecutivo (21-nov-2026: rol comercial; ve todo y
+-- modifica lo comercial y operativo, pero no diagnósticos ni documentos
+-- técnicos). "on conflict do nothing": volver a correr el script no
 -- borra los cambios hechos desde el dashboard.
 insert into public.access_rules (role, resource, can_read, can_write) values
   ('analyst','leads',true,true), ('analyst','clients',true,true), ('analyst','contactos',false,false),
@@ -341,9 +343,9 @@ insert into public.access_rules (role, resource, can_read, can_write) values
   ('operations','leads',true,true), ('operations','clients',true,true), ('operations','contactos',false,false),
   ('operations','pipeline',true,true), ('operations','agenda',true,true), ('operations','quotes',false,false),
   ('operations','documents',false,false), ('operations','analytics',true,false),
-  ('executive','leads',true,false), ('executive','clients',true,false), ('executive','contactos',false,false),
-  ('executive','pipeline',true,false), ('executive','agenda',true,false), ('executive','quotes',false,false),
-  ('executive','documents',false,false), ('executive','analytics',true,false),
+  ('executive','leads',true,true), ('executive','clients',true,true), ('executive','contactos',true,true),
+  ('executive','pipeline',true,true), ('executive','agenda',true,true), ('executive','quotes',true,true),
+  ('executive','documents',true,false), ('executive','analytics',true,true),
   ('viewer','leads',true,false), ('viewer','clients',true,false), ('viewer','contactos',false,false),
   ('viewer','pipeline',true,false), ('viewer','agenda',true,false), ('viewer','quotes',false,false),
   ('viewer','documents',false,false), ('viewer','analytics',true,false)

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PageHeader } from "@/components/app/PageHeader";
-import { Construction, ShieldCheck, UserPlus, RefreshCw, Shield, Eye, Settings2 } from "lucide-react";
+import { Construction, ShieldCheck, UserPlus, RefreshCw, Shield, Eye, Settings2, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, Role } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { AccessMatrix } from "@/components/app/AccessMatrix";
 import { CreateUserForm } from "@/components/app/CreateUserForm";
+import { missingRoleMessage } from "@/lib/access";
+import { UserCapabilities } from "@/components/app/UserCapabilities";
 
 export const ComingSoon = ({ title, eyebrow, description }: { title: string; eyebrow: string; description: string }) => (
   <div>
@@ -32,10 +34,11 @@ export const Messaging = () => (
 
 const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: typeof Shield }[] = [
   { value: "admin",      label: "Administrador", description: "Acceso total al sistema",         icon: Shield },
+  { value: "consultant", label: "Consultor",      description: "Autoridad técnica: valida y aprueba diagnósticos", icon: ClipboardCheck },
   { value: "analyst",    label: "Analista",       description: "Lectura y análisis de datos",     icon: Eye },
   { value: "operations", label: "Operaciones",    description: "Gestión de leads y clientes",     icon: Settings2 },
   { value: "advisor",    label: "Asesor",         description: "Atiende prospectos y clientes",   icon: Settings2 },
-  { value: "executive",  label: "Ejecutivo",      description: "Vista ejecutiva y reportes",      icon: Eye },
+  { value: "executive",  label: "Ejecutivo",      description: "Gestión comercial: ve todo y modifica lo comercial (no diagnósticos)", icon: Settings2 },
   { value: "viewer",     label: "Solo lectura",   description: "Consulta sin modificaciones",     icon: Eye },
 ];
 
@@ -56,6 +59,7 @@ export const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [openCaps, setOpenCaps] = useState<string | null>(null);
 
   // Lista TODOS los usuarios registrados (tabla profiles, visible para admins),
   // con su rol si lo tienen. Así los usuarios nuevos sin rol aparecen aquí.
@@ -73,7 +77,7 @@ export const Settings = () => {
     }
     const roleOf = new Map<string, Role>();
     // Si un usuario tuviera varios roles, se muestra el de mayor privilegio
-    const rank: Role[] = ["admin", "analyst", "operations", "advisor", "executive", "viewer"];
+    const rank: Role[] = ["admin", "consultant", "analyst", "operations", "advisor", "executive", "viewer"];
     for (const x of r.data ?? []) {
       const cur = roleOf.get(x.user_id as string);
       const next = x.role as Role;
@@ -123,11 +127,11 @@ export const Settings = () => {
       .upsert({ user_id: target.id, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (insErr) {
       setBusy(null);
-      // 22P02: la base todavía no tiene ese rol (p. ej. Asesor antes de supabase/setup/propuestas/08-rol-asesor.sql)
+      // 22P02: la base todavía no tiene ese rol (Asesor antes de 08, Consultor antes del paso 1 de 09)
       const sinRol = insErr.code === "22P02" || /invalid input value for enum/i.test(insErr.message);
       toast({
         title: "Error al asignar rol",
-        description: sinRol ? "Ese rol todavía no existe en la base de datos: falta ejecutar supabase/setup/propuestas/08-rol-asesor.sql." : insErr.message,
+        description: sinRol ? missingRoleMessage(role) : insErr.message,
         variant: "destructive",
       });
       return;
@@ -161,7 +165,7 @@ export const Settings = () => {
         description="Asigne roles a los colaboradores registrados y controle el acceso al panel operativo."
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {ROLE_OPTIONS.map((r) => (
           <div key={r.value} className="border border-border bg-card p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -196,16 +200,18 @@ export const Settings = () => {
               <th className="text-left px-6 py-3 font-medium">Usuario</th>
               <th className="text-left px-6 py-3 font-medium">Registrado</th>
               <th className="text-left px-6 py-3 font-medium w-56">Rol</th>
+              <th className="text-left px-6 py-3 font-medium w-40">Facultades M-DESR</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-steel">Cargando usuarios…</td></tr>
+              <tr><td colSpan={4} className="px-6 py-8 text-center text-steel">Cargando usuarios…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-steel">Sin usuarios registrados.</td></tr>
+              <tr><td colSpan={4} className="px-6 py-8 text-center text-steel">Sin usuarios registrados.</td></tr>
             ) : (
               rows.map((u) => (
-                <tr key={u.id} className={`border-t border-border ${u.id === user?.id ? "bg-secondary/20" : ""}`}>
+                <Fragment key={u.id}>
+                <tr className={`border-t border-border ${u.id === user?.id ? "bg-secondary/20" : ""}`}>
                   <td className="px-6 py-3">
                     <div className="text-navy">{u.email}{u.id === user?.id ? " (tú)" : ""}</div>
                     {u.name && u.name !== u.email && <div className="text-xs text-steel">{u.name}</div>}
@@ -226,7 +232,27 @@ export const Settings = () => {
                       </SelectContent>
                     </Select>
                   </td>
+                  <td className="px-6 py-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOpenCaps(openCaps === u.id ? null : u.id)}
+                      aria-expanded={openCaps === u.id}
+                      className="rounded-none h-8 text-xs gap-1"
+                    >
+                      {openCaps === u.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                      Facultades
+                    </Button>
+                  </td>
                 </tr>
+                {openCaps === u.id && (
+                  <tr className="border-t border-border bg-secondary/10">
+                    <td colSpan={4} className="px-6 py-4">
+                      <UserCapabilities userId={u.id} email={u.email} role={u.role} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))
             )}
           </tbody>

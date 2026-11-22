@@ -525,6 +525,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_capabilities: {
+        Row: {
+          capability: string
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          capability: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          capability?: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -560,6 +584,7 @@ export type Database = {
     Functions: {
       can_access: { Args: { _action: string; _resource: string }; Returns: boolean }
       has_any_role: { Args: { _user_id: string }; Returns: boolean }
+      has_capability: { Args: { _cap: string; _user: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -577,7 +602,7 @@ export type Database = {
         | "whatsapp"
         | "task"
         | "stage_change"
-      app_role: "admin" | "executive" | "analyst" | "operations" | "viewer" | "advisor"
+      app_role: "admin" | "executive" | "analyst" | "operations" | "viewer" | "advisor" | "consultant"
       deal_stage:
         | "prospeccion"
         | "diagnostico"
@@ -735,7 +760,7 @@ export const Constants = {
         "task",
         "stage_change",
       ],
-      app_role: ["admin", "executive", "analyst", "operations", "viewer", "advisor"],
+      app_role: ["admin", "executive", "analyst", "operations", "viewer", "advisor", "consultant"],
       deal_stage: [
         "prospeccion",
         "diagnostico",

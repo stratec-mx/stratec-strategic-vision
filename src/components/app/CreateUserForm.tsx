@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const ROLE_CHOICES = [
   { value: "admin", label: "Administrador" },
+  { value: "consultant", label: "Consultor" },
   { value: "analyst", label: "Analista" },
   { value: "operations", label: "Operaciones" },
   { value: "advisor", label: "Asesor" },

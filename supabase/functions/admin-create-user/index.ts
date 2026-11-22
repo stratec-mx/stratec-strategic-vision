@@ -9,7 +9,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ROLES = ["admin", "analyst", "operations", "advisor", "executive", "viewer"] as const;
+const ROLES = ["admin", "consultant", "analyst", "operations", "advisor", "executive", "viewer"] as const;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });

@@ -17,9 +17,20 @@ export type Permissions = Partial<Record<Resource, { read: boolean; write: boole
 
 /** Roles configurables en la matriz (admin siempre tiene todo). */
 export const CONFIGURABLE_ROLES = [
+  { id: "consultant", label: "Consultor" },
   { id: "analyst", label: "Analista" },
   { id: "operations", label: "Operaciones" },
   { id: "advisor", label: "Asesor" },
   { id: "executive", label: "Ejecutivo" },
   { id: "viewer", label: "Solo lectura" },
 ] as const;
+
+/** Script que agrega cada rol nuevo a la base (para el aviso de error 22P02). */
+const ROLE_SCRIPT: Record<string, string> = {
+  advisor: "supabase/setup/propuestas/08-rol-asesor.sql",
+  consultant: "supabase/setup/propuestas/09-consultor-y-facultades.sql (paso 1)",
+};
+
+/** Mensaje cuando la base todavía no tiene el rol elegido (error 22P02). */
+export const missingRoleMessage = (role: string) =>
+  `Ese rol todavía no existe en la base de datos: falta ejecutar ${ROLE_SCRIPT[role] ?? "el script que lo agrega"}.`;
