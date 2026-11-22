@@ -4,7 +4,7 @@
 |---|---|
 | Metodología | M-DESR, Metodología de Diagnóstico Estratégico de Seguridad y Riesgos |
 | Documento | 02 · Modelo lógico y diccionario de datos |
-| Versión | 0.5, borrador para revisión del titular (matriz definitiva del 23-nov-2026) |
+| Versión | 0.6 (matriz definitiva y visibilidad del CRM por asignación, 23-nov-2026) |
 | Fecha | 22 de noviembre de 2026 |
 | Parte de | Documento 01, que define la metodología: 4 niveles, 8 fases, entidades conceptuales y entregables |
 | Base de datos de referencia | Supabase de producción `xtfsqdwkbsghkzszpisz`, leída solo desde el repositorio. No se consultó ni se modificó |
@@ -569,7 +569,7 @@ En la columna “Oblig.”, **Sí** quiere decir `NOT NULL`. “FK” es llave f
 |---|---|---|---|---|
 | `client_id` | `uuid` FK `clients` (cascade) | Sí | | **Reusa** `clients` |
 | `user_id` | `uuid` FK `auth.users` (cascade) | Sí | | Asesor, Ejecutivo o Consultor |
-| `assignment_role` | `text` | Sí | `'asesor'` | `asesor`, `ejecutivo` o `consultor` |
+| `assignment_role` | `text` | Sí | `'asesor'` | `asesor`, `ejecutivo`, `consultor`, `operaciones` o `lectura` |
 | `is_primary` | `boolean` | Sí | `false` | Responsable principal: se copia a `clients.owner_id` |
 | `assigned_by`, `assigned_at` | `uuid`, `timestamptz` | Sí | `auth.uid()`, `now()` | |
 | `reason` | `text` | Sí | | Motivo |
@@ -1367,10 +1367,18 @@ Notas:
 
 - **El Administrador** ve y opera todo lo de M-DESR. Sus actos quedan marcados como `administrador`.
 - **El Consultor solo ve sus proyectos** (D-16, decidido). Las políticas restrictivas del borrador 10 le limitan `clients` y `documents` a los clientes y documentos de sus proyectos, aunque `access_rules` le dé el módulo.
-- **El Ejecutivo solo ve los documentos asignados** (D-19, decidido): los de proyectos donde está asignado, los de clientes de su cartera (`client_assignments` o `clients.owner_id`) y los que él creó.
-- **El Asesor** solo ve los clientes asignados y sus oportunidades: prospectos con `owner_id` propio y oportunidades propias o de clientes asignados. Son políticas restrictivas en `clients`, `leads` y `deals`; volver a pegarlas después de correr 02.
-- **Operaciones y Solo lectura** en el CRM: todavía dependen de `access_rules` del script 02. Filtrarlos por asignación requiere un ajuste en 02 (D-26).
-- Los datos de contacto siguen protegidos como hoy: por las vistas `lead_contacts` y `client_contacts` (script 02).
+- **CRM por asignación (D-19 y D-26, decididos).** Asesor, Operaciones, Ejecutivo y Solo lectura ven en el CRM **solo lo asignado**. `access_rules` sigue diciendo qué módulos ve cada rol, y las políticas restrictivas del borrador 10 deciden qué filas:
+
+  | Tabla | Ven |
+  |---|---|
+  | `clients` | Clientes asignados (`client_assignments`) o a su cargo (`owner_id`) |
+  | `leads` | Prospectos propios (`owner_id`) |
+  | `deals`, `quotes`, `appointments`, `activities` | Propios o de clientes asignados |
+  | `documents` | De proyectos donde están asignados, de clientes asignados o creados por ellos |
+
+  El Administrador y el Analista no se limitan. El Consultor tiene su propia regla: solo sus proyectos.
+- **Prospectos nuevos del sitio:** llegan sin responsable. Los ven el Administrador y el Analista hasta que se asignan (`leads.owner_id`).
+- **Correo y teléfono:** el borrador 10 vuelve a crear las vistas `lead_contacts` y `client_contacts` con el mismo filtro por asignación. Si se vuelve a correr 02, quedan sin el filtro hasta pegar otra vez el bloque de E5.
 - `can_access()` devuelve verdadero para `admin`. **Las funciones de M-DESR no lo usan para actos técnicos**, así que el Administrador no aprueba por ser Administrador.
 
 ---
@@ -1505,7 +1513,7 @@ Cuidados de la migración:
 | D-20 | ~~Retiro por persona~~ | **Decidido (23-nov):** sí, lo hace el Administrador. Le toca al script 09 |
 | D-21 | ~~Analista con `mdesr.approve` expresa~~ | **Resuelto en 09 (`da728e8`):** la base no deja dar validar, aprobar ni cerrar a quien no es Consultor |
 | D-25 | La matriz dice “No por defecto” para que un Analista valide y apruebe, o sea que se le podría conceder. El 09 hoy lo **impide** con un trigger. ¿Se permite concederlo? | El borrador 10 ya lo admite (vía A con `facultad_expresa`). Si se permite, el 09 quita ese bloqueo y exige una nota obligatoria (H-05) |
-| D-26 | Visibilidad por asignación en el CRM para Operaciones (proyectos y actividades asignados), Ejecutivo (su cartera) y Solo lectura (registros autorizados) | Ajustar 02 con políticas por `owner_id` y `client_assignments`, como las del Asesor en el borrador 10 |
+| D-26 | ~~Visibilidad del CRM por asignación~~ | **Decidido (23-nov):** sí. Está en el borrador 10, sin tocar el 02 |
 | D-23 | ¿Qué es un documento “asignado” al Ejecutivo? | Propuesta aplicada en el borrador 10: de un proyecto donde está asignado, de un cliente a su cargo o creado por él. Confirmar |
 | D-24 | ¿El Administrador puede aprobar lo que él mismo elaboró o modificó? | No, como cualquier persona. Si lo elabora, aprueba un Consultor. Confirmar |
 | D-22 | ~~¿Rechazar solo del Consultor?~~ | **Resuelto por la matriz:** rechazar va con validar y aprobar, por facultad (Consultor, Administrador o quien la reciba) |

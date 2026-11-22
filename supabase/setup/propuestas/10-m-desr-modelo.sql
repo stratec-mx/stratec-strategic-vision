@@ -118,7 +118,7 @@ create table if not exists public.client_assignments (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.clients(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  assignment_role text not null default 'asesor' check (assignment_role in ('asesor','ejecutivo','consultor')),
+  assignment_role text not null default 'asesor' check (assignment_role in ('asesor','ejecutivo','consultor','operaciones','lectura')),
   is_primary boolean not null default false,
   assigned_by uuid references auth.users(id) default auth.uid(),
   assigned_at timestamptz not null default now(),
@@ -131,6 +131,17 @@ create table if not exists public.client_assignments (
 create unique index if not exists client_assignments_active_key
   on public.client_assignments (client_id, user_id, assignment_role) where removed_at is null;
 create index if not exists client_assignments_user_idx on public.client_assignments (user_id) where removed_at is null;
+
+-- D-26: Asesor, Operaciones, Ejecutivo y Solo lectura ven el CRM solo por asignación.
+-- Admin, Analista y Consultor no se limitan aquí (el Consultor tiene su propia regla).
+create or replace function public.mdesr_crm_limited(_user uuid default auth.uid())
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (select 1 from public.user_roles where user_id = _user
+                 and role::text in ('advisor','operations','executive','viewer'))
+     and not exists (select 1 from public.user_roles where user_id = _user
+                     and role::text in ('admin','analyst'))
+$$;
 
 create or replace function public.mdesr_client_assigned(_client uuid, _user uuid default auth.uid())
 returns boolean language sql stable security definer set search_path = public
@@ -1760,7 +1771,9 @@ create trigger mdesr_guard_document before insert or update on public.documents
 
 -- ── E5 · políticas de documents ──────────────────────────────────────────
 -- ⚠ Volver a pegar este bloque después de cada ejecución de 02-tablas-y-permisos.sql,
--- que borra todas las políticas de documents, clients, leads y deals.
+-- que borra todas las políticas de documents, clients, leads, deals, quotes,
+-- appointments y activities, y vuelve a crear las vistas lead_contacts y
+-- client_contacts sin el filtro por asignación.
 -- RESTRICTIVAS: se suman (con AND) a las políticas actuales por módulo. Para los
 -- documentos fuera de M-DESR (project_id nulo) no cambian nada.
 drop policy if exists "mdesr entregables leer" on public.documents;
@@ -1789,8 +1802,9 @@ create policy "mdesr documentos consultor" on public.documents as restrictive fo
   with check (not public.has_role(auth.uid(), 'consultant') or public.has_role(auth.uid(), 'admin')
          or (project_id is not null and public.mdesr_is_member(project_id)));
 drop policy if exists "mdesr documentos ejecutivo" on public.documents;
-create policy "mdesr documentos ejecutivo" on public.documents as restrictive for select to authenticated
-  using (not public.has_role(auth.uid(), 'executive') or public.has_role(auth.uid(), 'admin')
+drop policy if exists "mdesr documentos asignados" on public.documents;
+create policy "mdesr documentos asignados" on public.documents as restrictive for select to authenticated
+  using (not public.mdesr_crm_limited()
          or (project_id is not null and public.mdesr_is_member(project_id))
          or owner_id = auth.uid()
          or (client_id is not null and public.mdesr_client_assigned(client_id)));
@@ -1799,19 +1813,66 @@ drop policy if exists "mdesr clientes consultor" on public.clients;
 create policy "mdesr clientes consultor" on public.clients as restrictive for select to authenticated
   using (not public.has_role(auth.uid(), 'consultant') or public.has_role(auth.uid(), 'admin')
          or exists (select 1 from public.projects p where p.client_id = clients.id and public.mdesr_is_member(p.id)));
--- Asesor: solo clientes y oportunidades asignados.
+-- D-26: visibilidad del CRM por asignación (Asesor, Operaciones, Ejecutivo y
+-- Solo lectura). Restrictivas: se suman a access_rules, que sigue diciendo
+-- qué módulos ve cada rol. Aquí se decide QUÉ FILAS:
+--   clientes: asignados (client_assignments) o a su cargo (owner_id)
+--   prospectos: propios (owner_id)
+--   oportunidades, cotizaciones, citas y actividades: propias o de clientes asignados
+-- Los prospectos nuevos del sitio llegan sin responsable: los ven el admin y el
+-- analista hasta que se asignan (leads.owner_id).
 drop policy if exists "mdesr clientes asesor" on public.clients;
-create policy "mdesr clientes asesor" on public.clients as restrictive for select to authenticated
-  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
-         or public.mdesr_client_assigned(id));
 drop policy if exists "mdesr prospectos asesor" on public.leads;
-create policy "mdesr prospectos asesor" on public.leads as restrictive for select to authenticated
-  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
-         or owner_id = auth.uid());
 drop policy if exists "mdesr oportunidades asesor" on public.deals;
-create policy "mdesr oportunidades asesor" on public.deals as restrictive for select to authenticated
-  using (not public.has_role(auth.uid(), 'advisor') or public.has_role(auth.uid(), 'admin')
-         or owner_id = auth.uid() or (client_id is not null and public.mdesr_client_assigned(client_id)));
+drop policy if exists "mdesr crm asignados" on public.clients;
+create policy "mdesr crm asignados" on public.clients as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or public.mdesr_client_assigned(id))
+  with check (not public.mdesr_crm_limited() or public.mdesr_client_assigned(id) or owner_id = auth.uid());
+drop policy if exists "mdesr crm asignados" on public.leads;
+create policy "mdesr crm asignados" on public.leads as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or owner_id = auth.uid())
+  with check (not public.mdesr_crm_limited() or owner_id = auth.uid());
+drop policy if exists "mdesr crm asignados" on public.deals;
+create policy "mdesr crm asignados" on public.deals as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)))
+  with check (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)));
+drop policy if exists "mdesr crm asignados" on public.quotes;
+create policy "mdesr crm asignados" on public.quotes as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)))
+  with check (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)));
+drop policy if exists "mdesr crm asignados" on public.appointments;
+create policy "mdesr crm asignados" on public.appointments as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id))
+         or exists (select 1 from public.leads l where l.id = lead_id and l.owner_id = auth.uid()))
+  with check (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)));
+drop policy if exists "mdesr crm asignados" on public.activities;
+create policy "mdesr crm asignados" on public.activities as restrictive for all to authenticated
+  using (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id))
+         or exists (select 1 from public.leads l where l.id = lead_id and l.owner_id = auth.uid())
+         or exists (select 1 from public.deals d where d.id = deal_id and d.owner_id = auth.uid()))
+  with check (not public.mdesr_crm_limited() or owner_id = auth.uid()
+         or (client_id is not null and public.mdesr_client_assigned(client_id)));
+
+-- Correo y teléfono: las vistas de 02 corren con permisos del dueño y no ven
+-- estas restricciones; se redefinen con el mismo filtro por asignación.
+create or replace view public.lead_contacts as
+  select id, email, phone from public.leads
+  where public.can_access('contactos', 'read')
+    and (not public.mdesr_crm_limited() or owner_id = auth.uid());
+create or replace view public.client_contacts as
+  select id, contact_email, contact_phone from public.clients
+  where public.can_access('contactos', 'read')
+    and (not public.mdesr_crm_limited() or public.mdesr_client_assigned(id));
+revoke all on public.lead_contacts, public.client_contacts from anon, public;
+grant select on public.lead_contacts, public.client_contacts to authenticated;
+
 -- Permisiva adicional: los miembros ven los entregables de su proyecto aunque su
 -- rol no tenga el módulo Documentos en access_rules (el Consultor empieza sin él).
 drop policy if exists "mdesr entregables miembros" on public.documents;
