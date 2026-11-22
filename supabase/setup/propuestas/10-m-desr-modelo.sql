@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- STRATEC · PROPUESTA 09 · M-DESR: modelo lógico (etapas E1 a E7)
+-- STRATEC · PROPUESTA 10 · M-DESR: modelo lógico (etapas E1 a E7)
 --
 --   ███  NO EJECUTADO  ███  NO EJECUTAR EN PRODUCCIÓN  ███
 --
@@ -11,9 +11,17 @@
 --   3. Verificar cada regla con usuarios simulados (como 04 y 05).
 --   4. Solo el titular lo pega en producción, etapa por etapa.
 --
--- Requisitos: 02-tablas-y-permisos.sql (access_rules, can_access, has_role,
--- touch_updated_at) y 08-rol-asesor.sql ya aplicados. No modifica ni vuelve a
--- definir nada de 02 ni de 08.
+-- Requisitos, en este orden: 02-tablas-y-permisos.sql, 08-rol-asesor.sql y
+-- 09-consultor-y-facultades.sql (rol 'consultant', user_capabilities,
+-- has_capability). Este script NO redefine nada de esos tres: usa
+-- has_capability() como única fuente de facultades.
+--
+-- Administrador: has_capability() le da todas las facultades (decisión del
+-- titular). Aquí puede operar cualquier proyecto, pero cada acto suyo que no
+-- le corresponda por función asignada queda en approval_records con
+-- authority_basis = 'intervencion_administrativa': nunca aparece como
+-- validación técnica del Consultor. La regla de autoría (nadie aprueba su
+-- propio trabajo) también aplica al Administrador.
 --
 -- Es aditivo: crea tablas, funciones, triggers y políticas nuevas. A la tabla
 -- existente `documents` solo le agrega columnas opcionales y políticas
@@ -22,53 +30,22 @@
 -- OJO: si después se vuelve a correr 02, este borra TODAS las políticas de
 -- `documents`. Hay que volver a pegar el bloque "E5 · políticas de documents".
 --
--- Igual que el script 08, va en DOS pasos separados en el SQL Editor.
+-- Va en una sola consulta (el valor 'consultant' ya lo agregó 09).
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ███ PASO 1 (ejecútalo solo) ███████████████████████████████████████████████
-alter type public.app_role add value if not exists 'consultant';
+do $$
+begin
+  if to_regprocedure('public.has_capability(uuid, text)') is null then
+    raise exception 'Falta ejecutar 09-consultor-y-facultades.sql (has_capability).';
+  end if;
+  if to_regclass('public.access_rules') is null then
+    raise exception 'Falta ejecutar 02-tablas-y-permisos.sql (access_rules).';
+  end if;
+end $$;
 
--- ███ PASO 2 (en una consulta NUEVA, después del paso 1) ████████████████████
+-- ═══ E1 · Núcleo ═══════════════════════════════════════
 
--- ═══ E1 · Roles, facultades y núcleo ═══════════════════════════════════════
-
-create table if not exists public.role_faculties (
-  role public.app_role not null,
-  faculty text not null check (faculty in (
-    'mdesr.prepare','mdesr.review','mdesr.comment','mdesr.submit','mdesr.validate',
-    'mdesr.approve','mdesr.reject','mdesr.return_for_correction','mdesr.close',
-    'mdesr.manage_instruments','mdesr.assign_reviewer')),
-  primary key (role, faculty)
-);
-
-insert into public.role_faculties (role, faculty) values
-  ('consultant','mdesr.prepare'), ('consultant','mdesr.review'), ('consultant','mdesr.comment'),
-  ('consultant','mdesr.submit'), ('consultant','mdesr.validate'), ('consultant','mdesr.approve'),
-  ('consultant','mdesr.reject'), ('consultant','mdesr.return_for_correction'), ('consultant','mdesr.close'),
-  ('consultant','mdesr.manage_instruments'), ('consultant','mdesr.assign_reviewer'),
-  ('analyst','mdesr.prepare'), ('analyst','mdesr.review'), ('analyst','mdesr.comment'),
-  ('analyst','mdesr.submit'), ('analyst','mdesr.return_for_correction'),
-  ('operations','mdesr.prepare'), ('operations','mdesr.comment'),
-  ('advisor','mdesr.comment'),
-  ('admin','mdesr.assign_reviewer')
-on conflict do nothing;
-
-create table if not exists public.user_faculties (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  faculty text not null check (faculty in (
-    'mdesr.prepare','mdesr.review','mdesr.comment','mdesr.submit','mdesr.validate',
-    'mdesr.approve','mdesr.reject','mdesr.return_for_correction','mdesr.close',
-    'mdesr.manage_instruments','mdesr.assign_reviewer')),
-  effect text not null default 'grant' check (effect in ('grant','deny')),
-  justification text,
-  granted_by uuid references auth.users(id) default auth.uid(),
-  granted_at timestamptz not null default now(),
-  revoked_at timestamptz,
-  revoked_by uuid references auth.users(id)
-);
-create unique index if not exists user_faculties_active_key
-  on public.user_faculties (user_id, faculty) where revoked_at is null;
+-- Facultades: las da 09-consultor-y-facultades.sql (user_capabilities, role_capabilities, has_capability).
 
 create table if not exists public.methodology_versions (
   id uuid primary key default gen_random_uuid(),
@@ -236,15 +213,7 @@ create index if not exists audit_log_project_idx on public.audit_log (project_id
 -- ── Funciones de facultades y membresía (security definer: sin recursión) ──
 create or replace function public.mdesr_has_faculty(_faculty text, _user uuid default auth.uid())
 returns boolean language sql stable security definer set search_path = public
-as $$
-  select _user is not null
-     and not exists (select 1 from public.user_faculties
-                     where user_id = _user and faculty = _faculty and effect = 'deny' and revoked_at is null)
-     and (exists (select 1 from public.user_roles ur join public.role_faculties rf on rf.role = ur.role
-                  where ur.user_id = _user and rf.faculty = _faculty)
-          or exists (select 1 from public.user_faculties
-                     where user_id = _user and faculty = _faculty and effect = 'grant' and revoked_at is null))
-$$;
+as $$ select public.has_capability(_user, _faculty) $$;
 
 create or replace function public.mdesr_functions(_project uuid, _user uuid default auth.uid())
 returns text[] language sql stable security definer set search_path = public
@@ -258,11 +227,38 @@ create or replace function public.mdesr_is_member(_project uuid)
 returns boolean language sql stable security definer set search_path = public
 as $$ select cardinality(public.mdesr_functions(_project)) > 0 $$;
 
+-- Leer un proyecto: sus miembros y el Administrador (decisión del titular).
+create or replace function public.mdesr_can_read(_project uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$ select _project is not null and (public.mdesr_is_member(_project) or public.has_role(auth.uid(), 'admin')) $$;
+
+-- ¿Con qué autoridad actúa _user para una facultad en un proyecto?
+--   funcion_asignada            tiene la función en el proyecto y la facultad por su rol (no admin)
+--   facultad_expresa            tiene la función y la facultad dada a su persona en user_capabilities
+--   intervencion_administrativa es admin y no le corresponde por lo anterior
+--   null                        no puede
+create or replace function public.mdesr_authority(_project uuid, _functions text[], _faculty text, _user uuid default auth.uid())
+returns text language sql stable security definer set search_path = public
+as $$
+  select case
+    when public.mdesr_functions(_project, _user) && _functions
+         and exists (select 1 from public.user_roles ur
+                     where ur.user_id = _user and ur.role::text <> 'admin'
+                       and _faculty = any (public.role_capabilities(ur.role::text)))
+      then 'funcion_asignada'
+    when public.mdesr_functions(_project, _user) && _functions
+         and exists (select 1 from public.user_capabilities c where c.user_id = _user and c.capability = _faculty)
+      then 'facultad_expresa'
+    when public.has_role(_user, 'admin') then 'intervencion_administrativa'
+    else null
+  end
+$$;
+
 create or replace function public.mdesr_can_read_object(_object uuid)
 returns boolean language sql stable security definer set search_path = public
 as $$
   select exists (select 1 from public.project_study_objects pso
-                 where pso.study_object_id = _object and public.mdesr_is_member(pso.project_id))
+                 where pso.study_object_id = _object and public.mdesr_can_read(pso.project_id))
       or exists (select 1 from public.study_objects so
                  where so.id = _object and so.created_by = auth.uid()
                    and not exists (select 1 from public.project_study_objects x where x.study_object_id = so.id))
@@ -361,29 +357,6 @@ drop trigger if exists mdesr_check_member on public.project_members;
 create trigger mdesr_check_member before insert or update on public.project_members
   for each row execute function public.mdesr_check_member();
 
--- R-03: aprobar o validar sin ser Consultor exige justificación; solo se revoca
-create or replace function public.mdesr_check_user_faculty()
-returns trigger language plpgsql security definer set search_path = public
-as $$
-begin
-  if tg_op = 'UPDATE' then
-    if (to_jsonb(new) - 'revoked_at' - 'revoked_by') is distinct from (to_jsonb(old) - 'revoked_at' - 'revoked_by') then
-      raise exception 'Una facultad registrada no se edita: se revoca y se registra otra.';
-    end if;
-    new.revoked_by := coalesce(new.revoked_by, auth.uid());
-    return new;
-  end if;
-  if new.effect = 'grant' and new.faculty in ('mdesr.approve','mdesr.validate')
-     and not public.has_role(new.user_id, 'consultant')
-     and coalesce(length(btrim(new.justification)), 0) < 20 then
-    raise exception 'Conceder % a quien no es Consultor requiere una justificación escrita.', new.faculty;
-  end if;
-  new.granted_by := coalesce(auth.uid(), new.granted_by);
-  return new;
-end $$;
-drop trigger if exists mdesr_check_user_faculty on public.user_faculties;
-create trigger mdesr_check_user_faculty before insert or update on public.user_faculties
-  for each row execute function public.mdesr_check_user_faculty();
 
 -- R-17: tablas que solo crecen
 create or replace function public.mdesr_append_only()
@@ -408,13 +381,9 @@ create or replace view public.mdesr_project_overview as
   select p.id, p.code, p.name, p.status, p.current_phase, p.sector_module, p.is_demo,
          p.client_id, c.name as client_name, p.start_date, p.target_end_date
   from public.projects p join public.clients c on c.id = p.client_id
-  where public.mdesr_is_member(p.id) or public.has_role(auth.uid(), 'admin');
+  where public.mdesr_can_read(p.id) or public.has_role(auth.uid(), 'admin');
 
--- El Consultor empieza sin acceso a los módulos actuales (solo ve sus proyectos)
-insert into public.access_rules (role, resource, can_read, can_write)
-select 'consultant', r, false, false
-from unnest(array['leads','clients','contactos','pipeline','agenda','quotes','documents','analytics']) r
-on conflict (role, resource) do nothing;
+-- Las filas de access_rules del Consultor y del Ejecutivo las pone 09. Ver la revisión cruzada (hallazgo H-01).
 
 -- ═══ E2 · Biblioteca metodológica ══════════════════════════════════════════
 
@@ -691,6 +660,8 @@ create table if not exists public.assessments (
   summary text,
   overall_level text check (overall_level in ('bajo','medio','alto','critico')),
   content_hash text,
+  validation_basis text check (validation_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa')),
+  approval_basis text check (approval_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa')),
   closed_at timestamptz,
   closed_by uuid references auth.users(id),
   created_by uuid references auth.users(id) default auth.uid(),
@@ -900,7 +871,10 @@ as $$ select project_id from public.assessments where id = _assessment $$;
 create or replace function public.mdesr_can_prepare(_assessment uuid)
 returns boolean language sql stable security definer set search_path = public
 as $$
-  select public.mdesr_has_faculty('mdesr.prepare')
+  select (public.has_role(auth.uid(), 'admin')
+          and exists (select 1 from public.assessments a join public.projects p on p.id = a.project_id
+                      where a.id = _assessment and a.status = 'borrador' and p.status = 'activo'))
+      or public.mdesr_has_faculty('mdesr.prepare')
      and exists (select 1
                  from public.assessments a
                  join public.projects p on p.id = a.project_id
@@ -1051,12 +1025,12 @@ on conflict (id) do nothing;
 drop policy if exists "mdesr evidencias leer" on storage.objects;
 create policy "mdesr evidencias leer" on storage.objects for select to authenticated
   using (bucket_id = 'mdesr-evidencias'
-         and public.mdesr_is_member(public.mdesr_try_uuid((storage.foldername(name))[1])));
+         and public.mdesr_can_read(public.mdesr_try_uuid((storage.foldername(name))[1])));
 drop policy if exists "mdesr evidencias subir" on storage.objects;
 create policy "mdesr evidencias subir" on storage.objects for insert to authenticated
   with check (bucket_id = 'mdesr-evidencias'
               and public.mdesr_has_faculty('mdesr.prepare')
-              and public.mdesr_is_member(public.mdesr_try_uuid((storage.foldername(name))[1])));
+              and public.mdesr_can_read(public.mdesr_try_uuid((storage.foldername(name))[1])));
 -- Sin políticas de update ni delete: los archivos no se reemplazan ni se borran desde el panel.
 
 -- ═══ E4 · Riesgo e intervención ════════════════════════════════════════════
@@ -1321,6 +1295,7 @@ create table if not exists public.approval_records (
   actor_id uuid references auth.users(id) default auth.uid(),
   actor_roles text[] not null default '{}',
   actor_function text,
+  authority_basis text not null default 'funcion_asignada' check (authority_basis in ('funcion_asignada','facultad_expresa','intervencion_administrativa','sistema')),
   methodology_version_label text not null,
   instrument_versions_applied jsonb not null default '[]',
   scale_version_label text,
@@ -1463,6 +1438,7 @@ declare
   nuevo text;
   revisor uuid;
   es_autor boolean;
+  base text;
   mv_label text; sv_label text; inst jsonb; huella text;
 begin
   if uid is null then raise exception 'Se requiere sesión iniciada.'; end if;
@@ -1487,21 +1463,24 @@ begin
 
   if _action = 'enviar' then
     if v_status <> 'borrador' then raise exception 'Solo se envía desde borrador.'; end if;
-    if not ('elaborador' = any(fns) and public.mdesr_has_faculty('mdesr.submit')) then
+    base := public.mdesr_authority(v_project, array['elaborador'], 'mdesr.submit', uid);
+    if base is null then
       raise exception 'Solo el elaborador con la facultad mdesr.submit envía a revisión.';
     end if;
     if _type = 'assessment' then perform public.mdesr_check_submission(_id); end if;
     nuevo := 'enviado';
   elsif _action = 'tomar_revision' then
     if v_status <> 'enviado' then raise exception 'No hay una versión enviada.'; end if;
-    if not ('revisor' = any(fns) and public.mdesr_has_faculty('mdesr.review')) then
+    base := public.mdesr_authority(v_project, array['revisor'], 'mdesr.review', uid);
+    if base is null then
       raise exception 'Solo el revisor asignado toma la revisión.';
     end if;
     if es_autor then raise exception 'No puedes revisar una versión de la que eres autor.'; end if;
     nuevo := 'en_revision';
   elsif _action = 'revisar' then
     if v_status <> 'en_revision' then raise exception 'La versión no está en revisión.'; end if;
-    if not ('revisor' = any(fns) and public.mdesr_has_faculty('mdesr.review')) then
+    base := public.mdesr_authority(v_project, array['revisor'], 'mdesr.review', uid);
+    if base is null then
       raise exception 'Solo el revisor asignado registra la revisión.';
     end if;
     if es_autor then raise exception 'No puedes revisar una versión de la que eres autor.'; end if;
@@ -1511,21 +1490,23 @@ begin
     nuevo := 'revisado';
   elsif _action = 'devolver' then
     if v_status not in ('en_revision','revisado','validado') then raise exception 'No hay nada que devolver.'; end if;
-    if not (public.mdesr_has_faculty('mdesr.return_for_correction')
-            and ('revisor' = any(fns) or 'consultor_validador' = any(fns))) then
+    base := public.mdesr_authority(v_project, array['revisor','consultor_validador'], 'mdesr.return_for_correction', uid);
+    if base is null then
       raise exception 'Solo el revisor o el consultor validador devuelven para corrección.';
     end if;
     if es_autor then raise exception 'No puedes devolver una versión de la que eres autor.'; end if;
     nuevo := 'devuelto';
   elsif _action = 'corregir' then
     if v_status <> 'devuelto' then raise exception 'Solo se corrige una versión devuelta.'; end if;
-    if not ('elaborador' = any(fns) and public.mdesr_has_faculty('mdesr.prepare')) then
+    base := public.mdesr_authority(v_project, array['elaborador'], 'mdesr.prepare', uid);
+    if base is null then
       raise exception 'Solo el elaborador abre la corrección.';
     end if;
     nuevo := 'borrador';
   elsif _action = 'validar' then
     if v_status <> 'revisado' then raise exception 'Solo se valida una versión revisada.'; end if;
-    if not ('consultor_validador' = any(fns) and public.mdesr_has_faculty('mdesr.validate')) then
+    base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.validate', uid);
+    if base is null then
       raise exception 'Solo el consultor validador asignado valida.';
     end if;
     if es_autor then raise exception 'No puedes validar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
@@ -1535,7 +1516,8 @@ begin
     nuevo := 'validado';
   elsif _action = 'aprobar' then
     if v_status <> 'validado' then raise exception 'Solo se aprueba una versión validada.'; end if;
-    if not ('consultor_validador' = any(fns) and public.mdesr_has_faculty('mdesr.approve')) then
+    base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.approve', uid);
+    if base is null then
       raise exception 'Solo el consultor validador asignado, con la facultad mdesr.approve, aprueba.';
     end if;
     if es_autor then raise exception 'No puedes aprobar una versión de la que eres autor: debe hacerlo otro Consultor.'; end if;
@@ -1549,14 +1531,16 @@ begin
     nuevo := 'aprobado';
   elsif _action = 'rechazar' then
     if v_status not in ('enviado','en_revision','revisado','validado') then raise exception 'No hay nada que rechazar.'; end if;
-    if not ('consultor_validador' = any(fns) and public.mdesr_has_faculty('mdesr.reject')) then
+    base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.reject', uid);
+    if base is null then
       raise exception 'Solo el consultor validador rechaza.';
     end if;
     if es_autor then raise exception 'No puedes rechazar una versión de la que eres autor.'; end if;
     nuevo := 'rechazado';
   elsif _action = 'cerrar' then
     if _type <> 'assessment' or v_status <> 'aprobado' then raise exception 'Solo se cierra un diagnóstico aprobado.'; end if;
-    if not ('consultor_validador' = any(fns) and public.mdesr_has_faculty('mdesr.close')) then
+    base := public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.close', uid);
+    if base is null then
       raise exception 'Solo el consultor validador cierra.';
     end if;
     nuevo := 'cerrado';
@@ -1564,7 +1548,9 @@ begin
     if v_status not in ('enviado','en_revision','revisado','validado','aprobado') then
       raise exception 'Solo se reabre una versión enviada o aprobada.';
     end if;
-    if not ('elaborador' = any(fns) or 'consultor_validador' = any(fns)) then
+    base := coalesce(public.mdesr_authority(v_project, array['elaborador'], 'mdesr.prepare', uid),
+                     public.mdesr_authority(v_project, array['consultor_validador'], 'mdesr.validate', uid));
+    if base is null then
       raise exception 'Solo el elaborador o el consultor validador reabren.';
     end if;
     nuevo := 'borrador';
@@ -1605,11 +1591,11 @@ begin
 
   if _action = 'reabrir' then
     insert into public.approval_records (subject_type, assessment_id, document_id, subject_revision_no, action, comments,
-      actor_id, actor_roles, actor_function, methodology_version_label, instrument_versions_applied, scale_version_label)
+      actor_id, actor_roles, actor_function, authority_basis, methodology_version_label, instrument_versions_applied, scale_version_label)
     values (_type, case when _type = 'assessment' then _id else v_assessment end, case when _type = 'document' then _id end,
       v_rev, 'invalidar', coalesce(_comments, 'Reapertura por cambio sustancial'),
       uid, (select coalesce(array_agg(role::text), '{}') from public.user_roles where user_id = uid),
-      array_to_string(fns, ','), mv_label, inst, sv_label);
+      array_to_string(fns, ','), coalesce(base, 'funcion_asignada'), mv_label, inst, sv_label);
   end if;
 
   if _type = 'assessment' then
@@ -1618,6 +1604,10 @@ begin
            revision_no = case when _action in ('corregir','reabrir') then revision_no + 1 else revision_no end,
            revision_started_at = case when _action in ('corregir','reabrir') then clock_timestamp() else revision_started_at end,
            content_hash = coalesce(huella, content_hash),
+           validation_basis = case when _action = 'validar' then base
+                                   when _action in ('corregir','reabrir') then null else validation_basis end,
+           approval_basis = case when _action = 'aprobar' then base
+                                 when _action in ('corregir','reabrir') then null else approval_basis end,
            closed_at = case when nuevo = 'cerrado' then now() else closed_at end,
            closed_by = case when nuevo = 'cerrado' then uid else closed_by end
      where id = _id;
@@ -1633,11 +1623,11 @@ begin
   end if;
 
   insert into public.approval_records (subject_type, assessment_id, document_id, subject_revision_no, action, decision, comments,
-    actor_id, actor_roles, actor_function, methodology_version_label, instrument_versions_applied, scale_version_label, content_hash)
+    actor_id, actor_roles, actor_function, authority_basis, methodology_version_label, instrument_versions_applied, scale_version_label, content_hash)
   values (_type, case when _type = 'assessment' then _id else v_assessment end, case when _type = 'document' then _id end,
     v_rev, _action, _decision, _comments,
     uid, (select coalesce(array_agg(role::text), '{}') from public.user_roles where user_id = uid),
-    array_to_string(fns, ','), mv_label, inst, sv_label, huella);
+    array_to_string(fns, ','), coalesce(base, 'funcion_asignada'), mv_label, inst, sv_label, huella);
 
   perform set_config('mdesr.internal', 'off', true);
   return nuevo;
@@ -1691,10 +1681,11 @@ begin
     new.revision_started_at := clock_timestamp();
     perform set_config('mdesr.internal', 'on', true);
     insert into public.approval_records (subject_type, assessment_id, document_id, subject_revision_no, action, comments,
-      actor_roles, methodology_version_label)
+      actor_roles, authority_basis, methodology_version_label)
     values ('document', old.assessment_id, old.id, old.revision_no, 'invalidar',
       'Cambio de contenido después de aprobado: la aprobación queda sin efecto.',
       (select coalesce(array_agg(role::text), '{}') from public.user_roles where user_id = auth.uid()),
+      'sistema',
       coalesce((select m.label from public.assessments a join public.methodology_versions m on m.id = a.methodology_version_id
                 where a.id = old.assessment_id), 'desconocida'));
     perform set_config('mdesr.internal', 'off', true);
@@ -1714,14 +1705,15 @@ create trigger mdesr_guard_document before insert or update on public.documents
 -- documentos fuera de M-DESR (project_id nulo) no cambian nada.
 drop policy if exists "mdesr entregables leer" on public.documents;
 create policy "mdesr entregables leer" on public.documents as restrictive for select to authenticated
-  using (project_id is null or public.mdesr_is_member(project_id));
+  using (project_id is null or public.mdesr_can_read(project_id));
 drop policy if exists "mdesr entregables alta" on public.documents;
 create policy "mdesr entregables alta" on public.documents as restrictive for insert to authenticated
-  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)));
+  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'));
 drop policy if exists "mdesr entregables editar" on public.documents;
 create policy "mdesr entregables editar" on public.documents as restrictive for update to authenticated
-  using (project_id is null or ('elaborador' = any(public.mdesr_functions(project_id)) and approval_status in ('borrador')))
-  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)));
+  using (project_id is null or (('elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'))
+                                 and approval_status in ('borrador')))
+  with check (project_id is null or 'elaborador' = any(public.mdesr_functions(project_id)) or public.has_role(auth.uid(), 'admin'));
 drop policy if exists "mdesr entregables borrar" on public.documents;
 create policy "mdesr entregables borrar" on public.documents as restrictive for delete to authenticated
   using (project_id is null or approval_status = 'borrador');
@@ -1729,7 +1721,7 @@ create policy "mdesr entregables borrar" on public.documents as restrictive for 
 -- rol no tenga el módulo Documentos en access_rules (el Consultor empieza sin él).
 drop policy if exists "mdesr entregables miembros" on public.documents;
 create policy "mdesr entregables miembros" on public.documents for select to authenticated
-  using (project_id is not null and public.mdesr_is_member(project_id));
+  using (project_id is not null and public.mdesr_can_read(project_id));
 drop policy if exists "mdesr entregables elaborador" on public.documents;
 create policy "mdesr entregables elaborador" on public.documents for insert to authenticated
   with check (project_id is not null and 'elaborador' = any(public.mdesr_functions(project_id)));
@@ -1743,7 +1735,7 @@ on conflict (id) do nothing;
 drop policy if exists "mdesr entregables pdf leer" on storage.objects;
 create policy "mdesr entregables pdf leer" on storage.objects for select to authenticated
   using (bucket_id = 'mdesr-entregables'
-         and public.mdesr_is_member(public.mdesr_try_uuid((storage.foldername(name))[1])));
+         and public.mdesr_can_read(public.mdesr_try_uuid((storage.foldername(name))[1])));
 
 -- ═══ E6 · Plano del inmueble ═══════════════════════════════════════════════
 
@@ -2002,7 +1994,7 @@ begin
   for t in select * from (values
       ('projects','',''), ('project_members','',''), ('project_phases','',''), ('study_objects','',''),
       ('project_study_objects','',''), ('sites','',''), ('areas','',''), ('assets','',''),
-      ('user_faculties','',''), ('role_faculties','',''), ('methodology_versions','',''),
+      ('methodology_versions','',''),
       ('instrument_versions','',''), ('risk_scale_versions','',''),
       ('assessments','',''), ('assessment_instruments','',''), ('responses','',''), ('information_sources','',''),
       ('pestel_factors','',''), ('findings','',''), ('threats','',''), ('vulnerabilities','',''), ('evidence','',''),
@@ -2085,7 +2077,7 @@ begin
       execute format('drop policy if exists %I on public.%I', p.policyname, t.tbl);
     end loop;
     execute format('create policy "mdesr leer" on public.%I for select to authenticated
-                    using (public.mdesr_is_member(public.mdesr_assessment_project(%s)))', t.tbl, t.expr);
+                    using (public.mdesr_can_read(public.mdesr_assessment_project(%s)))', t.tbl, t.expr);
     execute format('create policy "mdesr alta" on public.%I for insert to authenticated
                     with check (public.mdesr_can_prepare(%s))', t.tbl, t.expr);
     if t.editable then
@@ -2126,7 +2118,7 @@ end $$;
 do $$
 declare t text; p record;
 begin
-  foreach t in array array['role_faculties','user_faculties','projects','project_members','project_phases',
+  foreach t in array array['projects','project_members','project_phases',
                            'study_objects','project_study_objects','sites','areas','assets','project_log_entries',
                            'audit_log','assessments','information_sources','evidence','approval_records',
                            'review_comments','document_annexes','site_plans','plan_features','action_items',
@@ -2141,20 +2133,9 @@ begin
   end loop;
 end $$;
 
--- Facultades: cada quien ve las suyas; admin todas; solo admin escribe
-create policy "mdesr leer" on public.role_faculties for select to authenticated using (public.has_any_role(auth.uid()));
-create policy "mdesr admin" on public.role_faculties for all to authenticated
-  using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
-create policy "mdesr leer" on public.user_faculties for select to authenticated
-  using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
-create policy "mdesr admin alta" on public.user_faculties for insert to authenticated
-  with check (public.has_role(auth.uid(), 'admin'));
-create policy "mdesr admin revocar" on public.user_faculties for update to authenticated
-  using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
-
 -- Proyectos (D-03: el admin ve la ficha y el equipo; no el contenido técnico)
 create policy "mdesr leer" on public.projects for select to authenticated
-  using (public.mdesr_is_member(id) or public.has_role(auth.uid(), 'admin'));
+  using (public.mdesr_can_read(id) or public.has_role(auth.uid(), 'admin'));
 create policy "mdesr alta" on public.projects for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin') or public.has_role(auth.uid(), 'consultant'));
 create policy "mdesr editar" on public.projects for update to authenticated
@@ -2162,7 +2143,7 @@ create policy "mdesr editar" on public.projects for update to authenticated
   with check (public.has_role(auth.uid(), 'admin') or 'consultor_validador' = any(public.mdesr_functions(id)));
 
 create policy "mdesr leer" on public.project_members for select to authenticated
-  using (public.mdesr_is_member(project_id) or public.has_role(auth.uid(), 'admin'));
+  using (public.mdesr_can_read(project_id) or public.has_role(auth.uid(), 'admin'));
 create policy "mdesr asignar" on public.project_members for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin')
               or (project_function in ('revisor','consultor_validador')
@@ -2175,7 +2156,7 @@ create policy "mdesr dar de baja" on public.project_members for update to authen
              and 'consultor_validador' = any(public.mdesr_functions(project_id))))
   with check (true);
 
-create policy "mdesr leer" on public.project_phases for select to authenticated using (public.mdesr_is_member(project_id));
+create policy "mdesr leer" on public.project_phases for select to authenticated using (public.mdesr_can_read(project_id));
 create policy "mdesr editar" on public.project_phases for update to authenticated
   using (public.mdesr_functions(project_id) && array['elaborador','consultor_validador'])
   with check (public.mdesr_functions(project_id) && array['elaborador','consultor_validador']);
@@ -2186,7 +2167,7 @@ create policy "mdesr alta" on public.study_objects for insert to authenticated
 create policy "mdesr editar" on public.study_objects for update to authenticated
   using (public.mdesr_can_edit_object(id)) with check (public.mdesr_can_edit_object(id));
 
-create policy "mdesr leer" on public.project_study_objects for select to authenticated using (public.mdesr_is_member(project_id));
+create policy "mdesr leer" on public.project_study_objects for select to authenticated using (public.mdesr_can_read(project_id));
 create policy "mdesr ligar" on public.project_study_objects for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin') or public.mdesr_functions(project_id) && array['elaborador','consultor_validador']);
 
@@ -2202,16 +2183,16 @@ create policy "mdesr leer" on public.assets for select to authenticated using (p
 create policy "mdesr escribir" on public.assets for all to authenticated
   using (public.mdesr_can_edit_object(study_object_id)) with check (public.mdesr_can_edit_object(study_object_id));
 
-create policy "mdesr leer" on public.project_log_entries for select to authenticated using (public.mdesr_is_member(project_id));
+create policy "mdesr leer" on public.project_log_entries for select to authenticated using (public.mdesr_can_read(project_id));
 create policy "mdesr alta" on public.project_log_entries for insert to authenticated
-  with check (public.mdesr_is_member(project_id) and author_id = auth.uid());
+  with check (public.mdesr_can_read(project_id) and author_id = auth.uid());
 
 create policy "mdesr leer" on public.audit_log for select to authenticated
-  using (public.has_role(auth.uid(), 'admin') or (project_id is not null and public.mdesr_is_member(project_id)));
+  using (public.has_role(auth.uid(), 'admin') or (project_id is not null and public.mdesr_can_read(project_id)));
 -- Sin políticas de escritura: solo los triggers (security definer) escriben en audit_log.
 
 create policy "mdesr leer" on public.assessments for select to authenticated
-  using (public.mdesr_is_member(project_id));
+  using (public.mdesr_can_read(project_id));
 create policy "mdesr alta" on public.assessments for insert to authenticated
   with check (public.mdesr_has_faculty('mdesr.prepare')
               and public.mdesr_functions(project_id) && array['elaborador','consultor_validador']);
@@ -2219,37 +2200,37 @@ create policy "mdesr editar" on public.assessments for update to authenticated
   using (public.mdesr_can_prepare(id)) with check (public.mdesr_can_prepare(id));
 
 create policy "mdesr leer" on public.information_sources for select to authenticated
-  using (project_id is null and public.has_any_role(auth.uid()) or public.mdesr_is_member(project_id));
+  using (project_id is null and public.has_any_role(auth.uid()) or public.mdesr_can_read(project_id));
 create policy "mdesr alta" on public.information_sources for insert to authenticated
-  with check (public.mdesr_has_faculty('mdesr.prepare') and (project_id is null or public.mdesr_is_member(project_id)));
+  with check (public.mdesr_has_faculty('mdesr.prepare') and (project_id is null or public.mdesr_can_read(project_id)));
 
-create policy "mdesr leer" on public.evidence for select to authenticated using (public.mdesr_is_member(project_id));
+create policy "mdesr leer" on public.evidence for select to authenticated using (public.mdesr_can_read(project_id));
 create policy "mdesr alta" on public.evidence for insert to authenticated
-  with check (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_is_member(project_id)
+  with check (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_can_read(project_id)
               and (assessment_id is null or public.mdesr_can_prepare(assessment_id)));
 create policy "mdesr retirar" on public.evidence for update to authenticated
-  using (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_is_member(project_id))
-  with check (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_is_member(project_id));
+  using (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_can_read(project_id))
+  with check (public.mdesr_has_faculty('mdesr.prepare') and public.mdesr_can_read(project_id));
 
 create policy "mdesr leer" on public.approval_records for select to authenticated
-  using (public.mdesr_is_member(coalesce(public.mdesr_assessment_project(assessment_id),
+  using (public.mdesr_can_read(coalesce(public.mdesr_assessment_project(assessment_id),
                                          (select d.project_id from public.documents d where d.id = document_id))));
 -- Sin políticas de escritura: solo mdesr_transition_subject y los triggers.
 
 create policy "mdesr leer" on public.review_comments for select to authenticated
-  using (public.mdesr_is_member(coalesce(public.mdesr_assessment_project(assessment_id),
+  using (public.mdesr_can_read(coalesce(public.mdesr_assessment_project(assessment_id),
                                          (select d.project_id from public.documents d where d.id = document_id))));
 create policy "mdesr comentar" on public.review_comments for insert to authenticated
   with check (author_id = auth.uid() and public.mdesr_has_faculty('mdesr.comment')
-              and public.mdesr_is_member(coalesce(public.mdesr_assessment_project(assessment_id),
+              and public.mdesr_can_read(coalesce(public.mdesr_assessment_project(assessment_id),
                                                   (select d.project_id from public.documents d where d.id = document_id))));
 create policy "mdesr atender" on public.review_comments for update to authenticated
-  using (public.mdesr_is_member(coalesce(public.mdesr_assessment_project(assessment_id),
+  using (public.mdesr_can_read(coalesce(public.mdesr_assessment_project(assessment_id),
                                          (select d.project_id from public.documents d where d.id = document_id))))
   with check (true);
 
 create policy "mdesr leer" on public.document_annexes for select to authenticated
-  using (public.mdesr_is_member((select d.project_id from public.documents d where d.id = document_id)));
+  using (public.mdesr_can_read((select d.project_id from public.documents d where d.id = document_id)));
 create policy "mdesr escribir" on public.document_annexes for all to authenticated
   using ('elaborador' = any(public.mdesr_functions((select d.project_id from public.documents d where d.id = document_id))))
   with check ('elaborador' = any(public.mdesr_functions((select d.project_id from public.documents d where d.id = document_id))));
@@ -2269,22 +2250,22 @@ do $$
 declare t text;
 begin
   foreach t in array array['action_items','followup_reviews','indicators'] loop
-    execute format('create policy "mdesr leer" on public.%I for select to authenticated using (public.mdesr_is_member(project_id))', t);
+    execute format('create policy "mdesr leer" on public.%I for select to authenticated using (public.mdesr_can_read(project_id))', t);
     execute format('create policy "mdesr escribir" on public.%I for all to authenticated
-                    using (public.mdesr_has_faculty(''mdesr.prepare'') and public.mdesr_is_member(project_id))
-                    with check (public.mdesr_has_faculty(''mdesr.prepare'') and public.mdesr_is_member(project_id))', t);
+                    using (public.mdesr_has_faculty(''mdesr.prepare'') and public.mdesr_can_read(project_id))
+                    with check (public.mdesr_has_faculty(''mdesr.prepare'') and public.mdesr_can_read(project_id))', t);
   end loop;
 end $$;
 create policy "mdesr leer" on public.action_item_evidence for select to authenticated
-  using (public.mdesr_is_member((select a.project_id from public.action_items a where a.id = action_item_id)));
+  using (public.mdesr_can_read((select a.project_id from public.action_items a where a.id = action_item_id)));
 create policy "mdesr escribir" on public.action_item_evidence for insert to authenticated
   with check (public.mdesr_has_faculty('mdesr.prepare')
-              and public.mdesr_is_member((select a.project_id from public.action_items a where a.id = action_item_id)));
+              and public.mdesr_can_read((select a.project_id from public.action_items a where a.id = action_item_id)));
 create policy "mdesr leer" on public.indicator_measurements for select to authenticated
-  using (public.mdesr_is_member((select i.project_id from public.indicators i where i.id = indicator_id)));
+  using (public.mdesr_can_read((select i.project_id from public.indicators i where i.id = indicator_id)));
 create policy "mdesr escribir" on public.indicator_measurements for insert to authenticated
   with check (public.mdesr_has_faculty('mdesr.prepare')
-              and public.mdesr_is_member((select i.project_id from public.indicators i where i.id = indicator_id)));
+              and public.mdesr_can_read((select i.project_id from public.indicators i where i.id = indicator_id)));
 
 -- ── Permisos de ejecución de funciones ─────────────────────────────────────
 do $$
