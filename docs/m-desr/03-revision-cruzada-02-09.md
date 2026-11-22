@@ -5,12 +5,14 @@
 | Fecha | 22 de noviembre de 2026 |
 | Revisado | `supabase/setup/02-tablas-y-permisos.sql` y `supabase/setup/propuestas/09-consultor-y-facultades.sql` (en `main`, commit `efc4546`), contra [`02-modelo-logico.md`](02-modelo-logico.md) v0.2 y el borrador [`10-m-desr-modelo.sql`](../../supabase/setup/propuestas/10-m-desr-modelo.sql) |
 | Método | Lectura de código. **Ningún script se ejecutó en ninguna base.** Las pruebas del panel (vitest y build) no prueban la base de datos |
-| Actualización | 22-nov-2026: incorpora el criterio final del Administrador (no recibe facultades técnicas por su rol) |
+| Actualización | 23-nov-2026: decisiones del titular. El Administrador tiene facultades técnicas por su rol; su aprobación permite emitir; la revisión es opcional; el Consultor solo ve sus proyectos; el Ejecutivo solo los documentos asignados; hay retiro de facultades por persona y una facultad nueva de reasignación |
 | Dictamen | **No ejecutar todavía en producción.** Primero hay que resolver H-01 a H-05 y correr las pruebas de la sección 4 en Supabase de pruebas |
 
 ## 1. Respuesta a los cuatro puntos del revisor
 
-### A. Separación entre Administrador y Consultor (criterio final del 22-nov)
+### A. Separación entre Administrador y Consultor
+
+> **Sustituido el 23-nov:** el Administrador **sí** tiene facultades técnicas por su rol y su aprobación permite emitir. En el borrador 10, cada acto suyo queda con `authority_basis = 'administrador'`, que lo distingue del Consultor. Lo que sigue describe el criterio anterior y se conserva como historial.
 
 - **Criterio:**
   - el Administrador concede, modifica y revoca facultades de cualquiera, incluidas las suyas;
@@ -53,12 +55,12 @@
 
 | Id | Gravedad | Dónde | Hallazgo | Propuesta |
 |---|---|---|---|---|
-| H-01 | **Alta** | 09, paso 2.5 | El Consultor recibe `clients` en lectura y `documents` en lectura y **edición** sobre toda la tabla. Contradice “solo ve los proyectos que tiene asignados” | `consultant`: `clients` y `documents` en falso. Sus entregables los ve por asignación (políticas del borrador 10) y el nombre del cliente por `mdesr_project_overview`. Si el titular quiere que vea los documentos actuales, que sea solo en lectura |
-| H-02 | **Alta** | 02 y 09, Ejecutivo | El Ejecutivo lee **todos** los documentos actuales (hallazgos, riesgos y dictámenes de todos los clientes) y todos los datos de contacto | Decidir D-19. Opciones: (a) `documents` en falso para el Ejecutivo y acceso por asignación cuando los documentos tengan proyecto; (b) mantenerlo y dejarlo escrito como decisión consciente |
+| H-01 | **Alta**, decidido (D-16) | 09, paso 2.5 | El Consultor recibe `clients` en lectura y `documents` en lectura y **edición** sobre toda la tabla. Contradice “solo ve los proyectos que tiene asignados” | `consultant`: `clients` y `documents` en falso. Sus entregables los ve por asignación (políticas del borrador 10) y el nombre del cliente por `mdesr_project_overview`. Si el titular quiere que vea los documentos actuales, que sea solo en lectura |
+| H-02 | **Alta**, decidido (D-19) | 02 y 09, Ejecutivo | El Ejecutivo lee **todos** los documentos actuales (hallazgos, riesgos y dictámenes de todos los clientes) y todos los datos de contacto | Decidir D-19. Opciones: (a) `documents` en falso para el Ejecutivo y acceso por asignación cuando los documentos tengan proyecto; (b) mantenerlo y dejarlo escrito como decisión consciente |
 | H-03 | Media | 09, `do update` del Ejecutivo | Cada ejecución de 09 vuelve a fijar los permisos del Ejecutivo y borra los ajustes del panel. Además, amplía en el acto el acceso de quien ya tenga ese rol | Cambiar a `do nothing` tras la primera ejecución, o avisarlo en el encabezado. Antes de correrlo: `select u.email from public.user_roles r join auth.users u on u.id = r.user_id where r.role = 'executive';` |
 | H-04 | Media | Orden 02 → 09 | Si 09 se corre antes que 02, salta el paso 2.5 y el Consultor queda sin reglas de módulo. Correr 02 después no las agrega | Fijar el orden 02 → 03 → 08 → 09 en `supabase/setup/README.md`, o que 02 incluya también las filas del Consultor |
 | H-05 | Media | 09, `user_capabilities.note` | Dar `mdesr.approve` o `mdesr.validate` a un analista no exige justificación. El requisito pide “autorización expresa” | `check` o trigger: si la facultad es `mdesr.approve` o `mdesr.validate` y la persona no es `consultant`, la nota es obligatoria (mínimo 20 caracteres) |
-| H-06 | Media (ya no aplica al admin) | 09, modelo de facultades | No se puede quitar a una sola persona una facultad que trae su rol. Por ejemplo, impedir que un Consultor apruebe sin cambiarle el rol | Si el titular lo necesita (D-20): columna `effect` (`grant` o `deny`) en `user_capabilities`, donde `deny` gana en `has_capability()` |
+| H-06 | Media, decidido (D-20): retiro por persona, lo hace el Administrador | 09, modelo de facultades | No se puede quitar a una sola persona una facultad que trae su rol. Por ejemplo, impedir que un Consultor apruebe sin cambiarle el rol | Si el titular lo necesita (D-20): columna `effect` (`grant` o `deny`) en `user_capabilities`, donde `deny` gana en `has_capability()` |
 | H-11 | ~~Alta~~ **Resuelto** | 09 y el panel | Daban todas las facultades al admin | Corregido en `main` (`da728e8`) |
 | H-07 | Baja | 09, `has_capability(_user, …)` | Cualquier usuario con sesión puede consultar las facultades de **otra** persona pasando su id | Limitar `_user` a `auth.uid()` salvo para el Administrador, o dar `execute` solo dentro de funciones `security definer` |
 | H-08 | Baja | 02, comentario de la línea 110 | Dice que convertir `executive` en `operations` “daría permiso de edición a quien se asignó como solo lectura”. El Ejecutivo ya no es de solo lectura | Actualizar el comentario |
@@ -91,8 +93,11 @@ Cuentas: **Admin**, **Consultor 1**, **Consultor 2**, **Analista A**, **Analista
 | 8 | Admin | Quitar a C `mdesr.approve` y C intenta aprobar | Error, sin recargar nada |
 | 9 | Analista A | Editar un hallazgo con el diagnóstico `aprobado` | Error: hay que reabrir |
 | 10 | Consultor 1 | Reabrir, cambiar un hallazgo y aprobar sin nueva revisión | Error: la versión nueva está en `borrador` y exige el flujo completo |
-| 11 | Admin | Aprobar P1, asignado o no, aun dándose `mdesr.approve` | Error: requiere el rol Consultor |
-| 12 | Admin | Darse `mdesr.prepare`, asignarse como elaborador y editar un hallazgo en borrador | Pasa. Queda como autor, el acto queda como `facultad_autoconcedida` y la concesión aparece en `user_capabilities_log` |
+| 11 | Admin | Aprobar P1 sin estar asignado | Pasa, con `authority_basis = 'administrador'` y `approval_basis = 'administrador'`. El entregable se puede emitir |
+| 12 | Admin | Editar un hallazgo en borrador y luego aprobar esa versión | Error: es autor |
+| 12c | Admin | Aprobar una versión `enviado` de un proyecto sin revisor | Pasa |
+| 12d | Analista A | Reasignar un proyecto (`mdesr_reassign_member`) | Error: falta `mdesr.reassign` |
+| 12e | Ejecutivo | Leer un documento de un cliente que no está a su cargo | 0 filas |
 | 12b | Consultor 1 | Validar una versión que él revisó, con `requires_independence = false` | Error: nunca puede validar lo que revisó |
 | 13 | Consultor 1 | Validar una versión que él mismo revisó (`requires_independence`) | Error |
 | 14 | Cualquiera | `update` o `delete` en `approval_records`, `audit_log` o `risk_evaluations` | Error |
