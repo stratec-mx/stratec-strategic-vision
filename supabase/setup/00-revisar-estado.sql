@@ -43,15 +43,28 @@ union all
 select 'roles', 'cuentas en auth.users', count(*)::text, null
 from auth.users
 
+-- Las consultas a user_roles van como texto (query_to_xml) para que este
+-- script tampoco falle en una base vacía, donde esa tabla todavía no existe.
+-- Siguen siendo de solo lectura.
 union all
-select 'roles', 'asignaciones con rol ' || role::text, count(*)::text, null
-from public.user_roles
-group by role
+select 'roles', 'asignaciones por rol',
+       (xpath('/row/v/text()', query_to_xml(
+          case when to_regclass('public.user_roles') is null
+               then $q$select 'NO EXISTE la tabla user_roles' as v$q$
+               else $q$select coalesce(string_agg(role || ': ' || n, ', ' order by role), 'ninguna') as v
+                       from (select role::text as role, count(*) as n from public.user_roles group by 1) x$q$
+          end, false, true, '')))[1]::text,
+       null
 
 union all
-select '02 cambiaría', 'asignaciones repetidas que borraría', coalesce(sum(c - 1), 0)::text,
+select '02 cambiaría', 'asignaciones repetidas que borraría',
+       (xpath('/row/v/text()', query_to_xml(
+          case when to_regclass('public.user_roles') is null
+               then $q$select '0' as v$q$
+               else $q$select coalesce(sum(c - 1), 0)::text as v
+                       from (select count(*) as c from public.user_roles group by user_id, role having count(*) > 1) d$q$
+          end, false, true, '')))[1]::text,
        'mismo usuario y mismo rol más de una vez; queda una de cada una'
-from (select count(*) as c from public.user_roles group by user_id, role having count(*) > 1) d
 
 -- 02 ya no da admin a todas las cuentas. Sin ningún admin, exige el correo de
 -- una cuenta (línea "set stratec.admin_email" de 02) y da admin solo a esa.
@@ -60,13 +73,21 @@ select '02 cambiaría', 'correo del primer administrador',
        case when a.hay_admin then 'no hace falta' else 'OBLIGATORIO' end,
        case when a.hay_admin then 'ya hay admin: 02 ignora el correo y no cambia ningún rol'
             else 'hoy no hay admin: escríbelo al inicio de 02; si falta o no es de una cuenta existente, 02 se detiene sin cambiar nada' end
-from (select exists (select 1 from public.user_roles where role::text = 'admin') as hay_admin) a
+from (select coalesce((xpath('/row/v/text()', query_to_xml(
+        case when to_regclass('public.user_roles') is null
+             then $q$select false as v$q$
+             else $q$select exists (select 1 from public.user_roles where role::text = 'admin') as v$q$
+        end, false, true, '')))[1]::text::boolean, false) as hay_admin) a
 
 union all
 select '02 cambiaría', 'cuentas que recibirían admin',
        case when a.hay_admin then '0' else '1' end,
        case when a.hay_admin then 'ya hay admin: 02 no da admin a nadie'
             else 'solo la cuenta del correo que escribas al inicio de 02; nunca todas' end
-from (select exists (select 1 from public.user_roles where role::text = 'admin') as hay_admin) a
+from (select coalesce((xpath('/row/v/text()', query_to_xml(
+        case when to_regclass('public.user_roles') is null
+             then $q$select false as v$q$
+             else $q$select exists (select 1 from public.user_roles where role::text = 'admin') as v$q$
+        end, false, true, '')))[1]::text::boolean, false) as hay_admin) a
 
 order by 1, 2;

@@ -5,7 +5,9 @@
 --
 -- Qué modifica, además de crear estructuras que falten:
 --   · Reemplaza TODAS las políticas de user_roles, profiles, access_rules y de
---     las 7 tablas del CRM por las de este script (00 las lista antes).
+--     las 7 tablas del CRM por las de este script (00 las lista antes),
+--     salvo las que empiezan con "mdesr " (scripts 10 y 11), que conserva.
+--     Tampoco reescribe lead_contacts / client_contacts si ya existen.
 --   · Borra asignaciones de rol repetidas (mismo usuario y mismo rol dos
 --     veces). No se pierde ningún permiso: queda una de cada una.
 --   · Si NO existe ningún admin, da rol admin SOLO a la cuenta cuyo correo
@@ -88,10 +90,12 @@ create table if not exists public.user_roles (
 do $$
 declare p record;
 begin
-  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'user_roles' loop
+  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'user_roles'
+           and policyname not like 'mdesr %' loop
     execute format('drop policy if exists %I on public.user_roles', p.policyname);
   end loop;
-  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'profiles' loop
+  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'profiles'
+           and policyname not like 'mdesr %' loop
     execute format('drop policy if exists %I on public.profiles', p.policyname);
   end loop;
 end $$;
@@ -370,7 +374,8 @@ grant execute on function public.can_access(text, text) to authenticated;
 do $$
 declare p record;
 begin
-  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'access_rules' loop
+  for p in select policyname from pg_policies where schemaname = 'public' and tablename = 'access_rules'
+           and policyname not like 'mdesr %' loop
     execute format('drop policy if exists %I on public.access_rules', p.policyname);
   end loop;
 end $$;
@@ -393,7 +398,8 @@ begin
       ('appointments','agenda'), ('quotes','quotes'), ('documents','documents')) as m(tbl, resource)
   loop
     execute format('alter table public.%I enable row level security', t);
-    for p in select policyname from pg_policies where schemaname = 'public' and tablename = t loop
+    for p in select policyname from pg_policies where schemaname = 'public' and tablename = t
+           and policyname not like 'mdesr %' loop
       execute format('drop policy if exists %I on public.%I', p.policyname, t);
     end loop;
     execute format($f$
@@ -424,10 +430,20 @@ revoke select on public.clients from authenticated, anon;
 grant select (id, name, industry, contact_name, country, status, notes, owner_id, created_at, updated_at)
   on public.clients to authenticated;
 
-create or replace view public.lead_contacts as
-  select id, email, phone from public.leads where public.can_access('contactos', 'read');
-create or replace view public.client_contacts as
-  select id, contact_email, contact_phone from public.clients where public.can_access('contactos', 'read');
+-- Solo se crean si no existen: el script 10 las redefine con el
+-- filtro por asignación, y volver a correr este script no debe quitarlo.
+-- Por lo mismo, los ciclos de arriba no borran las políticas "mdesr ...".
+do $$
+begin
+  if to_regclass('public.lead_contacts') is null then
+    create view public.lead_contacts as
+      select id, email, phone from public.leads where public.can_access('contactos', 'read');
+  end if;
+  if to_regclass('public.client_contacts') is null then
+    create view public.client_contacts as
+      select id, contact_email, contact_phone from public.clients where public.can_access('contactos', 'read');
+  end if;
+end $$;
 revoke all on public.lead_contacts, public.client_contacts from anon, public;
 grant select on public.lead_contacts, public.client_contacts to authenticated;
 
