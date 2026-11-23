@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { describeDbError } from "@/lib/dbErrors";
 import { withLeadContacts } from "@/lib/contacts";
+import { SelectorResponsable, useUsuariosConRol } from "@/components/app/Responsable";
+import { nombreResponsable, sinAsignar } from "@/lib/responsables";
 import { z } from "zod";
 
 const schema = z.object({
@@ -37,6 +39,10 @@ const Leads = () => {
   const canQuote = can("quotes", "write");
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
+  // Filtro del admin: todos o solo los que no tienen responsable (los perfiles limitados no los ven).
+  const [asignacion, setAsignacion] = useState<"todos" | "sin">("todos");
+  const usuarios = useUsuariosConRol(isAdmin);
+  const [asignando, setAsignando] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   // Id del lead que se está eliminando; mientras tanto se bloquean los botones de eliminar
@@ -65,6 +71,23 @@ const Leads = () => {
     setOpen(false);
     load();
   };
+
+  // Solo el admin asigna. La base vuelve a revisar el permiso.
+  const asignar = async (lead: { id: string; full_name: string }, owner: string | null) => {
+    setAsignando(lead.id);
+    const { data, error } = await supabase.from("leads").update({ owner_id: owner }).eq("id", lead.id).select("id");
+    setAsignando(null);
+    if (error || !data?.length) {
+      if (error) console.error("[Leads.asignar]", error.code ?? "error");
+      toast({ title: "No se pudo asignar el prospecto", description: error ? describeDbError(error, "Intenta de nuevo.") : "Tu usuario no tiene permiso para cambiar el responsable.", variant: "destructive" });
+      return;
+    }
+    toast({ title: owner ? "Responsable asignado" : "Prospecto sin responsable", description: `${lead.full_name} · ${nombreResponsable(owner, usuarios)}` });
+    setRows((rs) => rs.map((r) => (r.id === lead.id ? { ...r, owner_id: owner } : r)));
+  };
+
+  const visibles = isAdmin && asignacion === "sin" ? sinAsignar(rows) : rows;
+  const columnas = isAdmin ? 10 : 8;
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from("leads").update({ status: status as any }).eq("id", id);
@@ -112,6 +135,15 @@ const Leads = () => {
           <>
             {can("pipeline") && (
               <Button asChild variant="outline" className="rounded-none h-10 text-xs"><Link to="/app/pipeline">Ver embudo de negociación</Link></Button>
+            )}
+            {isAdmin && (
+              <Select value={asignacion} onValueChange={(v) => setAsignacion(v as "todos" | "sin")}>
+                <SelectTrigger className="w-44 rounded-none h-10 border-border" aria-label="Filtrar por responsable"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los responsables</SelectItem>
+                  <SelectItem value="sin">Sin asignar ({sinAsignar(rows).length})</SelectItem>
+                </SelectContent>
+              </Select>
             )}
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-44 rounded-none h-10 border-border"><Filter className="h-3.5 w-3.5 mr-2" /><SelectValue /></SelectTrigger>
@@ -176,12 +208,17 @@ const Leads = () => {
               <th className="py-3 px-4 font-medium">Estado</th>
               <th className="py-3 px-4 font-medium">Score</th>
               <th className="py-3 px-4 font-medium">Fecha</th>
+              {isAdmin && <th className="py-3 px-4 font-medium">Responsable</th>}
               {isAdmin && <th className="py-3 px-4 font-medium"><span className="sr-only">Acciones</span></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-steel">Sin prospectos registrados.</td></tr>}
-            {rows.map((l) => (
+            {visibles.length === 0 && (
+              <tr><td colSpan={columnas} className="text-center py-12 text-steel">
+                {rows.length > 0 ? "Todos los prospectos tienen responsable." : "Sin prospectos registrados."}
+              </td></tr>
+            )}
+            {visibles.map((l) => (
               <tr key={l.id} className="hover:bg-secondary/30 transition">
                 <td className="py-3 px-4">
                   <div className="text-navy">{l.full_name}</div>
@@ -221,6 +258,14 @@ const Leads = () => {
                 <td className="py-3 px-4 text-steel text-xs whitespace-nowrap">
                   {new Date(l.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" })}
                 </td>
+                {isAdmin && (
+                  <td className="py-3 px-4">
+                    <SelectorResponsable
+                      valor={l.owner_id} usuarios={usuarios} disabled={asignando === l.id}
+                      etiqueta={`Responsable de ${l.full_name}`} onCambio={(id) => asignar(l, id)}
+                    />
+                  </td>
+                )}
                 {isAdmin && (
                   <td className="py-3 px-2 text-right">
                     <Button
