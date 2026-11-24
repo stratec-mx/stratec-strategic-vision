@@ -1401,8 +1401,42 @@ Notas:
 - **Advertencia:** `measurement_note` es obligatoria y aparece siempre en pantalla, en el PDF y en el pie del anexo. Texto propuesto: “Medidas aproximadas obtenidas sobre imagen satelital. No sustituyen un levantamiento topográfico.”
 - **Exportación:** el plano se agrega al entregable como anexo (`document_annexes.annex_type = 'plano'`). El PDF se genera con la versión congelada del plano e incluye el crédito del proveedor de imagen (Esri).
 - **Confidencialidad:** los símbolos con `is_sensitive` (cámaras, accesos, puntos ciegos) solo los ven los miembros del proyecto. Nunca salen en demos: para eso hay proyectos y objetos `is_demo`.
-- **Motor de mapa:** la sesión del módulo de mapeo eligió MapLibre con satélite de Esri. El modelo guarda GeoJSON estándar en WGS84, así que no depende del motor.
+- **Motor de mapa:** MapLibre con Esri, sujeto a la validación de licencia de 11.1b; Google Maps queda descartado. El modelo guarda GeoJSON estándar en WGS84, así que no depende del motor.
 - **PostGIS:** no hace falta en la versión 1. Si más adelante se necesitan búsquedas espaciales (“riesgos a menos de 200 m”), se agrega una columna `geography` calculada desde el GeoJSON, sin rehacer nada (D-11).
+
+### 11.1b Proveedor de mapa y captura de la geometría (decisión del 24-nov-2026)
+
+**Google Maps queda descartado.** Sus preguntas frecuentes para desarrolladores lo dicen expresamente:
+
+- una aplicación que genera documentos electrónicos o impresos no puede incluir datos ni imágenes de Google Maps Platform;
+- no se deben trazar ni digitalizar elementos de su imagen satelital.
+
+Las dos cosas son centrales aquí: la imagen del plano va en el Programa Interno y en el Programa Específico, y el perímetro se dibuja sobre el mapa. Que el panel sea de uso interno no cambia nada.
+
+**Candidato: MapLibre con Esri.** La documentación de ArcGIS Online sobre mapas estáticos permite usarlos en informes impresos o digitales, incluido “un informe para un cliente”, con la atribución a Esri y sus licenciantes. Antes de programar falta confirmar:
+
+| Pendiente | Por qué |
+|---|---|
+| Uso comercial recurrente | La misma página pide permiso previo para “monetización comercial y reventa directa”. Hay que confirmar con Esri que un informe de consultoría entra en “informe para un cliente” |
+| World Imagery por nombre | La página habla de mapas de ArcGIS Online en general. La de atribución de World Imagery no se pudo leer (rechazó el acceso). Falta la leyenda exacta |
+| Dibujar sobre la imagen | La página de Esri no trata la digitalización. Hay que revisar los términos completos |
+| Cuenta y forma de generar la imagen | La atribución se obtiene con su visor de mapas. Hay que definir si hace falta una cuenta de ArcGIS |
+| Calidad en Morelos | Probar la imagen en ubicaciones reales |
+
+**Cómo se captura la geometría.** No se calca la imagen satelital: la imagen es solo referencia visual. Las coordenadas salen de:
+
+1. **GPS en campo:** recorrer el perímetro con el teléfono y marcar cada vértice. Se guarda la precisión del GPS en cada punto;
+2. **plano o levantamiento que entrega el cliente**, con sus medidas;
+3. **medidas tomadas en campo** con cinta o distanciómetro.
+
+`site_plans.measurement_method` debe reflejar el origen. Hoy su valor por defecto es `satelital_aproximada`. En el script de plantillas se cambiará a `levantamiento_campo` y se agregará el valor `gps_campo`, sin tocar los planos que ya existan. La leyenda también cambia a: “Medidas aproximadas obtenidas en campo; no sustituyen un levantamiento topográfico.”
+
+**La imagen en el documento:** es un mapa estático con la atribución autorizada. Se congela junto con los datos del plano en cada documento aprobado (R-12).
+
+Fuentes revisadas:
+
+- [Esri: mapas estáticos en ArcGIS Online](https://doc.esri.com/en/arcgis-online/latest/reference/static-maps.html)
+- [Google Maps Platform: preguntas frecuentes](https://developers.google.com/maps/faq)
 
 ### 11.2 Símbolos iniciales (C-11)
 
