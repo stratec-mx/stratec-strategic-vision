@@ -68,7 +68,7 @@ Los apartados se habilitan según el servicio contratado y la configuración del
 
 ### 4.3 Estados de avance
 
-Cada apartado está en uno de estos estados: pendiente, en elaboración, en revisión, con observaciones, aprobado o validado (según corresponda) y listo.
+Cada apartado está en uno de estos estados: pendiente, en elaboración, en revisión, con observaciones, aprobado o validado (según corresponda), listo y **no aplica**. “No aplica” exige un motivo, se muestra con “---” en el índice y no bloquea el envío a revisión, aunque el apartado sea obligatorio.
 
 El avance general es informativo. No se calcula solo como porcentaje de apartados terminados: también cuenta los requisitos obligatorios del servicio y las condiciones para emitir entregables.
 
@@ -202,7 +202,8 @@ Revisé el esquema que ya está en producción: migraciones, scripts 02, 03 y 08
 | `template_section_id` | `uuid` FK | Sí | De la versión de plantilla del documento |
 | `content` | `text` o `jsonb` | No | Texto redactado o contenido estructurado |
 | `source_references` | `jsonb` | No | Registros del expediente usados, con su id y su versión |
-| `status` | `text` | Sí | Estados de 4.3 |
+| `status` | `text` | Sí | Estados de 4.3, incluido `no_aplica` |
+| `not_applicable_reason` | `text` | Condicional | Obligatorio si el estado es `no_aplica` |
 | `author_id` | `uuid` | Sí | |
 | `document_revision_no` | `integer` | Sí | Versión del documento a la que pertenece |
 | `created_at`, `updated_at` | | | |
@@ -264,7 +265,7 @@ Reglas que siguen vigentes:
 | STR-01.4 | Protocolos de Seguridad y Prevención de Extorsión | Escenarios, responsabilidades y procedimientos | `protocolo-seguridad` |
 | STR-01.5 | NOM-035 | Instrumentos y procedimientos de la norma | `informe-nom-035` |
 | STR-01 | Consultoría en Seguridad (diagnóstico) | M-DESR | `diagnostico-seguridad` |
-| STR-02.1 | Programa Interno de Protección Civil | Estructura y requisitos oficiales aplicables en Morelos | Nueva, **piloto**: [`plantillas/pipc-morelos-riesgo-alto-v1.md`](plantillas/pipc-morelos-riesgo-alto-v1.md) |
+| STR-02.1 | Programa Interno de Protección Civil | Estructura y requisitos oficiales aplicables en Morelos | Nueva, **piloto**: [`plantillas/pipc-morelos-v1.md`](plantillas/pipc-morelos-v1.md) |
 | STR-02.2 | Plan de Continuidad de Operaciones | Análisis de impacto, estrategias, recuperación y pruebas | `plan-continuidad` |
 | STR-02.3 | Revisión de Programa Interno | Verificación de requisitos | `revision-programa-interno` |
 | STR-02.5 | Actualización de Programa Interno | Igual que STR-02.1, sobre una versión anterior | — |
@@ -321,6 +322,6 @@ Cada etapa se trabaja en una rama propia y se publica con tu visto bueno. Las ta
 | P-01 | **Formato de referencia de la plantilla piloto.** El *Documento Maestro Integrado v3* (mayo de 2026) **no sirve**: es un plan de negocio (estructura de marcas, catálogo con precios y márgenes, inversión, fases y metas), no un formato de documento técnico. El otro archivo de la misma carpeta, *Template Propuesta*, es una propuesta comercial: sirve de referencia para Cotizaciones, no para entregables | Para el Programa Interno, partir de los requisitos oficiales vigentes en Morelos y de los formatos o términos de referencia de la autoridad estatal. Si STRATEC ya tiene un Programa Interno bien hecho, se usa como modelo (sin datos del cliente) |
 | P-02 | Estructura vigente de cada documento por servicio | Una plantilla por vez, empezando por el piloto |
 | P-03 | Verificar los términos de referencia y requisitos oficiales del Programa Interno en Morelos | Investigarlos en fuentes oficiales y que el titular confirme la versión vigente |
-| P-04 | Servicio piloto | **Confirmado: Programa Interno de Protección Civil (STR-02.1).** Modelo de plantilla en [`plantillas/pipc-morelos-riesgo-alto-v1.md`](plantillas/pipc-morelos-riesgo-alto-v1.md), tomado del formato 2025 de la CEPCM (riesgo alto): usa casi todo el expediente (inmueble, plano, diagnóstico, evidencias, riesgos, medidas, responsables y anexos) y prueba que el motor no solo sirve para diagnósticos |
+| P-04 | Servicio piloto | **Confirmado: Programa Interno de Protección Civil (STR-02.1).** Modelo de plantilla en [`plantillas/pipc-morelos-v1.md`](plantillas/pipc-morelos-v1.md), tomado del formato 2025 de la CEPCM (riesgo alto): usa casi todo el expediente (inmueble, plano, diagnóstico, evidencias, riesgos, medidas, responsables y anexos) y prueba que el motor no solo sirve para diagnósticos |
 | P-05 | Migración de los documentos actuales | Plantillas heredadas como versión 0; documentos actuales sin cambios (sección 9) |
 | P-06 | Integrar la prevención del delito mediante el diseño ambiental (ISO 22341) como sección del instrumento maestro | Pendiente de autorización del titular (aparte de este documento) |

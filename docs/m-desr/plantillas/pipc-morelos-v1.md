@@ -1,10 +1,10 @@
-# Plantilla piloto · Programa Interno de Protección Civil · Morelos · Modalidad riesgo alto
+# Plantilla piloto · Programa Interno de Protección Civil · Morelos (riesgo ordinario y alto)
 
 | Ficha | |
 |---|---|
 | Servicio | STR-02.1 Programa Interno de Protección Civil (sirve también para STR-02.5, actualización) |
-| Plantilla | `PIPC-MOR-RA`, versión 1, **borrador** |
-| Fuente de la estructura | Formato de Programa Interno de la Coordinación Estatal de Protección Civil de Morelos (CEPCM), **ejercicio 2025, modalidad riesgo alto**, que proporcionó el titular. Aquí se toma **solo la estructura** (capítulos, apartados y su orden) y las normas que cita cada apartado. No contiene datos de ningún cliente |
+| Plantilla | `PIPC-MOR`, versión 1, **borrador**. Una sola plantilla para las dos clasificaciones |
+| Fuente de la estructura | Formato de Programa Interno de la Coordinación Estatal de Protección Civil de Morelos (CEPCM), **ejercicio 2025, riesgo alto**, que proporcionó el titular. Es la única guía que emite la CEPCM; los municipios la adoptan con los mismos apartados para los establecimientos de riesgo ordinario. Aquí se toma **solo la estructura** (capítulos, apartados y su orden) y las normas que cita cada apartado. No contiene datos de ningún cliente |
 | Base legal | Ley Estatal de Protección Civil de Morelos y su Reglamento (vigentes); normas oficiales mexicanas citadas por apartado |
 | Parte de | [Documento 03: expediente y plantillas](../03-expediente-y-plantillas.md) |
 | Estado | Modelo para validar. Sin código ni SQL |
@@ -31,6 +31,16 @@ Cada apartado de la guía se convierte en un apartado de la plantilla con:
   - **Sí:** siempre;
   - **Cond.:** solo si aplica (la condición se indica);
   - **NI:** no aplica a establecimientos de nuevo ingreso.
+  - **Ord.:** en riesgo ordinario normalmente no aplica (ver §1.1). Es una sugerencia: lo decide quien elabora.
+
+### 1.1 Clasificaciones y apartados que no aplican
+
+En Morelos solo hay **dos clasificaciones: ordinario y alto**. La CEPCM solo emite la guía de riesgo alto, y los municipios la adoptan con **los mismos apartados** para riesgo ordinario. Por eso es **una sola plantilla**:
+
+- **La clasificación** sale de II.5 (incendio, aforo y actividades altamente riesgosas). Se muestra en la portada y define a quién se presenta: la CEPCM o el municipio.
+- **Se conservan todos los apartados** en el orden de la guía, aunque no apliquen. Así lo hace la práctica: el índice muestra “---” en lugar del número de página y el apartado dice “No aplica”, con el motivo.
+- **Cada apartado se puede marcar “No aplica”** con un motivo breve. Por ejemplo: “El establecimiento no cuenta con instalación de gas L.P.” o “Establecimiento de nuevo ingreso”. Un apartado obligatorio marcado así no bloquea el envío a revisión, pero el motivo es obligatorio y lo ve el revisor.
+- **El panel sugiere** qué no aplica según la clasificación, el giro y lo capturado en el expediente: sin sustancias químicas, sin gas o sin plantas, entre otros. El Consultor confirma.
 - **Norma:** referencia que cita la guía en ese apartado (solo el número, nunca el texto).
 
 ## 2. Portada
@@ -41,7 +51,7 @@ Cada apartado de la guía se convierte en un apartado de la plantilla con:
 | Razón social | D | `clients.name`, o el dato de la ficha |
 | Fotografía de la fachada | E | `evidence` (tipo foto, área “fachada”) |
 | Título: “Programa Interno de Protección Civil” y ejercicio | G | Año del proyecto |
-| Modalidad (riesgo alto) | G | Resultado de II.5 |
+| Clasificación del riesgo: ordinario o alto | G | Resultado de II.5 |
 | Logotipo y datos del asesor que elabora | D | Datos de STRATEC (configuración) |
 
 ## 3. Estructura
@@ -94,7 +104,7 @@ Cada apartado de la guía se convierte en un apartado de la plantilla con:
 | II.5.1 | Grado de riesgo de incendio | T | Cálculo con inventario de materiales y superficie (ver §6) | Sí | NOM-002-STPS-2010 |
 | II.5.2 | Aforo de personas | T | Ficha + áreas | Sí | |
 | II.5.3 | Actividades altamente riesgosas (AAR) | T | Inventario de materiales y procesos | Sí | |
-| II.5.4 | Conclusión: modalidad del Programa Interno | G + R | Resultado de II.5.1 a II.5.3 | Sí | NOM-002-STPS-2010 |
+| II.5.4 | Conclusión: clasificación del establecimiento (ordinario o alto) | G + R | Resultado de II.5.1 a II.5.3 | Sí | NOM-002-STPS-2010 |
 | II.6 | Listado de sustancias químicas peligrosas (SQP) | T | Inventario de sustancias (dato nuevo) | Cond. (si las hay) | NOM-018-STPS-2015; NOM-005-STPS-1998 |
 | II.6.1 | Actividades o áreas donde se usan SQP | T + P | Inventario + `areas` + plano | Cond. | |
 | II.7 | Análisis de riesgos | M | Diagnóstico M-DESR del proyecto | Sí | |
@@ -248,6 +258,7 @@ No hace falta una plantilla aparte.
 
 ## 9. Pendientes para cerrar la versión 1
 
-1. **Modalidades de riesgo bajo y medio.** Ninguna de las dos guías lo resuelve. Hay que confirmar con la CEPCM si existen formatos distintos. Si existen, serían plantillas hermanas con menos apartados, y la modalidad se elegiría con el resultado de II.5.
-2. **Vigencia de las normas.** Revisar cada NOM citada; por ejemplo, la de instalaciones eléctricas tiene una versión posterior a 2012. La guía 2025 cita algunas versiones anteriores.
-3. **Cálculo del riesgo de incendio** (§6): validarlo aparte, con un caso real.
+1. ~~Modalidades~~ **Resuelto (24-nov):** solo hay ordinario y alto, con la misma guía y los mismos apartados. Lo que no aplica se marca “No aplica” (§1.1).
+2. **Lista de apartados que normalmente no aplican en riesgo ordinario:** el Consultor la valida con casos reales; hasta entonces el panel solo sugiere.
+3. **Vigencia de las normas.** Revisar cada NOM citada; por ejemplo, la de instalaciones eléctricas tiene una versión posterior a 2012. La guía 2025 cita algunas versiones anteriores.
+4. **Cálculo del riesgo de incendio** (§6): validarlo aparte, con un caso real.

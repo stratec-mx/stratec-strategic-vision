@@ -6,7 +6,7 @@
 | Plantilla | `PEPC-MOR-EVT`, versión 1, **borrador** |
 | Fuente de la estructura | Un Programa Específico de Protección Civil para evento masivo, presentado ante la CEPCM en 2026, que proporcionó el titular. Aquí se toma **solo la estructura** (capítulos, apartados y su orden) y las normas que cita. No contiene datos del organizador, del evento ni del asesor que lo elaboró |
 | Base legal | Ley Estatal de Protección Civil de Morelos y su Reglamento; normas citadas por apartado |
-| Hermana de | [Plantilla del Programa Interno](pipc-morelos-riesgo-alto-v1.md). Comparte buena parte de los apartados |
+| Hermana de | [Plantilla del Programa Interno](pipc-morelos-v1.md). Comparte buena parte de los apartados |
 | Estado | Modelo para validar. Sin código ni SQL |
 
 > Los nombres “Programa Específico” y “Programa Especial” se usan para el mismo documento. Antes de publicar el servicio en el sitio hay que confirmar con la CEPCM cuál usa hoy.
@@ -23,7 +23,7 @@
 | Clasificación de riesgo | Incendio (NOM-002-STPS-2010), aforo y actividades altamente riesgosas | No hay clasificación formal: se usa el aforo estimado frente a la capacidad del inmueble |
 | Dictámenes del inmueble | Sí (II.12 y II.13) | No: se sustituyen por la memoria de cálculo de las estructuras temporales |
 
-Las claves de contenido (R, D, T, P, E, A, M y G) y la columna “Oblig.” significan lo mismo que en la [plantilla del Programa Interno](pipc-morelos-riesgo-alto-v1.md#1-cómo-leer-este-modelo).
+Las claves de contenido (R, D, T, P, E, A, M y G) y la columna “Oblig.” significan lo mismo que en la [plantilla del Programa Interno](pipc-morelos-v1.md#1-cómo-leer-este-modelo).
 
 ## 2. Portada y control del documento
 
