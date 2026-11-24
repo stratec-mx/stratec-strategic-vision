@@ -198,7 +198,7 @@ El Programa Interno incluye datos personales de terceros: integrantes de la UIPC
 
 - se guardan solo dentro del proyecto, con acceso por asignación (como las evidencias);
 - las identificaciones y firmas van en el almacenamiento privado, nunca en el repositorio;
-- el aviso de privacidad y el contrato deben cubrirlo (pendiente del titular).
+- el cliente proporciona esos datos y el **contrato de servicio** ya lo contempla (decisión del titular): no hace falta cambiar el aviso de privacidad.
 
 ## 6. Datos nuevos que el expediente todavía no captura
 
@@ -217,10 +217,38 @@ El Programa Interno necesita información que hoy no está en ninguna tabla. En 
 
 **Cálculo del grado de riesgo de incendio (II.5.1):** con el inventario de materiales y la superficie, el panel puede calcular el grado según el método de la NOM-002-STPS-2010 y mostrar la operación. Lo revisa y confirma quien elabora. Es la pieza más técnica de la plantilla y conviene validarla aparte.
 
-## 7. Pendientes para cerrar la versión 1
+## 7. Variante institucional (segunda guía revisada)
 
-1. **Modalidades.** Esta estructura es la de **riesgo alto**. Falta confirmar si la CEPCM tiene formatos distintos para riesgo bajo o medio. Si los tiene, serían plantillas hermanas con menos apartados, y la modalidad se elige con el resultado de II.5.
-2. **Vigencia de las normas.** Revisar cada NOM citada; por ejemplo, la de instalaciones eléctricas tiene versión posterior a 2012. La guía 2025 cita algunas versiones anteriores.
-3. **Textos base** de brigadas, procedimientos de emergencia y recuperación. Los redacta o valida el titular; se comparten con la plantilla de Protocolos (STR-01.4).
-4. **Formato de salida.** La CEPCM recibe el Programa Interno en un formato específico (el de esta guía) y los anexos en archivo aparte. Hay que confirmar si se entrega en Word, en PDF o en los dos, para que el panel genere el formato correcto.
-5. **Registro del asesor ante la CEPCM** para firmar la carta de corresponsabilidad (§4).
+El titular compartió una segunda guía: una “guía de llenado” para la **actualización 2024-2025** del Programa Interno de una unidad académica universitaria. La elaboró la propia institución; **no es un formato de la CEPCM**.
+
+**Conclusión: es la misma estructura base en otro formato, no una modalidad de riesgo distinta.** No menciona modalidad ni nivel de riesgo y conserva los seis bloques de la guía de la CEPCM: datos generales, prevención, auxilio, recuperación, contingencias y continuidad. Al final lleva conclusiones, anexos y bibliografía.
+
+| Diferencia | Guía CEPCM 2025 (riesgo alto) | Guía institucional 2024-2025 |
+|---|---|---|
+| Documentos legales y administrativos (identificación, poder, aprobado y visto bueno anteriores, carta de corresponsabilidad, registro del asesor) | Sí | No |
+| Clasificación de riesgo | Incendio, aforo, actividades altamente riesgosas y conclusión | Solo incendio (NOM-002-STPS-2010) y aforo |
+| Dictámenes | 10 tipos más “otros” | Solo estructural, gas L.P. y eléctrico |
+| Simulacros | Programa anual | Programa y guion con **mínimo 6 al año**, con hipótesis por fenómeno |
+| Procedimientos de emergencia | Discapacidad, sismo, incendio, sustancias, bomba y otros | Los mismos, más **emergencia médica**, **incendio forestal o de pastizal** y **atención de siniestros con la póliza de seguro** |
+| Población | Personal administrativo, operativo y flotante | Censo de la comunidad (fijos y externos) y cronograma por ciclo escolar |
+
+**Cómo se usa:** la plantilla piloto se queda con la estructura de la CEPCM, que es la que pide la autoridad. Lo que la guía institucional agrega se incorpora como apartados **opcionales** (Cond.) para clientes institucionales o educativos:
+
+- III.1.6 se divide en emergencia médica, incendio forestal o de pastizal y siniestros con póliza de seguro;
+- II.16 permite indicar un número mínimo de simulacros y la hipótesis de cada uno;
+- I.2.7 acepta el censo por tipo de población.
+
+No hace falta una plantilla aparte.
+
+## 8. Decisiones del titular (24-nov-2026)
+
+- **Formato de entrega: solo físico.** El Programa Interno se entrega impreso. El panel genera un PDF listo para imprimir, en el orden de la guía, con la guía de anexos para armar la carpeta.
+- **Textos base** de brigadas, procedimientos de emergencia, recuperación y difusión: **los redacta y valida el Consultor.** Se comparten con la plantilla de Protocolos (STR-01.4).
+- **Datos personales:** los cubre el contrato de servicio (§5).
+
+## 9. Pendientes para cerrar la versión 1
+
+1. **Modalidades de riesgo bajo y medio.** Ninguna de las dos guías lo resuelve. Hay que confirmar con la CEPCM si existen formatos distintos. Si existen, serían plantillas hermanas con menos apartados, y la modalidad se elegiría con el resultado de II.5.
+2. **Vigencia de las normas.** Revisar cada NOM citada; por ejemplo, la de instalaciones eléctricas tiene una versión posterior a 2012. La guía 2025 cita algunas versiones anteriores.
+3. **Registro del asesor ante la CEPCM** para firmar la carta de corresponsabilidad (§4).
+4. **Cálculo del riesgo de incendio** (§6): validarlo aparte, con un caso real.
