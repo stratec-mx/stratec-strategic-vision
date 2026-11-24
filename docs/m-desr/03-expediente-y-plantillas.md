@@ -264,11 +264,11 @@ Reglas que siguen vigentes:
 | STR-01.4 | Protocolos de Seguridad y Prevención de Extorsión | Escenarios, responsabilidades y procedimientos | `protocolo-seguridad` |
 | STR-01.5 | NOM-035 | Instrumentos y procedimientos de la norma | `informe-nom-035` |
 | STR-01 | Consultoría en Seguridad (diagnóstico) | M-DESR | `diagnostico-seguridad` |
-| STR-02.1 | Programa Interno de Protección Civil | Estructura y requisitos oficiales aplicables en Morelos | — (nueva; **piloto propuesto**) |
+| STR-02.1 | Programa Interno de Protección Civil | Estructura y requisitos oficiales aplicables en Morelos | Nueva, **piloto**: [`plantillas/pipc-morelos-riesgo-alto-v1.md`](plantillas/pipc-morelos-riesgo-alto-v1.md) |
 | STR-02.2 | Plan de Continuidad de Operaciones | Análisis de impacto, estrategias, recuperación y pruebas | `plan-continuidad` |
 | STR-02.3 | Revisión de Programa Interno | Verificación de requisitos | `revision-programa-interno` |
 | STR-02.5 | Actualización de Programa Interno | Igual que STR-02.1, sobre una versión anterior | — |
-| STR-02.6 | Protección Civil para Eventos Masivos | Requisitos del evento, aforo, instalaciones y operación | — |
+| STR-02.6 | Protección Civil para Eventos Masivos (servicio adicional) | Programa Específico de Protección Civil del evento | Nueva: [`plantillas/pepc-morelos-evento-masivo-v1.md`](plantillas/pepc-morelos-evento-masivo-v1.md) |
 | STR-03 / 03.1 | Capacitación y brigadas | Objetivos, contenidos, evaluación y evidencias | — |
 | STR-04 / 04.1 / 04.2 | Integración tecnológica, CCTV, GPS | Especificación técnica y propuesta por niveles | — |
 | STR-99 | Servicio personalizado | Informe técnico genérico | `informe-tecnico` |
