@@ -71,7 +71,7 @@ Cada apartado de la guía se convierte en un apartado de la plantilla con:
 | I.4 | Aprobado del Programa Interno del ejercicio anterior | A | Archivo del cliente | NI | |
 | I.5 | Visto bueno del ejercicio anterior | A | Archivo del cliente | NI | |
 | I.6 | Carta de corresponsabilidad firmada por el asesor registrado y el representante | A | Firma del asesor y del cliente | Sí | |
-| I.7 | Registro vigente del asesor que elabora el Programa Interno | A | Configuración de STRATEC | Sí | |
+| I.7 | Registro vigente del asesor que elabora el Programa Interno | A | Lo coloca el titular a mano: el registro está vigente | Sí | |
 | I.8 | Georreferenciación del establecimiento | P | `sites.latitude` y `longitude`; versión vigente del plano | Sí | |
 | I.9 | Colindancias: norte, sur, oriente y poniente | T + P | Plano (`plan_features` tipo colindancia) | Sí | |
 | I.10 | Áreas del establecimiento con memoria fotográfica | T + E | `areas` + `evidence` por área | Sí | |
@@ -188,7 +188,7 @@ Es la misma estructura de la plantilla de STR-02.2 (Plan de Continuidad). Se com
 ## 4. Restricciones de competencia (alertas internas, nunca en textos al cliente)
 
 - **Dictámenes (II.12 y II.13):** los emiten terceros (unidades de verificación, peritos u otros profesionistas con registro). STRATEC no los elabora. La plantilla solo los **anexa** y, si faltan, registra la recomendación de obtenerlos.
-- **Carta de corresponsabilidad (I.6) y registro del asesor (I.7):** requieren un asesor con registro vigente ante la CEPCM. Si quien elabora no lo tiene, la plantilla bloquea la emisión y avisa internamente.
+- **Carta de corresponsabilidad (I.6) y registro del asesor (I.7):** requieren un asesor con registro vigente ante la CEPCM. El registro de STRATEC **está vigente** (24-nov-2026) y el titular lo anexa a mano. El panel solo recuerda anexarlo.
 - **Registro del capacitador (II.14.3):** igual, para quien imparte la capacitación.
 - Estas restricciones van en el campo `restrictions` de la versión de plantilla. Se muestran a quien elabora y se reflejan en la cotización, no en el documento.
 
@@ -250,5 +250,4 @@ No hace falta una plantilla aparte.
 
 1. **Modalidades de riesgo bajo y medio.** Ninguna de las dos guías lo resuelve. Hay que confirmar con la CEPCM si existen formatos distintos. Si existen, serían plantillas hermanas con menos apartados, y la modalidad se elegiría con el resultado de II.5.
 2. **Vigencia de las normas.** Revisar cada NOM citada; por ejemplo, la de instalaciones eléctricas tiene una versión posterior a 2012. La guía 2025 cita algunas versiones anteriores.
-3. **Registro del asesor ante la CEPCM** para firmar la carta de corresponsabilidad (§4).
-4. **Cálculo del riesgo de incendio** (§6): validarlo aparte, con un caso real.
+3. **Cálculo del riesgo de incendio** (§6): validarlo aparte, con un caso real.
