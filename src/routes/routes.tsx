@@ -55,6 +55,7 @@ import {
   RequireAccess,
   Settings,
   EnPreparacion,
+  Inmuebles,
 } from "./panelPages";
 
 export const routeElements = (
@@ -117,8 +118,10 @@ export const routeElements = (
       <Route path="analytics" element={<RequireAccess resource="analytics"><Analytics /></RequireAccess>} />
       <Route path="messaging" element={<Messaging />} />
       <Route path="settings" element={<Settings />} />
+      {/* Inmuebles y plano: prototipo que guarda solo en el navegador (Documento 04). */}
+      <Route path="inmuebles" element={<Inmuebles />} />
       {/* Módulos M-DESR: sus tablas están en diseño (Documento 02). */}
-      {["proyectos", "inmuebles", "inspecciones", "riesgos", "tratamiento"].map((p) => (
+      {["proyectos", "inspecciones", "riesgos", "tratamiento"].map((p) => (
         <Route key={p} path={p} element={<EnPreparacion />} />
       ))}
     </Route>

@@ -15,5 +15,6 @@ export const Agenda = lazy(() => import("../pages/app/Agenda.tsx"));
 export const Analytics = lazy(() => import("../pages/app/Analytics.tsx"));
 export const Messaging = lazy(() => import("../pages/app/Placeholders.tsx").then((m) => ({ default: m.Messaging })));
 export const Settings = lazy(() => import("../pages/app/Placeholders.tsx").then((m) => ({ default: m.Settings })));
+export const Inmuebles = lazy(() => import("../pages/app/Inmuebles.tsx"));
 export const EnPreparacion = lazy(() => import("../pages/app/EnPreparacion.tsx"));
 export const MapaDemo = lazy(() => import("../pages/MapaDemo.tsx"));

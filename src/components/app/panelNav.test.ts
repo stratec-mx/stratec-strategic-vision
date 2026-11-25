@@ -10,7 +10,7 @@ describe("menú del panel", () => {
   });
   it("los módulos M-DESR explican qué harán", () => {
     expect(MODULOS.filter((m) => m.enPreparacion).map((m) => m.to)).toEqual(
-      ["/app/proyectos", "/app/inmuebles", "/app/inspecciones", "/app/riesgos", "/app/tratamiento"],
+      ["/app/proyectos", "/app/inspecciones", "/app/riesgos", "/app/tratamiento"],
     );
   });
   it("arma la ruta de navegación", () => {

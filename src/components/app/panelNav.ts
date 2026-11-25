@@ -25,7 +25,6 @@ export const MODULOS: ModuloNav[] = [
   },
   {
     to: "/app/inmuebles", label: "Inmuebles y sedes", d: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
-    enPreparacion: "Registrará los inmuebles y sedes de cada cliente, con su mapa satelital, su perímetro y su plano.",
   },
   {
     to: "/app/inspecciones", label: "Inspecciones y diagnósticos", d: "M9 3h6v3H9zM9 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-3M9 14l2 2 4-4",
