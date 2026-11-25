@@ -2,7 +2,7 @@
 // guarda solo en este navegador, con inmuebles ficticios. No escribe en la base de datos.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, ChevronRight, Map as MapaIcono, PencilRuler, Plus, RotateCcw, X } from "lucide-react";
+import { Building2, ChevronRight, FileText, Loader2, Map as MapaIcono, PencilRuler, Plus, RotateCcw, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGps } from "@/hooks/useGps";
 import { aLocal, area, distancia, fmtM, fmtM2, lados, ORIENTACION_ETIQUETA, ORIENTACIONES, verticesPorTramos, type LngLat } from "@/lib/plano/geo";
@@ -13,6 +13,9 @@ import { MapaInmuebles, type HerramientaMapa, type MapaHandle } from "@/componen
 import { fondosDisponibles, type Fondo } from "@/lib/plano/fondos";
 import { PanelExterior, type Cliente, type VerSituacion } from "@/components/plano/PanelExterior";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PdfPreviewDialog, type PdfPreview } from "@/components/app/PdfPreviewDialog";
+import { previewPlanoPdf, TIPO_DOCUMENTO_ETIQUETA, type TipoDocumentoPlano } from "@/lib/plano/planoPdf";
 import { CroquisEditor } from "@/components/plano/CroquisEditor";
 
 const AYUDA_MAPA: Partial<Record<HerramientaMapa, string>> = {
@@ -77,6 +80,27 @@ export default function Inmuebles() {
   const [verSituacion, setVerSituacion] = useState<VerSituacion>("todo");
   const [listaAbierta, setListaAbierta] = useState(false);
   const [hallazgoSel, setHallazgoSel] = useState<string | null>(null);
+  // Documento del plano (mismo diseño que la propuesta económica).
+  const [docAbierto, setDocAbierto] = useState(false);
+  const [tipoDoc, setTipoDoc] = useState<TipoDocumentoPlano>("diagnostico");
+  const [firmas, setFirmas] = useState({ elaboro: "", reviso: "" });
+  const [generando, setGenerando] = useState(false);
+  const [errorDoc, setErrorDoc] = useState<string | null>(null);
+  const [vistaPdf, setVistaPdf] = useState<PdfPreview | null>(null);
+  const generarDocumento = async () => {
+    if (!sel) return;
+    setGenerando(true);
+    setErrorDoc(null);
+    try {
+      const p = await previewPlanoPdf({ inm: sel, tipo: tipoDoc, elaboro: firmas.elaboro.trim() || undefined, reviso: firmas.reviso.trim() || undefined });
+      setDocAbierto(false);
+      setVistaPdf(p);
+    } catch (e) {
+      setErrorDoc(e instanceof Error ? e.message : "No se pudo generar el documento.");
+    } finally {
+      setGenerando(false);
+    }
+  };
   // Predio por medidas: punto de inicio y tramos (largo y rumbo).
   const [inicioMedidas, setInicioMedidas] = useState<LngLat | null>(null);
   const [tramos, setTramos] = useState<{ largo: string; rumbo: string }[]>([{ largo: "", rumbo: "90" }]);
@@ -368,6 +392,10 @@ export default function Inmuebles() {
           {migas}
         </div>
         {sel && (
+          <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setDocAbierto(true)} className="flex items-center gap-1.5 rounded-md border border-pn-borde bg-white px-3 py-2 text-[13px] font-medium text-pn-texto hover:bg-pn-calido">
+            <FileText className="h-4 w-4" /> Documento
+          </button>
           <div className="flex rounded-md border border-pn-borde bg-white p-0.5" role="tablist" aria-label="Vista">
             {([["mapa", "Exterior (mapa)", MapaIcono], ["croquis", "Croquis interior", PencilRuler]] as const).map(([v, t, Icono]) => (
               <button
@@ -382,8 +410,53 @@ export default function Inmuebles() {
               </button>
             ))}
           </div>
+          </div>
         )}
       </div>
+
+      {/* Documento del plano: mismo diseño que la propuesta económica */}
+      <Dialog open={docAbierto} onOpenChange={(v) => !generando && setDocAbierto(v)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Documento del plano</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 text-[13px]">
+            <p className="text-pn-sub">
+              Arma el PDF con la lámina exterior (OpenStreetMap), el croquis de cada nivel, colindancias, inventario, hallazgos y fotos. Las fotos marcadas con personas o placas no se incluyen.
+            </p>
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1 text-[12px] font-medium text-pn-sub">¿Para qué documento?</legend>
+              {(Object.keys(TIPO_DOCUMENTO_ETIQUETA) as TipoDocumentoPlano[]).map((t) => (
+                <label key={t} className={`flex cursor-pointer items-start gap-2 rounded-md border p-2.5 ${tipoDoc === t ? "border-pn-navy bg-pn-calido" : "border-pn-borde"}`}>
+                  <input type="radio" name="tipo-doc" checked={tipoDoc === t} onChange={() => setTipoDoc(t)} className="mt-0.5" />
+                  <span>
+                    <span className="block font-medium text-pn-texto">{TIPO_DOCUMENTO_ETIQUETA[t]}</span>
+                    <span className="block text-[12px] text-pn-sub">
+                      {t === "diagnostico" ? "Incluye cámaras, accesos y puntos ciegos (confidencial, solo para el cliente)." : "Sin elementos de seguridad sensibles: va a Protección Civil."}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <div className="grid grid-cols-2 gap-2">
+              <label>
+                <span className="mb-1 block text-[12px] font-medium text-pn-sub">Elaboró</span>
+                <input value={firmas.elaboro} onChange={(e) => setFirmas((f) => ({ ...f, elaboro: e.target.value }))} placeholder="Nombre y cargo" className="w-full rounded-md border border-pn-borde px-2.5 py-2" />
+              </label>
+              <label>
+                <span className="mb-1 block text-[12px] font-medium text-pn-sub">Revisó</span>
+                <input value={firmas.reviso} onChange={(e) => setFirmas((f) => ({ ...f, reviso: e.target.value }))} placeholder="Nombre y cargo" className="w-full rounded-md border border-pn-borde px-2.5 py-2" />
+              </label>
+            </div>
+            {errorDoc && <p className="text-[12.5px] text-pn-alerta">{errorDoc}</p>}
+            <button type="button" onClick={() => void generarDocumento()} disabled={generando} className="flex items-center justify-center gap-2 rounded-md bg-pn-navy px-4 py-2.5 font-medium text-white disabled:opacity-60">
+              {generando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              {generando ? "Armando el documento…" : "Ver documento"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <PdfPreviewDialog preview={vistaPdf} onClose={() => { if (vistaPdf) URL.revokeObjectURL(vistaPdf.url); setVistaPdf(null); }} />
 
       <Sheet open={listaAbierta} onOpenChange={setListaAbierta}>
         <SheetContent side="left" className="w-[300px] overflow-y-auto p-3">
