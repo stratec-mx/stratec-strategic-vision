@@ -182,12 +182,32 @@ En el evento: escenario (I.9.3) y apoyo externo (II.7.8). Cada lámina se congel
 8. Una persona no asignada al proyecto no ve cámaras, accesos ni puntos ciegos.
 9. Cambiar el mapa base no altera ninguna geometría guardada.
 
-## 10. Pendientes antes de construir
+## 10. Decisiones y prueba visual (24-nov-2026)
+
+| # | Tema | Resultado |
+|---|---|---|
+| 1 | Proveedor de teselas | **OpenFreeMap** (gratuito, sin llave ni tarjeta; datos de OpenStreetMap). Si algún día falla, se cambia por un archivo PMTiles propio de Morelos sin tocar las geometrías |
+| 2 | Prueba visual en Morelos | Hecha con MapLibre + OpenFreeMap, estilo *liberty* (capturas en [`pruebas/`](pruebas/)). Resultados por zona en la tabla siguiente. **Es suficiente como mapa de orientación** para ubicar y nombrar colindancias; las geometrías salen de campo, así que no depende de que el mapa tenga cada construcción |
+| 3 | Interiores | De acuerdo: dentro de edificios los elementos se colocan a mano sobre el croquis del nivel (§5.2) |
+| 4 | Diseño de la lámina | De acuerdo: se presentará una propuesta visual para aprobación |
+
+| Zona | Resultado |
+|---|---|
+| Centro de Cuernavaca | Calles con nombre, sentido de circulación, construcciones, comercios y servicios, parques y escala |
+| CIVAC, Jiutepec | Calles y avenidas con nombre, colonias, escuelas, comercios y unidades habitacionales. En las zonas residenciales faltan casi todas las construcciones |
+| Tlayacapan | Calles con nombre y edificios principales (presidencia, mercado, ex convento); casi sin construcciones |
+| Tlaltizapán | Calles con nombre, carreteras (MOR 2 y MOR 4), río y clínica; sin construcciones |
+
+**Referencia revisada: Boldr Pro (REEKON Tools).** No es una app para dibujar planos. Sirve para capturar datos de obra: anotar medidas sobre fotos y PDF, llevar listas de medidas y usar calculadoras (área, escaleras), con medidores láser de la marca conectados por Bluetooth. La idea que sí se toma:
+
+- **Fase 2:** capturar medidas desde un distanciómetro láser con Bluetooth directo en el croquis, en lugar de teclearlas;
+- en teléfonos Android con Chrome se puede leer el distanciómetro desde el navegador; en iPhone haría falta una app nativa;
+- en la versión 1, las medidas se teclean.
+
+## 11. Pendientes antes de construir
 
 | # | Pendiente | Propuesta |
 |---|---|---|
-| 1 | Proveedor de teselas de OpenStreetMap | Probar OpenFreeMap y un archivo PMTiles propio de Morelos; elegir por calidad y estabilidad |
-| 2 | Prueba visual en tres zonas de Morelos | Por ejemplo, centro de Cuernavaca, CIVAC (Jiutepec) y una zona rural, para ver si el mapa base tiene suficiente detalle |
 | 3 | Satélite como referencia en pantalla | Solo si Esri confirma la licencia (Documento 02, 11.1b) |
 | 4 | Precisión del GPS en interiores | En interiores el GPS falla; ahí los elementos se colocan a mano sobre el plano |
 | 5 | Diseño de la lámina | Una propuesta visual con la identidad de STRATEC, para que el titular la apruebe |
