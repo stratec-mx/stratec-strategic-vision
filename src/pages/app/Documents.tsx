@@ -201,10 +201,11 @@ export const DocumentsList = () => {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl rounded-none">
+        <DialogContent className="max-w-3xl rounded-none max-h-[90dvh] flex flex-col">
           <DialogHeader><DialogTitle className="font-display text-navy">Nuevo documento</DialogTitle></DialogHeader>
-          <div className="space-y-5">
-            <div className="grid sm:grid-cols-2 gap-2">
+          {/* La lista de plantillas se desplaza; cliente y botón quedan siempre a la vista */}
+          <div className="flex flex-col gap-5 min-h-0">
+            <div className="grid sm:grid-cols-2 gap-2 overflow-y-auto min-h-0 pr-1">
               {DOCUMENT_TEMPLATES.map((t) => (
                 <button
                   key={t.id}
