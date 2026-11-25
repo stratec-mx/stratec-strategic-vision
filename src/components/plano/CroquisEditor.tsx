@@ -5,15 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { AppWindow, DoorOpen, Maximize, MousePointer2, PenLine, Redo2, Route, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { useHistorial } from "@/hooks/useHistorial";
 import {
-  EPS, GROSOR_INICIAL, agregarAbertura, agregarEscalera, agregarMuro, asentar, borrarAbertura, borrarEscalera, borrarMuro,
-  cambiarAbertura, cambiarEscalera, dist, iman, moverVerticesLibre, muroCercano, nuevoId, predioACroquis,
-  type Croquis, type Nivel, type P, type ResultadoIman,
+  EPS, ETIQUETA_ABERTURA, ETIQUETA_ESCALERA, GROSOR_INICIAL, SUBTIPOS_PUERTA, TIPOS_ESCALERA, agregarAbertura, agregarEscalera,
+  agregarMuro, anguloHacia, asentar, borrarAbertura, borrarEscalera, borrarMuro, cambiarEscalera, deslizarAbertura, dist,
+  escaleraInicial, giroConPaso, iman, moverVerticesLibre, muroCercano, nuevoId, predioACroquis,
+  type Croquis, type Nivel, type P, type ResultadoIman, type SubtipoPuerta, type TipoEscalera,
 } from "@/lib/plano/croquis";
 import { CAMARA_INICIAL, SIMBOLOS, TIPOS_SIMBOLO, type TipoSimbolo } from "@/lib/plano/simbolos";
 import { CroquisDibujo, type Seleccion } from "./CroquisDibujo";
 import { CroquisPanel } from "./CroquisPanel";
 
-export type HerramientaCroquis = "seleccionar" | "muro" | "puerta" | "ventana" | "escalera" | "ruta" | `simbolo:${TipoSimbolo}`;
+export type HerramientaCroquis = "seleccionar" | "muro" | "divisoria" | "puerta" | "ventana" | "escalera" | "ruta" | `simbolo:${TipoSimbolo}`;
 
 interface Vista {
   x: number;
@@ -25,20 +26,28 @@ type Arrastre =
   | { k: "pan"; cx: number; cy: number; vista: Vista; movio: boolean }
   | { k: "vertice"; id: string; movio: boolean }
   | { k: "muro"; id: string; inicio: P; orig: Record<string, P>; normal: P; movio: boolean }
-  | { k: "abertura"; id: string; movio: boolean }
-  | { k: "escalera"; id: string; dx: number; dy: number; movio: boolean }
-  | { k: "simbolo"; id: string; dx: number; dy: number; movio: boolean }
+  /**
+   * Puertas, ventanas, escaleras y símbolos se arrastran con cualquier herramienta. Si solo se
+   * tocan (sin arrastrar) y la herramienta dibuja (muro, línea divisoria, ruta), el toque coloca
+   * un punto como si se hubiera tocado el fondo.
+   */
+  | { k: "abertura"; id: string; cx: number; cy: number; movio: boolean; coloca: boolean }
+  | { k: "escalera" | "simbolo"; id: string; dx: number; dy: number; cx: number; cy: number; movio: boolean; coloca: boolean }
+  | { k: "giro"; id: string; movio: boolean }
   | { k: "camara-punta"; id: string; movio: boolean }
   | { k: "colocar"; cx: number; cy: number; movio: boolean; vista: Vista };
 
 const AYUDA: Record<string, string> = {
-  seleccionar: "Toca un muro, espacio, puerta o símbolo para editarlo. Arrastra las esquinas o los muros para moverlos. Arrastra el fondo para desplazarte.",
+  seleccionar: "Toca un muro, espacio, puerta o símbolo para editarlo. Arrastra las esquinas o los muros para moverlos. Las puertas, ventanas, escaleras y símbolos se arrastran con cualquier herramienta. Arrastra el fondo para desplazarte.",
   muro: "Toca para empezar y otra vez en cada esquina. Puedes escribir el largo y pulsar Enter. Al tocar una esquina existente el tramo termina. Doble toque o Esc para terminar.",
-  puerta: "Toca un muro para poner una puerta. Queda pegada a él.",
-  ventana: "Toca un muro para poner una ventana. Queda pegada a él.",
-  escalera: "Toca dónde va la escalera. Después elige a qué nivel llega.",
+  divisoria: "Delimita pasillos, zonas o cajones de estacionamiento donde no hay muro. Se traza igual que un muro: toca en cada esquina. Divide los espacios, pero no lleva puertas ni ventanas.",
+  puerta: "Elige el tipo de puerta junto al botón y toca un muro para ponerla. Toca una puerta o ventana existente para editarla, o arrástrala a lo largo de su muro.",
+  ventana: "Toca un muro para poner una ventana. Toca una puerta o ventana existente para editarla, o arrástrala a lo largo de su muro.",
+  escalera: "Elige el tipo junto al botón y toca dónde va. Después gírala con el círculo azul y elige a qué nivel llega.",
   ruta: "Toca cada punto de la ruta de evacuación, en orden hacia la salida. Doble toque o “Terminar ruta” para cerrar.",
 };
+
+const dibujaTramos = (h: HerramientaCroquis) => h === "muro" || h === "divisoria";
 
 const ESPERA_ARRASTRE = 6; // píxeles
 
@@ -48,6 +57,9 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
   const [nivelId, setNivelId] = useState(c.niveles[0]?.id ?? "");
   const nivel = c.niveles.find((n) => n.id === nivelId) ?? c.niveles[0];
   const [herramienta, setHerramienta] = useState<HerramientaCroquis>("seleccionar");
+  const [clasePuerta, setClasePuerta] = useState<SubtipoPuerta>("abatible");
+  const [tipoEscalera, setTipoEscalera] = useState<TipoEscalera>("recta");
+  const [giroLibre, setGiroLibre] = useState(false);
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [grosor, setGrosor] = useState(GROSOR_INICIAL);
   const [angulos, setAngulos] = useState(true);
@@ -206,11 +218,12 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
       // Al llegar a una esquina o a un muro que ya existe, el muro termina (cierra el recinto).
       const existia = nivel.vertices.some((v) => dist(v, p) < EPS) || !!muroCercano(nivel, p, EPS);
       const desde = cadena;
-      aplicarNivel((n) => agregarMuro(n, desde, p, grosor));
+      const virtual = herramienta === "divisoria";
+      aplicarNivel((n) => agregarMuro(n, desde, p, grosor, virtual));
       setLargo("");
       setCadena(existia ? null : p);
     },
-    [nivel, cadena, aplicarNivel, grosor],
+    [nivel, cadena, aplicarNivel, grosor, herramienta],
   );
 
   const colocarConLargo = useCallback(() => {
@@ -229,21 +242,30 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
   const colocar = useCallback(
     (raw: P) => {
       if (!nivel) return;
-      if (herramienta === "muro") {
+      if (dibujaTramos(herramienta)) {
         colocarMuro(ajustar(raw, cadena).p);
       } else if (herramienta === "puerta" || herramienta === "ventana") {
-        const m = muroCercano(nivel, raw, 16 * esc);
+        const m = muroCercano(nivel, raw, 16 * esc, { soloFisicos: true });
         if (!m) {
-          setAviso("Toca sobre un muro: las puertas y ventanas van pegadas a un muro.");
+          setAviso(
+            muroCercano(nivel, raw, 16 * esc)
+              ? "Las líneas divisorias no llevan puertas ni ventanas. Cámbiala a muro físico si hace falta."
+              : "Toca sobre un muro: las puertas y ventanas van pegadas a un muro.",
+          );
           return;
         }
         // La abertura nueva queda seleccionada en el siguiente render.
         pendienteAbertura.current = new Set(nivel.aberturas.map((a) => a.id));
-        aplicarNivel((n) => agregarAbertura(n, m.muro.id, m.t, herramienta));
+        const clase = herramienta === "ventana" ? "ventana" : clasePuerta;
+        aplicarNivel((n) => agregarAbertura(n, m.muro.id, m.t, clase));
       } else if (herramienta === "escalera") {
         const p = ajustar(raw).p;
         const arriba = [...c.niveles].filter((n) => n.nivelPiso > nivel.nivelPiso).sort((a, b) => a.nivelPiso - b.nivelPiso)[0];
-        aplicarCroquis((cc) => agregarEscalera(cc, nivel.id, { x: p.x, y: p.y, ancho: 1.2, largo: 3, giro: 0, sentido: "sube", nivelDestino: arriba?.id }));
+        const id = nuevoId("s");
+        aplicarCroquis((cc) =>
+          agregarEscalera(cc, nivel.id, { id, x: p.x, y: p.y, giro: 0, sentido: "sube", nivelDestino: arriba?.id, ...escaleraInicial(tipoEscalera) }),
+        );
+        setSeleccion({ k: "escalera", id });
         setHerramienta("seleccionar");
       } else if (herramienta === "ruta") {
         setRuta((r) => [...r, ajustar(raw, r[r.length - 1]).p]);
@@ -258,7 +280,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
         setSeleccion({ k: "simbolo", id });
       }
     },
-    [nivel, herramienta, colocarMuro, ajustar, cadena, esc, aplicarNivel, aplicarCroquis, c.niveles],
+    [nivel, herramienta, colocarMuro, ajustar, cadena, esc, aplicarNivel, aplicarCroquis, c.niveles, clasePuerta, tipoEscalera],
   );
 
   // Selecciona la puerta o ventana recién puesta.
@@ -344,16 +366,29 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
     const k = blanco?.getAttribute("data-k");
     const id = blanco?.getAttribute("data-id") ?? "";
 
-    // Símbolos, escaleras y la punta de la cámara se arrastran con cualquier herramienta.
+    // La punta de la cámara, la manija de giro, puertas, ventanas, escaleras y símbolos se
+    // arrastran con cualquier herramienta.
     if (k === "camara-punta") {
       arrastre.current = { k: "camara-punta", id, movio: false };
       return;
     }
-    if ((k === "simbolo" || k === "escalera") && (herramienta === "seleccionar" || herramienta.startsWith("simbolo:"))) {
+    if (k === "escalera-giro") {
+      setSeleccion({ k: "escalera", id });
+      arrastre.current = { k: "giro", id, movio: false };
+      return;
+    }
+    // Con muro, línea divisoria o ruta, un toque sin arrastre sigue colocando el punto.
+    const coloca = dibujaTramos(herramienta) || herramienta === "ruta";
+    if (k === "abertura" && nivel.aberturas.some((a) => a.id === id)) {
+      if (!coloca) setSeleccion({ k: "abertura", id });
+      arrastre.current = { k: "abertura", id, cx: e.clientX, cy: e.clientY, movio: false, coloca };
+      return;
+    }
+    if (k === "simbolo" || k === "escalera") {
       const obj = k === "simbolo" ? nivel.simbolos.find((s) => s.id === id) : nivel.escaleras.find((s) => s.id === id);
       if (obj) {
-        setSeleccion({ k, id });
-        arrastre.current = { k, id, dx: obj.x - raw.x, dy: obj.y - raw.y, movio: false };
+        if (!coloca) setSeleccion({ k, id });
+        arrastre.current = { k, id, dx: obj.x - raw.x, dy: obj.y - raw.y, cx: e.clientX, cy: e.clientY, movio: false, coloca };
         return;
       }
     }
@@ -372,9 +407,6 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
       const b = nivel.vertices.find((v) => v.id === m.b)!;
       const L = dist(a, b) || 1;
       arrastre.current = { k: "muro", id, inicio: raw, orig: { [a.id]: { x: a.x, y: a.y }, [b.id]: { x: b.x, y: b.y } }, normal: { x: -(b.y - a.y) / L, y: (b.x - a.x) / L }, movio: false };
-    } else if (k === "abertura") {
-      setSeleccion({ k: "abertura", id });
-      arrastre.current = { k: "abertura", id, movio: false };
     } else if (k === "espacio" || k === "ruta") {
       setSeleccion({ k, id });
       arrastre.current = { k: "pan", cx: e.clientX, cy: e.clientY, vista: vistaRef.current, movio: false };
@@ -404,7 +436,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
     const raw = aMundo(e.clientX, e.clientY);
     const ar = arrastre.current;
     if (!ar) {
-      if (herramienta === "muro") setCursor(ajustar(raw, cadena));
+      if (dibujaTramos(herramienta)) setCursor(ajustar(raw, cadena));
       else if (herramienta === "ruta") setCursor(ajustar(raw, ruta[ruta.length - 1]));
       else if (cursor) setCursor(null);
       return;
@@ -413,13 +445,18 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
       const dx = e.clientX - ar.cx;
       const dy = e.clientY - ar.cy;
       if (!ar.movio && Math.hypot(dx, dy) < ESPERA_ARRASTRE) {
-        if (herramienta === "muro") setCursor(ajustar(raw, cadena));
+        if (dibujaTramos(herramienta)) setCursor(ajustar(raw, cadena));
         return;
       }
       ar.movio = true;
       const e0 = ar.vista.w / svgRef.current!.getBoundingClientRect().width;
       setVista({ ...ar.vista, x: ar.vista.x - dx * e0, y: ar.vista.y - dy * e0 });
       return;
+    }
+    if ((ar.k === "abertura" || ar.k === "escalera" || ar.k === "simbolo") && !ar.movio) {
+      // Un temblor del dedo no es arrastre: así un toque solo selecciona.
+      if (Math.hypot(e.clientX - ar.cx, e.clientY - ar.cy) < ESPERA_ARRASTRE) return;
+      setSeleccion({ k: ar.k, id: ar.id });
     }
     const primero = !ar.movio;
     ar.movio = true;
@@ -435,8 +472,15 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
       for (const [vid, o] of Object.entries(ar.orig)) cambios[vid] = { x: o.x + ar.normal.x * paso, y: o.y + ar.normal.y * paso };
       aplicarNivel((n) => moverVerticesLibre(n, cambios), op);
     } else if (ar.k === "abertura") {
-      const m = muroCercano(nivel, raw, 40 * esc);
-      if (m) aplicarNivel((n) => cambiarAbertura(n, ar.id, { muro: m.muro.id, t: m.t }), op);
+      // Se desliza por su muro; solo cambia de muro si el puntero se aleja claramente del suyo.
+      aplicarNivel((n) => deslizarAbertura(n, ar.id, raw, 30 * esc), op);
+    } else if (ar.k === "giro") {
+      const s = nivel.escaleras.find((x) => x.id === ar.id);
+      if (s) {
+        const giro = giroConPaso(anguloHacia(s, raw), giroLibre || e.shiftKey);
+        // Siempre se aplica (aunque el giro no cambie) para que todo el arrastre sea un solo paso de deshacer.
+        aplicarCroquis((cc) => cambiarEscalera(cc, nivel.id, ar.id, { giro }), op);
+      }
     } else if (ar.k === "escalera") {
       const x = Math.round((raw.x + ar.dx) * 20) / 20;
       const y = Math.round((raw.y + ar.dy) * 20) / 20;
@@ -472,11 +516,12 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
     arrastre.current = null;
     if (!ar) return;
     if (ar.k === "colocar" && !ar.movio) colocar(aMundo(e.clientX, e.clientY));
+    if ((ar.k === "abertura" || ar.k === "escalera" || ar.k === "simbolo") && !ar.movio && ar.coloca) colocar(aMundo(e.clientX, e.clientY));
     if ((ar.k === "vertice" || ar.k === "muro") && ar.movio) aplicarNivel(asentar, { fusionar: true });
   };
 
   const alDobleClic = () => {
-    if (herramienta === "muro") terminarCadena();
+    if (dibujaTramos(herramienta)) terminarCadena();
     if (herramienta === "ruta") terminarRuta();
   };
 
@@ -489,13 +534,13 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
 
   if (!nivel) return null;
 
-  const boton = (h: HerramientaCroquis, etiqueta: string, icono: React.ReactNode) => (
+  const boton = (h: HerramientaCroquis, etiqueta: string, icono: React.ReactNode, pegado = false) => (
     <button
       key={h}
       type="button"
       onClick={() => elegir(h)}
       aria-pressed={herramienta === h}
-      className={`flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-[13px] font-medium ${
+      className={`flex shrink-0 items-center gap-1.5 border px-3 py-2 text-[13px] font-medium ${pegado ? "rounded-l-md" : "rounded-md"} ${
         herramienta === h ? "border-pn-navy bg-pn-navy text-white" : "border-pn-borde bg-white text-pn-texto hover:bg-pn-calido"
       }`}
     >
@@ -504,7 +549,29 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
     </button>
   );
 
-  const previo = herramienta === "muro" && cadena && cursor && dist(cadena, cursor.p) > 0.04 ? { desde: cadena, hasta: cursor.p } : null;
+  /** Botón de herramienta con su lista de variantes (funciona igual con el dedo). */
+  const botonConTipo = <T extends string>(
+    h: HerramientaCroquis, etiqueta: string, icono: React.ReactNode, valor: T, opciones: readonly T[], etiquetas: Record<T, string>, cambiar: (v: T) => void, aria: string,
+  ) => (
+    <div key={h} className="flex shrink-0">
+      {boton(h, etiqueta, icono, true)}
+      <select
+        aria-label={aria}
+        value={valor}
+        onChange={(e) => {
+          cambiar(e.target.value as T);
+          elegir(h);
+        }}
+        className={`-ml-px max-w-[11rem] rounded-r-md border px-1.5 text-[12.5px] ${herramienta === h ? "border-pn-navy bg-[#E8EEF6] text-pn-texto" : "border-pn-borde bg-white text-pn-sub"}`}
+      >
+        {opciones.map((o) => (
+          <option key={o} value={o}>{etiquetas[o]}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const previo = dibujaTramos(herramienta) && cadena && cursor && dist(cadena, cursor.p) > 0.04 ? { desde: cadena, hasta: cursor.p } : null;
   const ultimaRuta = ruta[ruta.length - 1];
 
   return (
@@ -513,9 +580,10 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {boton("seleccionar", "Seleccionar", <MousePointer2 className="h-4 w-4" />)}
           {boton("muro", "Muro", <PenLine className="h-4 w-4" />)}
-          {boton("puerta", "Puerta", <DoorOpen className="h-4 w-4" />)}
+          {boton("divisoria", "Línea divisoria", <span aria-hidden className="block w-4 border-t-2 border-dashed border-current" />)}
+          {botonConTipo<SubtipoPuerta>("puerta", "Puerta", <DoorOpen className="h-4 w-4" />, clasePuerta, SUBTIPOS_PUERTA, ETIQUETA_ABERTURA, setClasePuerta, "Tipo de puerta")}
           {boton("ventana", "Ventana", <AppWindow className="h-4 w-4" />)}
-          {boton("escalera", "Escalera", <span className="text-[15px] leading-none">⌸</span>)}
+          {botonConTipo("escalera", "Escalera", <span className="text-[15px] leading-none">⌸</span>, tipoEscalera, TIPOS_ESCALERA, ETIQUETA_ESCALERA, setTipoEscalera, "Tipo de escalera, rampa o elevador")}
           {boton("ruta", "Ruta", <Route className="h-4 w-4" />)}
           {TIPOS_SIMBOLO.map((t) =>
             boton(`simbolo:${t}`, SIMBOLOS[t].etiqueta, (
@@ -561,7 +629,11 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
             {/* Tramo en curso */}
             {previo && (
               <g pointerEvents="none">
-                <line x1={previo.desde.x} y1={previo.desde.y} x2={previo.hasta.x} y2={previo.hasta.y} stroke="#1D4ED8" strokeWidth={grosor} strokeOpacity={0.45} strokeLinecap="square" />
+                {herramienta === "divisoria" ? (
+                  <line x1={previo.desde.x} y1={previo.desde.y} x2={previo.hasta.x} y2={previo.hasta.y} stroke="#1D4ED8" strokeWidth={Math.max(0.015, 1.6 * esc)} strokeDasharray={`${7 * esc} ${4 * esc}`} />
+                ) : (
+                  <line x1={previo.desde.x} y1={previo.desde.y} x2={previo.hasta.x} y2={previo.hasta.y} stroke="#1D4ED8" strokeWidth={grosor} strokeOpacity={0.45} strokeLinecap="square" />
+                )}
                 <text x={(previo.desde.x + previo.hasta.x) / 2} y={(previo.desde.y + previo.hasta.y) / 2 - 10 * esc} fontSize={13 * esc} textAnchor="middle" fill="#1D4ED8" fontWeight={700}>
                   {dist(previo.desde, previo.hasta).toFixed(2)} m
                 </text>
@@ -573,7 +645,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
             {cursor?.linea && (
               <line x1={cursor.linea[0].x} y1={cursor.linea[0].y} x2={cursor.linea[1].x} y2={cursor.linea[1].y} stroke="#F59E0B" strokeWidth={Math.max(0.01, 1 * esc)} strokeDasharray={`${4 * esc} ${3 * esc}`} pointerEvents="none" />
             )}
-            {cursor && (herramienta === "muro" || herramienta === "ruta") && (
+            {cursor && (dibujaTramos(herramienta) || herramienta === "ruta") && (
               <circle cx={cursor.p.x} cy={cursor.p.y} r={5 * esc} fill={cursor.guia === "vertice" || cursor.guia === "muro" || cursor.guia === "predio" ? "#F59E0B" : "#1D4ED8"} pointerEvents="none" />
             )}
             {cadena && <circle cx={cadena.x} cy={cadena.y} r={5 * esc} fill="#1D4ED8" pointerEvents="none" />}
@@ -595,7 +667,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
             ))}
           </div>
 
-          {herramienta === "muro" && cadena && (
+          {dibujaTramos(herramienta) && cadena && (
             <div className="absolute bottom-2 left-2 right-14 flex flex-wrap items-center gap-2 rounded-md border border-pn-borde bg-white/95 p-2 shadow-sm">
               <label className="flex items-center gap-1.5 text-[13px] text-pn-texto">
                 Largo
@@ -614,7 +686,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
                 m
               </label>
               <button type="button" onClick={colocarConLargo} className="rounded-md bg-pn-navy px-3 py-1.5 text-[13px] font-medium text-white">Poner tramo</button>
-              <button type="button" onClick={terminarCadena} className="rounded-md border border-pn-borde px-3 py-1.5 text-[13px]">Terminar muro</button>
+              <button type="button" onClick={terminarCadena} className="rounded-md border border-pn-borde px-3 py-1.5 text-[13px]">{herramienta === "divisoria" ? "Terminar línea" : "Terminar muro"}</button>
             </div>
           )}
           {herramienta === "ruta" && ruta.length > 0 && (
@@ -654,6 +726,8 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
           setAngulos={setAngulos}
           conIman={conIman}
           setConIman={setConIman}
+          giroLibre={giroLibre}
+          setGiroLibre={setGiroLibre}
           predio={predioNivel}
         />
       </aside>
