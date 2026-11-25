@@ -47,7 +47,7 @@ El mapa base solo sirve para orientarse.
 | Dibujo táctil | **Terra Draw** (código abierto) | Polígonos, líneas y puntos con el dedo; compatible con MapLibre |
 | Geometrías | **PostGIS** en Supabase | Medidas, áreas y búsquedas espaciales en la base; resuelve D-11 del Documento 02 (antes: “después”) |
 | Evidencias | Supabase Storage privado (`mdesr-evidencias`) | Ya existe (script 10) |
-| Satélite | **Opcional**, solo como referencia visual en pantalla (Esri), si la licencia lo permite. Nunca para calcar ni en el PDF hasta confirmar la licencia | Ver la sección 11.1b del Documento 02 |
+| Satélite | **Opcional**, solo como referencia visual en pantalla (Esri, con cuenta de ArcGIS Location Platform). Nunca para calcar ni en el PDF sin confirmación escrita de Esri | Ver §11 |
 | Google Maps | **Descartado como dependencia.** Se puede evaluar después como mapa base alternativo solo en pantalla | Su política prohíbe usar sus mapas en documentos generados y calcar su imagen satelital |
 
 Como el modelo guarda geometrías propias en coordenadas estándar (WGS84), **el mapa base se puede cambiar sin perder ningún plano.**
@@ -214,7 +214,39 @@ En el evento: escenario (I.9.3) y apoyo externo (II.7.8). Cada lámina se congel
 | Tlayacapan | Calles con nombre y edificios principales (presidencia, mercado, ex convento); casi sin construcciones |
 | Tlaltizapán | Calles con nombre, carreteras (MOR 2 y MOR 4), río y clínica; sin construcciones |
 
-## 11. Pendientes antes de construir
+## 11. Licencia de Esri World Imagery (validación del 24-nov-2026)
+
+Se revisaron solo fuentes oficiales de Esri y del INEGI. **No es una opinión legal.**
+
+| # | Pregunta | Resultado |
+|---|---|---|
+| 1 | Uso comercial recurrente en un panel interno | Permitido dentro de una **aplicación del cliente** con una cuenta de **ArcGIS Location Platform**. El acuerdo incluye como usuarios a los “usuarios finales o clientes” de quien contrata. Las salidas del servicio solo sirven “para visualización” y “dentro de las aplicaciones del cliente”, y no se pueden revender ni redistribuir a terceros (Acuerdo de ArcGIS Location Platform, rev. 21-nov-2025, art. 3.1 d) |
+| 2 | Atribución | Obligatoria en toda salida del mapa base (art. 3.1 d 4), sin quitar ni ocultar avisos (art. 3.1 a 3). Texto vigente del servicio: **“Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community”** (Maxar ahora aparece como Vantor). Hay condiciones adicionales de proveedores de datos en esri.com/legal/third-party-data, que todavía no se revisan |
+| 3 | Dibujar encima y exportar a PDF para el cliente | **No está claro.** Dibujar figuras propias encima es visualización y no está prohibido. Se permite usar la salida “en formato estático (PDF, GIF, JPEG, HTML), en forma final inalterable” (art. 3.1 d 6 B). Pero el mismo artículo prohíbe “redistribuir la salida a terceros” y la limita a la aplicación. La página de mapas estáticos de ArcGIS Online sí menciona “un informe para un cliente”, pero es de otro producto. **Hace falta una confirmación por escrito de Esri** antes de poner su imagen en el Programa Interno. Además, no se puede extraer, descargar ni guardar la imagen fuera de lo permitido (art. 3.1 d 6) |
+| 4 | Cuenta, llave y nivel gratuito | Hace falta una **cuenta de ArcGIS Location Platform** y un token de acceso. Gratis al mes: **2 millones de teselas** (después, 0.15 USD por cada 1,000), o **1,000 sesiones** (después, 4 USD por cada 1,000), y **1,000 mapas estáticos** (después, 0.90 USD por cada 1,000). Para 5 a 20 usuarios se queda dentro de lo gratuito. Nota: el mapa de demostración actual (`/mapa-demo`) usa las teselas de ArcGIS Online sin token; eso no sirve para producción |
+| 5 | Calidad en Morelos (metadatos del servicio) | **Buena.** Centro de Cuernavaca y CIVAC: 0.5 m por pixel, WorldView-2, 15-ene-2024, precisión ±5 m. Tlayacapan: 0.5 m, 26-ene-2024. Tlaltizapán: 0.34 m, 26-feb-2026. Alcanza para identificar techos, patios y accesos, no para medir |
+
+**Cuidado con mezclar licencias:** el acuerdo de Esri prohíbe combinar su salida de forma que quede sujeta a licencias abiertas de bases de datos (art. 3.1 a 4). Mostrar OpenStreetMap y la imagen de Esri como capas separadas en pantalla es visualización. No hay que generar un producto que mezcle los datos de los dos.
+
+**Alternativas libres:**
+
+| Opción | Uso comercial y en PDF | Pendiente |
+|---|---|---|
+| **OpenStreetMap** (calles), con OpenFreeMap | Sí, con “© colaboradores de OpenStreetMap” | Ya elegido como mapa base (§10) |
+| **Ortoimágenes del INEGI** (imagen) | Sí: sus Términos de libre uso permiten “explotar comercialmente la información”, con el crédito “Fuente: INEGI, [producto]” y avisando de las transformaciones | No se pudo leer la página del producto: falta confirmar resolución, año y cobertura en Morelos, y cómo se sirve (descarga o servicio) |
+
+**Conclusión:** la lámina del documento se queda con OpenStreetMap, que tiene licencia clara. Esri se puede usar como referencia satelital **solo en pantalla**, con cuenta de ArcGIS Location Platform y dentro del nivel gratuito. No se pone su imagen en el PDF hasta que Esri lo confirme por escrito. Si el titular quiere imagen satelital en el documento, la opción más clara es una ortoimagen del INEGI, sujeta a revisar su resolución en Morelos.
+
+Fuentes:
+
+- [Acuerdo de ArcGIS Location Platform (E204, rev. 21-nov-2025)](https://www.esri.com/content/dam/esrisites/en-us/media/legal/platform/platform-legal.pdf)
+- [Precios de ArcGIS Location Platform](https://location.arcgis.com/pricing/)
+- [Static Basemap Tiles service](https://developers.arcgis.com/rest/static-basemap-tiles/)
+- [Servicio World Imagery y sus metadatos](https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer)
+- [Mapas estáticos en ArcGIS Online](https://doc.esri.com/en/arcgis-online/latest/reference/static-maps.html)
+- [Términos de libre uso del INEGI](https://www.inegi.org.mx/inegi/terminos.html)
+
+## 12. Pendientes antes de construir
 
 | # | Pendiente | Propuesta |
 |---|---|---|
