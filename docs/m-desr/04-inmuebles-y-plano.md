@@ -21,7 +21,7 @@
 | 3. Geometrías propias | Perímetro, colindancias, áreas, accesos, rutas, equipos, zonas de riesgo y punto de reunión | Las registra el consultor | Sí (PostGIS) |
 | 4. Información de inspección | Fotografías, observaciones, medidas, características y condiciones de seguridad | Inspección de campo | Sí, ligada a cada elemento |
 
-**Las geometrías nunca se calcan de una imagen de terceros.** Salen de:
+**Las geometrías nunca se calcan de una imagen de terceros** (excepción por decisión del titular del 25-nov: calcar sobre Google en pantalla, ver §14, D-G1). Salen de:
 
 - GPS en campo;
 - vértices que el consultor coloca según lo que mide y observa en el sitio;
@@ -48,7 +48,7 @@ El mapa base solo sirve para orientarse.
 | Geometrías | **PostGIS** en Supabase | Medidas, áreas y búsquedas espaciales en la base; resuelve D-11 del Documento 02 (antes: “después”) |
 | Evidencias | Supabase Storage privado (`mdesr-evidencias`) | Ya existe (script 10) |
 | Satélite | **Opcional**, solo como referencia visual en pantalla (Esri, con cuenta de ArcGIS Location Platform). Nunca para calcar ni en el PDF sin confirmación escrita de Esri | Ver §11 |
-| Google Maps | **Descartado como dependencia.** Se puede evaluar después como mapa base alternativo solo en pantalla | Su política prohíbe usar sus mapas en documentos generados y calcar su imagen satelital |
+| Google Maps | **Fondo en pantalla** (mapa, satélite y negocios), por decisión del titular del 25-nov (§14). **Nunca en el PDF:** las láminas siguen con OpenStreetMap | Decisión del titular asumiendo el riesgo de las condiciones de Google (§14, D-G1) |
 
 Como el modelo guarda geometrías propias en coordenadas estándar (WGS84), **el mapa base se puede cambiar sin perder ningún plano.**
 
@@ -262,6 +262,23 @@ El prototipo está publicado en `/app/inmuebles` (main `90a9c92`) y por ahora **
 | D-P8 | **Espacios del croquis y áreas** | El consultor agrupa espacios en áreas. Pasillos, sanitarios y escaleras **no crean área** por omisión | `floor_plan_elements.area_id` (varios espacios, una área), opcional. Tipos que no generan área: `pasillo`, `sanitario`, `escalera` |
 | D-P9 | **Fotos** | Con la cámara (sin copia en la galería) o desde la galería, marcada como “subida después”. Si lleva la casilla “aparecen personas o placas”, **no sale en documentos** | `evidence.capture_mode` (`camara`, `galeria`). La casilla usa `evidence.contains_personal_data`, que ya existe; el generador de documentos la excluye siempre |
 | D-P10 | **Satélite en pantalla** | Botón Mapa / Satélite con Esri. El titular crea la cuenta de ArcGIS Location Platform y pone la llave en Vercel. El botón aparece solo si existe la variable | Ninguno en la base. La imagen de Esri no va al PDF (§11) |
+
+## 14. Decisiones del titular (25-nov-2026)
+
+| # | Tema | Decisión | Efecto |
+|---|---|---|---|
+| D-G1 | **Google Maps en pantalla y calcar sobre su imagen** | El titular decide usar Google Maps como fondo en pantalla (mapa, satélite y negocios) y **calcar contornos sobre su imagen**. Se le explicó que las condiciones de Google lo prohíben sin importar el fin y que pueden suspender la cuenta. Respondió que el plano no es el producto comercial, sino el conjunto de estudios, y **asume el riesgo** | Sustituye, solo para Google, la regla de §1 “nunca se calca”. **Las láminas del PDF siguen con OpenStreetMap**: Google nunca va al documento. Llave de Google Maps restringida a los dominios del panel, en Vercel, con alerta de gasto |
+| D-G2 | Negocios del entorno (POI) | De Google, solo en pantalla | Sirven para ubicar riesgos externos; no se guardan ni se copian a la base |
+| D-G3 | **Situación de cada elemento** | Existente, propuesto o retirar (diagnóstico frente a propuesta), visible por capas | `plan_features.situation` (`existente`, `propuesto`, `retirar`). La lámina del diagnóstico muestra lo existente y la de propuestas, lo propuesto y lo que se retira |
+| D-G4 | **Catálogo ampliado** | Acceso vehicular y peatonal, torniquete, pluma o barrera vehicular, lector, cerca eléctrica, luminaria, caseta, botón de pánico y punto ciego. Además, **elementos personalizados** que el usuario agrega y guarda | Nuevos `plan_feature_types`, con su marca de sensible. Los personalizados agregan `is_custom` y `created_by`, y quedan disponibles para todo el equipo |
+| D-G5 | **Croquis: aberturas y circulaciones** | Puertas corredizas y de doble hoja, portón y cortina. Escaleras recta, en L, en U y de caracol, rampa y elevador. **Líneas divisorias sin muro** para delimitar pasillos y estacionamientos | Tipos nuevos en `floor_plan_elements`. Las líneas divisorias cierran espacios para el reconocimiento automático, pero no dibujan muro |
+
+**Riesgo registrado (D-G1).** Si Google suspende la cuenta:
+
+- el panel pierde el fondo de Google y vuelve a OpenStreetMap (y a Esri, si tiene llave);
+- **las geometrías ya guardadas no se pierden**, porque son propias y no dependen del proveedor.
+
+El riesgo lo asume el titular. Queda en esta tabla como registro.
 
 ## 12. Pendientes antes de construir
 
