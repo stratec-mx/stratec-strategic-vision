@@ -1413,7 +1413,9 @@ Notas:
 
 Las dos cosas son centrales aquí: la imagen del plano va en el Programa Interno y en el Programa Específico, y el perímetro se dibuja sobre el mapa. Que el panel sea de uso interno no cambia nada.
 
-**Candidato: MapLibre con Esri.** La documentación de ArcGIS Online sobre mapas estáticos permite usarlos en informes impresos o digitales, incluido “un informe para un cliente”, con la atribución a Esri y sus licenciantes. Antes de programar falta confirmar:
+> **Actualizado el 24-nov:** el mapa base inicial es **MapLibre con OpenStreetMap**, con geometrías propias en PostGIS. Esri queda solo como referencia satelital opcional en pantalla, si su licencia lo permite. Ver el [Documento 04](04-inmuebles-y-plano.md).
+
+**Esri (opcional):** La documentación de ArcGIS Online sobre mapas estáticos permite usarlos en informes impresos o digitales, incluido “un informe para un cliente”, con la atribución a Esri y sus licenciantes. Antes de programar falta confirmar:
 
 | Pendiente | Por qué |
 |---|---|
@@ -1539,7 +1541,7 @@ Cuidados de la migración:
 | D-08 | ¿Qué cuenta como “cambio sustancial”? | Cualquier cambio de contenido después de enviar, incluida una corrección menor en el entregable. Es la regla más simple de auditar |
 | D-09 | Aprobación expresa para un analista: ¿basta con el Administrador o necesita también el visto bueno del Consultor? | La registra el Administrador con **nota obligatoria** (H-05) |
 | D-10 | ¿Guardar las respuestas y los puntos del mapa del diagnóstico gratuito? Los puntos dicen dónde ve el cliente sus vulnerabilidades | Sí, tras revisar el aviso de privacidad. Se lo señalo; no lo publico yo |
-| D-11 | ¿PostGIS ahora o después? | Después. La versión 1 guarda GeoJSON y medidas |
+| D-11 | ~~¿PostGIS ahora o después?~~ | **Decidido (24-nov):** ahora, con el módulo Inmuebles y plano (Documento 04) |
 | D-12 | ¿Cuánto tiempo se guardan las evidencias y los datos personales de un proyecto cerrado? | Definir un plazo y anotarlo en el contrato y en el aviso de privacidad |
 | D-13 | Contenido del instrumento maestro y de los 4 módulos sectoriales, versión 1 | Lo carga el Consultor a partir del Documento 01. Se puede preparar en una hoja de cálculo para importarlo |
 | D-14 | ¿Entran al flujo de aprobación también los 9 tipos de documento actuales o solo los 5 entregables de M-DESR? | Solo los 5 de M-DESR al principio |
