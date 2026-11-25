@@ -174,6 +174,7 @@ Revisé el esquema que ya está en producción: migraciones, scripts 02, 03 y 08
 | `change_summary` | `text` | No | |
 | `uses_sections` | `text[]` | Sí | Apartados del expediente que usa (`diagnostico`, `riesgos`…) |
 | `restrictions` | `text` | No | Restricciones de competencia (sección 9) |
+| `allows_sensitive_features` | `boolean` | Sí | Si el documento puede mostrar elementos sensibles del plano (cámaras, accesos controlados, sensores, puntos ciegos). Verdadero en el diagnóstico y el análisis de riesgo; falso en el Programa Interno, el Programa Específico y los documentos para autoridades (Documento 04, D-P4) |
 | `content_hash` | `text` | No | Huella al publicar |
 
 **`document_template_sections`**: estructura de cada versión, jerárquica.
