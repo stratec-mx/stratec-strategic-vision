@@ -87,6 +87,15 @@ Ejemplo: el consultor inspecciona un inmueble en Jiutepec.
 | F-11 | Capas | Encender o apagar grupos: protección civil, seguridad, riesgos, intervención. Lo sensible solo lo ven los miembros del proyecto |
 | F-12 | Versiones del plano | Cada cambio importante crea una versión. La versión de un diagnóstico cerrado queda congelada |
 | F-13 | Lámina técnica | Genera la imagen del plano para el documento (§7) |
+| F-14 | **Mapa de cartera** | Vista general con un marcador por cada inmueble donde interviene STRATEC, con color por estado del proyecto. **Cada quien ve solo lo que puede ver:** el Administrador, todos; el Consultor, el Analista y los demás, solo sus proyectos asignados (RLS). Al tocar un marcador se abre el expediente |
+| F-15 | **Navegación tipo Prezi** | Acercamientos animados y continuos: cartera → municipio → inmueble → área → elemento (`flyTo` de MapLibre). Como el mapa y los trazos son vectoriales, no pierden calidad al acercarse |
+
+### 5.1 Liga con el cliente
+
+- Cada levantamiento pertenece a un **objeto de estudio** ligado a un **cliente que ya existe** en `clients` (`study_objects.client_id`, Documento 02).
+- El módulo **solo lee** los datos del cliente (nombre y contacto según los permisos); no los crea ni los modifica.
+- Un cliente nuevo se da de alta en el módulo Clientes.
+- **Sin conexión con el cotizador en la versión 1.** La liga proyecto–cotización ya existe en el modelo (`projects.quote_id`) y se usará cuando el cotizador lo integre.
 
 ## 6. Qué agrega a la base de datos (script 12, probado antes en Supabase de prueba)
 
