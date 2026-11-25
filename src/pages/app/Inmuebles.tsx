@@ -60,10 +60,34 @@ export default function Inmuebles() {
   const [recorrido, setRecorrido] = useState<VerticePredio[]>([]);
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [guardado, setGuardado] = useState<"ok" | "error">("ok");
+  const [satelite, setSatelite] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("stratec.plano.fondo") === "satelite";
+    } catch {
+      return false;
+    }
+  });
+  const [avisoMapa, setAvisoMapa] = useState<string | null>(null);
   const mapa = useRef<MapaHandle>(null);
 
   const sel = datos.inmuebles.find((i) => i.id === selId) ?? null;
   const gps = useGps(herramienta === "recorrido");
+
+  const cambiarFondo = (sat: boolean) => {
+    setSatelite(sat);
+    setAvisoMapa(null);
+    try {
+      localStorage.setItem("stratec.plano.fondo", sat ? "satelite" : "mapa");
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
+
+  useEffect(() => {
+    if (!avisoMapa) return;
+    const t = setTimeout(() => setAvisoMapa(null), 6000);
+    return () => clearTimeout(t);
+  }, [avisoMapa]);
 
   // Guardar en el navegador (con una pequeña espera para no escribir en cada tecla).
   useEffect(() => {
@@ -290,6 +314,11 @@ export default function Inmuebles() {
             ladoSel={ladoSel}
             gps={herramienta === "recorrido" ? gps.pos : null}
             recorrido={recorrido}
+            satelite={satelite}
+            onErrorSatelite={(m) => {
+              setAvisoMapa(m);
+              setSatelite(false);
+            }}
             onElegirInmueble={elegirInmueble}
             onClicMapa={alClicMapa}
             onPerimetroDibujado={alPerimetroDibujado}
@@ -300,6 +329,26 @@ export default function Inmuebles() {
             onCamara={(id, c) => cambiar((i) => ({ ...i, elementos: i.elementos.map((e) => (e.id === id && e.camara ? { ...e, camara: { ...e.camara, ...c } } : e)) }))}
             onElegirLado={(i) => setLadoSel((l) => (l === i ? null : i))}
           />
+
+          {/* Fondo: mapa de calles (OpenStreetMap) o satélite (Esri, solo en pantalla) */}
+          <div className="absolute bottom-9 left-2 flex rounded-md border border-pn-borde bg-white p-0.5 shadow-sm" role="group" aria-label="Fondo del mapa">
+            {([[false, "Mapa"], [true, "Satélite"]] as const).map(([v, t]) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={satelite === v}
+                onClick={() => cambiarFondo(v)}
+                className={`rounded px-3 py-1.5 text-[12.5px] font-medium ${satelite === v ? "bg-pn-navy text-white" : "text-pn-texto hover:bg-pn-calido"}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          {avisoMapa && (
+            <div role="status" className="absolute bottom-20 left-2 right-2 rounded-md bg-pn-navy px-3 py-2 text-[12.5px] text-white shadow sm:right-auto sm:max-w-sm">
+              {avisoMapa}
+            </div>
+          )}
 
           {/* Ayuda de la herramienta activa */}
           {(AYUDA_MAPA[herramienta] || herramienta.startsWith("simbolo:")) && (

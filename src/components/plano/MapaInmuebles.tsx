@@ -13,6 +13,7 @@ import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { cono, destino, distancia, lados, rumbo, ORIENTACION_CORTA, type LngLat } from "@/lib/plano/geo";
 import { ESTADO_INFO, puntoInmueble, TIPO_COLINDANCIA_ETIQUETA, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
 import { COLOR_RUTA, SIMBOLOS, type DatosCamara, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { agregarSatelite, llaveEsri, mostrarSatelite } from "@/lib/plano/satelite";
 
 maplibregl.setWorkerUrl(urlWorker);
 
@@ -37,6 +38,9 @@ interface Props {
   ladoSel: number | null;
   gps: { lng: number; lat: number; precision: number } | null;
   recorrido: VerticePredio[];
+  /** Fondo satelital de Esri (solo en pantalla). */
+  satelite: boolean;
+  onErrorSatelite(mensaje: string): void;
   onElegirInmueble(id: string): void;
   onClicMapa(p: LngLat): void;
   onPerimetroDibujado(coords: LngLat[]): void;
@@ -191,6 +195,29 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
       mapa.current = null;
     };
   }, []);
+
+  // ── Fondo satelital (Esri, solo en pantalla; Documento 04 §11) ──
+  const { satelite } = props;
+  useEffect(() => {
+    const map = mapa.current;
+    if (!map || !listo) return;
+    if (!satelite) {
+      mostrarSatelite(map, false);
+      return;
+    }
+    const llave = llaveEsri();
+    if (!llave) {
+      cb.current.onErrorSatelite("El satélite se activa cuando se configure la llave de Esri en Vercel (ver la guía).");
+      return;
+    }
+    let vigente = true;
+    agregarSatelite(map, llave, "gps-precision")
+      .then(() => vigente && mostrarSatelite(map, true))
+      .catch((e: Error) => vigente && cb.current.onErrorSatelite(e.message));
+    return () => {
+      vigente = false;
+    };
+  }, [satelite, listo]);
 
   // ── Herramienta activa: modo de Terra Draw y cursor ──
   const { herramienta } = props;
