@@ -184,7 +184,7 @@ En el evento: escenario (I.9.3) y apoyo externo (II.7.8). Cada lámina se congel
 - Botones grandes y pocos pasos; se usa con una mano en campo.
 - Modo “recorrido”: el GPS sigue al consultor y un botón grande marca cada vértice.
 - Fotos directo desde la cámara, ligadas al elemento abierto.
-- **Sin conexión (fase 2):** guardar en el teléfono y sincronizar al volver la señal. En la versión 1 se necesita conexión.
+- **Sin conexión, completo, desde la versión 1** (decisión del 24-nov, §13): mapas descargados por zona y sincronización automática al volver la señal.
 
 ## 9. Pruebas de aceptación
 
@@ -245,6 +245,23 @@ Fuentes:
 - [Servicio World Imagery y sus metadatos](https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer)
 - [Mapas estáticos en ArcGIS Online](https://doc.esri.com/en/arcgis-online/latest/reference/static-maps.html)
 - [Términos de libre uso del INEGI](https://www.inegi.org.mx/inegi/terminos.html)
+
+## 13. Decisiones del titular sobre el prototipo (24-nov-2026)
+
+El prototipo está publicado en `/app/inmuebles` (main `90a9c92`) y por ahora **guarda solo en el navegador**. Decisiones para la versión conectada a la base (script 12):
+
+| # | Tema | Decisión | Efecto en el modelo |
+|---|---|---|---|
+| D-P1 | **Versiones del plano (F-12)** | Automáticas en momentos clave: al ligar el plano a un diagnóstico, al cerrarlo y al aprobar un documento. Además, guardado al editar, automático o con botón, con una nota de “qué cambió”. **Exterior y croquis interior van en la misma versión.** Un proyecto nuevo en el mismo inmueble parte de una copia del último plano vigente | `building_levels` y `floor_plan_elements` **cuelgan de `site_plans`** (la versión), no de `sites`. `site_plans` agrega `change_note`, `version_reason` (`diagnostico`, `cierre`, `aprobacion_documento`, `edicion`) y `copied_from_plan_id` |
+| D-P2 | **Sin conexión** | Trabajo sin conexión **completo** desde la versión 1: mapas descargados por zona y sincronización automática | Teselas guardadas en el teléfono para la zona del proyecto y cola de cambios con resolución de conflictos (gana el último y queda en la bitácora). Las fotos se suben al volver la señal |
+| D-P3 | **Permisos por función** | Todos ven lo sensible, **menos el observador comercial**. Editan el elaborador y el apoyo de campo. El **revisor** marca el plano como “revisado” y su nombre va en “Revisó” del cajetín. El Administrador ve todo | `site_plans.status` suma `revisado`, con `reviewed_by` y `reviewed_at`. Política: a quien solo es `observador` se le ocultan los elementos con `is_sensitive` |
+| D-P4 | **Lo sensible en PDF** | Sale en el **diagnóstico** y en los **estudios de riesgo**, que se integran con el diagnóstico, el análisis y las propuestas. **No sale** en el Programa Interno ni en documentos para autoridades | `document_template_versions.allows_sensitive_features` (Documento 03): verdadero en el diagnóstico y el análisis de riesgo, falso en el Programa Interno, el Programa Específico y los documentos para autoridades |
+| D-P5 | **Tipos sensibles separados** | Alarma de emergencia y salida **no** son sensibles. Sensor de intrusión y acceso controlado **sí** lo son | `plan_feature_types`: `alarma_emergencia` (no sensible) y `sensor_intrusion` (sensible) en lugar de `alarma`; `salida_emergencia` (no) y `control_acceso` (sí) |
+| D-P6 | **Fichas de equipos** | Datos fijos: extintor (agente, capacidad y fecha de recarga), botiquín, hidrante, salida (ancho) y alarma. Para todos, un **estado de un toque**: bueno, regular, malo o no funciona | Esquema de `plan_features.properties` por tipo + `condition` (`bueno`, `regular`, `malo`, `no_funciona`). Alimenta el inventario del Programa Interno (II.8.1) |
+| D-P7 | **Hallazgos desde el mapa** | Captura rápida (foto, título y ubicación) **solo con un diagnóstico abierto**. Se completa en la computadora. Lo que captura el apoyo de campo lo revisa el elaborador. Puede haber varios hallazgos por elemento | `findings` con `review_status = 'propuesta'` cuando lo captura el apoyo de campo. Tabla `plan_feature_findings` (N:M) en lugar de un solo `finding_id` |
+| D-P8 | **Espacios del croquis y áreas** | El consultor agrupa espacios en áreas. Pasillos, sanitarios y escaleras **no crean área** por omisión | `floor_plan_elements.area_id` (varios espacios, una área), opcional. Tipos que no generan área: `pasillo`, `sanitario`, `escalera` |
+| D-P9 | **Fotos** | Con la cámara (sin copia en la galería) o desde la galería, marcada como “subida después”. Si lleva la casilla “aparecen personas o placas”, **no sale en documentos** | `evidence.capture_mode` (`camara`, `galeria`). La casilla usa `evidence.contains_personal_data`, que ya existe; el generador de documentos la excluye siempre |
+| D-P10 | **Satélite en pantalla** | Botón Mapa / Satélite con Esri. El titular crea la cuenta de ArcGIS Location Platform y pone la llave en Vercel. El botón aparece solo si existe la variable | Ninguno en la base. La imagen de Esri no va al PDF (§11) |
 
 ## 12. Pendientes antes de construir
 
