@@ -8,7 +8,7 @@
 // Coordenadas locales en metros: x hacia la derecha, y hacia abajo (como en pantalla).
 // Todas las funciones son puras: reciben un nivel y devuelven uno nuevo.
 
-import type { DatosCamara, TipoSimbolo } from "./simbolos";
+import type { DatosCamara, DatosElemento, TipoSimbolo } from "./simbolos";
 
 export interface P {
   x: number;
@@ -80,7 +80,7 @@ export interface Escalera {
   enlace?: string;
 }
 
-export interface SimboloCroquis {
+export interface SimboloCroquis extends DatosElemento {
   id: string;
   tipo: TipoSimbolo;
   x: number;

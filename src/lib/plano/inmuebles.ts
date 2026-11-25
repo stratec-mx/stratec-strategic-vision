@@ -6,7 +6,7 @@
 
 import { destino, type LngLat, type Orientacion } from "./geo";
 import { agregarMuro, cambiarEspacio, nivelVacio, nuevoId, type Croquis, type Nivel, type P } from "./croquis";
-import type { DatosCamara, TipoSimbolo } from "./simbolos";
+import { tipoSimbolo, type DatosCamara, type DatosElemento, type TipoSimbolo } from "./simbolos";
 
 export const ESTADOS = ["prospecto", "en_curso", "entregado", "suspendido"] as const;
 export type EstadoProyecto = (typeof ESTADOS)[number];
@@ -47,12 +47,11 @@ export interface Colindancia {
   descripcion?: string;
 }
 
-export interface ElementoMapa {
+export interface ElementoMapa extends DatosElemento {
   id: string;
   tipo: TipoSimbolo;
   lng: number;
   lat: number;
-  nota?: string;
   camara?: DatosCamara;
 }
 
@@ -171,12 +170,39 @@ export const puntoInmueble = (inm: Inmueble): LngLat | null => {
 
 // ───────────────────────── Guardado en el navegador ─────────────────────────
 
+/**
+ * Pone al día lo guardado por versiones anteriores del prototipo: los códigos `salida` y `alarma`
+ * pasan a `salida_emergencia` y `alarma_emergencia` (D-P5); se descartan los símbolos que ya no existen.
+ */
+export function normalizarDatos(d: Datos): Datos {
+  return {
+    ...d,
+    inmuebles: d.inmuebles.map((i) => ({
+      ...i,
+      elementos: (i.elementos ?? []).flatMap((e) => {
+        const tipo = tipoSimbolo(e.tipo);
+        return tipo ? [{ ...e, tipo }] : [];
+      }),
+      croquis: {
+        ...i.croquis,
+        niveles: (i.croquis?.niveles ?? []).map((n) => ({
+          ...n,
+          simbolos: (n.simbolos ?? []).flatMap((s) => {
+            const tipo = tipoSimbolo(s.tipo);
+            return tipo ? [{ ...s, tipo }] : [];
+          }),
+        })),
+      },
+    })),
+  };
+}
+
 export function cargar(): Datos {
   try {
     const crudo = localStorage.getItem(CLAVE);
     if (crudo) {
       const d = JSON.parse(crudo) as Datos;
-      if (d && d.version === 1 && Array.isArray(d.inmuebles)) return d;
+      if (d && d.version === 1 && Array.isArray(d.inmuebles)) return normalizarDatos(d);
     }
   } catch {
     /* almacenamiento bloqueado o dañado: se empieza de nuevo */

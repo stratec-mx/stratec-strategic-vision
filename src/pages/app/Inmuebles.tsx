@@ -12,6 +12,7 @@ import { nuevoId, type Croquis, type P } from "@/lib/plano/croquis";
 import { MapaInmuebles, type HerramientaMapa, type MapaHandle } from "@/components/plano/MapaInmuebles";
 import { PanelExterior, type Cliente } from "@/components/plano/PanelExterior";
 import { CroquisEditor } from "@/components/plano/CroquisEditor";
+import { llaveEsri } from "@/lib/plano/satelite";
 
 const AYUDA_MAPA: Partial<Record<HerramientaMapa, string>> = {
   ubicar: "Toca el mapa donde está el inmueble.",
@@ -60,9 +61,11 @@ export default function Inmuebles() {
   const [recorrido, setRecorrido] = useState<VerticePredio[]>([]);
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [guardado, setGuardado] = useState<"ok" | "error">("ok");
+  // D-P10: el botón Mapa / Satélite aparece solo si el despliegue tiene la llave de Esri.
+  const hayLlaveEsri = llaveEsri() !== "";
   const [satelite, setSatelite] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("stratec.plano.fondo") === "satelite";
+      return hayLlaveEsri && localStorage.getItem("stratec.plano.fondo") === "satelite";
     } catch {
       return false;
     }
@@ -331,6 +334,7 @@ export default function Inmuebles() {
           />
 
           {/* Fondo: mapa de calles (OpenStreetMap) o satélite (Esri, solo en pantalla) */}
+          {hayLlaveEsri && (
           <div className="absolute bottom-9 left-2 flex rounded-md border border-pn-borde bg-white p-0.5 shadow-sm" role="group" aria-label="Fondo del mapa">
             {([[false, "Mapa"], [true, "Satélite"]] as const).map(([v, t]) => (
               <button
@@ -344,6 +348,7 @@ export default function Inmuebles() {
               </button>
             ))}
           </div>
+          )}
           {avisoMapa && (
             <div role="status" className="absolute bottom-20 left-2 right-2 rounded-md bg-pn-navy px-3 py-2 text-[12.5px] text-white shadow sm:right-auto sm:max-w-sm">
               {avisoMapa}

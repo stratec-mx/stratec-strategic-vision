@@ -6,7 +6,7 @@ import {
   conoLocal, dist, largoMuro, polar, poligonoEspacio, posicionAbertura, puntoInterior, superficie,
   type Abertura, type Escalera, type Nivel, type P, type SimboloCroquis, type TipoEspacio,
 } from "@/lib/plano/croquis";
-import { COLOR_RUTA, SIMBOLOS } from "@/lib/plano/simbolos";
+import { COLOR_RUTA, CONDICION_INFO, SIMBOLOS } from "@/lib/plano/simbolos";
 
 export type Seleccion = { k: "muro" | "vertice" | "abertura" | "espacio" | "escalera" | "simbolo" | "ruta"; id: string } | null;
 
@@ -104,7 +104,7 @@ function SimboloSvg({ s, sel, esc }: { s: SimboloCroquis; sel: boolean; esc: num
           })()}
         </>
       )}
-      <circle data-k="simbolo" data-id={s.id} cx={s.x} cy={s.y} r={r} fill={def.color} stroke={sel ? "#F59E0B" : "#FFFFFF"} strokeWidth={Math.max(0.03, 2 * esc)} style={{ cursor: "move" }} />
+      <circle data-k="simbolo" data-id={s.id} cx={s.x} cy={s.y} r={r} fill={def.color} stroke={sel ? "#F59E0B" : s.condicion === "malo" || s.condicion === "no_funciona" ? CONDICION_INFO[s.condicion].color : "#FFFFFF"} strokeWidth={Math.max(0.03, (s.condicion === "malo" || s.condicion === "no_funciona" ? 3 : 2) * esc)} style={{ cursor: "move" }} />
       <text x={s.x} y={s.y} dy="0.35em" textAnchor="middle" fontSize={r * (def.glifo.length > 1 ? 0.8 : 1.1)} fontWeight={700} fill="#FFFFFF" pointerEvents="none">
         {def.glifo}
       </text>

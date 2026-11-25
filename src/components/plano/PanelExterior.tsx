@@ -11,8 +11,9 @@ import {
   ESTADO_INFO, ESTADOS, METODO_ETIQUETA, TIPO_COLINDANCIA_ETIQUETA, TIPOS_COLINDANCIA,
   type EstadoProyecto, type Inmueble, type MetodoMedicion, type TipoColindancia,
 } from "@/lib/plano/inmuebles";
-import { SIMBOLOS, TIPOS_SIMBOLO, type DatosCamara } from "@/lib/plano/simbolos";
+import { avisosElemento, CONDICION_INFO, SIMBOLOS, TIPOS_SIMBOLO, type DatosCamara } from "@/lib/plano/simbolos";
 import type { HerramientaMapa } from "./MapaInmuebles";
+import { FichaElemento } from "./FichaElemento";
 
 const campo = "w-full rounded-md border border-pn-borde bg-white px-2.5 py-2 text-[14px] text-pn-texto";
 const etiqueta = "mb-1 block text-[12px] font-medium text-pn-sub";
@@ -69,6 +70,7 @@ export function PanelExterior(p: Props) {
   const gpsVs = inm.perimetro.filter((v) => v.origen === "gps" && v.precision !== undefined);
   const precisionMedia = gpsVs.length ? gpsVs.reduce((s, v) => s + (v.precision ?? 0), 0) / gpsVs.length : null;
   const elSel = inm.elementos.find((e) => e.id === p.elementoSel) ?? null;
+  const hoy = new Date();
 
   const fijarUbicacion = (pt: LngLat) => {
     cambiar((i) => ({ ...i, ubicacion: { lng: pt[0], lat: pt[1], fecha: new Date().toISOString() } }));
@@ -367,15 +369,13 @@ export function PanelExterior(p: Props) {
                 <p className="text-[12px] text-pn-sub">También puedes arrastrar el punto blanco de la punta del cono.</p>
               </div>
             )}
-            <label className="mt-2 block">
-              <span className={etiqueta}>Nota</span>
-              <input
-                value={elSel.nota ?? ""}
-                onChange={(e) => cambiar((x) => ({ ...x, elementos: x.elementos.map((el) => (el.id === elSel.id ? { ...el, nota: e.target.value } : el)) }))}
-                placeholder={elSel.tipo === "extintor" ? "Ej. PQS 6 kg, vigente a 2027" : "Características u observaciones"}
-                className={campo}
+            <div className="mt-2">
+              <FichaElemento
+                tipo={elSel.tipo}
+                datos={elSel}
+                cambiar={(c) => cambiar((x) => ({ ...x, elementos: x.elementos.map((el) => (el.id === elSel.id ? { ...el, ...c } : el)) }))}
               />
-            </label>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -403,6 +403,8 @@ export function PanelExterior(p: Props) {
                 >
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: SIMBOLOS[e.tipo].color }}>{SIMBOLOS[e.tipo].glifo}</span>
                   {SIMBOLOS[e.tipo].etiqueta} {i + 1}
+                  {e.condicion && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CONDICION_INFO[e.condicion].color }} title={CONDICION_INFO[e.condicion].etiqueta} />}
+                  {avisosElemento(e.tipo, e, hoy).length > 0 && <span className="shrink-0 rounded bg-[#FDECEA] px-1.5 py-0.5 text-[11px] text-pn-alerta">{avisosElemento(e.tipo, e, hoy)[0]}</span>}
                   {e.nota && <span className="truncate text-pn-sub">· {e.nota}</span>}
                 </button>
               </li>

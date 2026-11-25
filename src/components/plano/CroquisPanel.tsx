@@ -10,6 +10,7 @@ import {
 import { LEYENDA_MEDIDAS } from "@/lib/plano/geo";
 import { SIMBOLOS } from "@/lib/plano/simbolos";
 import type { Seleccion } from "./CroquisDibujo";
+import { FichaElemento } from "./FichaElemento";
 
 const fmt = (m: number, d = 2) => m.toLocaleString("es-MX", { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -395,6 +396,13 @@ function Propiedades(p: Props) {
             <p className="text-[12px] text-pn-sub">También puedes arrastrar el punto blanco de la punta del cono.</p>
           </div>
         )}
+        <div className="mt-2">
+          <FichaElemento
+            tipo={s.tipo}
+            datos={s}
+            cambiar={(c) => aplicarNivel((n) => ({ ...n, simbolos: n.simbolos.map((x) => (x.id === s.id ? { ...x, ...c } : x)) }))}
+          />
+        </div>
         {borrar("Borrar")}
       </>,
     );

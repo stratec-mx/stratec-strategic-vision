@@ -12,7 +12,7 @@ import { TerraDraw, TerraDrawLineStringMode, TerraDrawPolygonMode, TerraDrawSele
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { cono, destino, distancia, lados, rumbo, ORIENTACION_CORTA, type LngLat } from "@/lib/plano/geo";
 import { ESTADO_INFO, puntoInmueble, TIPO_COLINDANCIA_ETIQUETA, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
-import { COLOR_RUTA, SIMBOLOS, type DatosCamara, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { COLOR_RUTA, CONDICION_INFO, SIMBOLOS, type DatosCamara, type TipoSimbolo } from "@/lib/plano/simbolos";
 import { agregarSatelite, llaveEsri, mostrarSatelite } from "@/lib/plano/satelite";
 
 maplibregl.setWorkerUrl(urlWorker);
@@ -383,6 +383,8 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
           el.style.background = def.color;
           el.textContent = def.glifo;
           el.classList.toggle("plano-simbolo-sel", e.id === elementoSel);
+          // Anillo de color si el elemento está en mal estado.
+          el.style.boxShadow = e.condicion === "malo" || e.condicion === "no_funciona" ? `0 0 0 3px ${CONDICION_INFO[e.condicion].color}` : "";
           m.setDraggable(herramienta === "navegar");
         },
       );
