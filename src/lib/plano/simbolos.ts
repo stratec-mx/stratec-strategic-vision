@@ -171,6 +171,11 @@ export const FICHAS: Partial<Record<string, Campo[]>> = {
     { clave: "lente", etiqueta: "Lente", tipo: "opcion", opciones: ["Fija", "Varifocal"] },
     { clave: "vision_nocturna", etiqueta: "Visión nocturna (IR)", tipo: "sino" },
     { clave: "alcance_ir_m", etiqueta: "Alcance IR", tipo: "numero", unidad: "m" },
+    { clave: "alcance_identificacion_m", etiqueta: "Alcance de identificación", tipo: "numero", unidad: "m" },
+    { clave: "alcance_reconocimiento_m", etiqueta: "Alcance de reconocimiento", tipo: "numero", unidad: "m" },
+    { clave: "ia", etiqueta: "Analítica con IA", tipo: "sino" },
+    { clave: "lpr", etiqueta: "Lector de matrículas (LPR)", tipo: "sino" },
+    { clave: "reconocimiento_facial", etiqueta: "Reconocimiento facial", tipo: "sino" },
   ],
   alarma_emergencia: [
     { clave: "tipo", etiqueta: "Tipo", tipo: "opcion", opciones: ["Sonora", "Visual", "Sonora y visual"] },

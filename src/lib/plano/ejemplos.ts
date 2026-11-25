@@ -133,11 +133,12 @@ export function elementosTecnologiaBodega(esquinaSO: LngLat): ElementoMapa[] {
   return [
     { id: nuevoId("x"), tipo: "acceso_vehicular", ...p(6, -1) },
     { id: nuevoId("x"), tipo: "pluma_vehicular", ...p(6, 1), situacion: "propuesto", nota: "Ejemplo: pluma con lector de tarjeta" },
+    { id: nuevoId("x"), tipo: "camara", ...p(4, 0), situacion: "propuesto", camara: { direccion: 180, angulo: 30, alcance: 15 }, ficha: { tipo_camara: "Bullet", megapixeles: "4 MP", lente: "Varifocal", vision_nocturna: true, alcance_identificacion_m: 10, lpr: true, ia: true }, nota: "Ejemplo: lectura de placas en el acceso vehicular" },
     { id: nuevoId("x"), tipo: "acceso_peatonal", ...p(20, -1) },
     { id: nuevoId("x"), tipo: "torniquete", ...p(20, 1.5), situacion: "propuesto", nota: "Ejemplo: torniquete de media altura" },
     { id: nuevoId("x"), tipo: "caseta_vigilancia", ...p(12, 2), situacion: "propuesto" },
     { id: nuevoId("x"), tipo: "camara", ...p(1, 1), camara: { direccion: 45, angulo: 90, alcance: 18 }, condicion: "regular", ficha: { tipo_camara: "Bullet", megapixeles: "2 MP (1080p)", lente: "Fija", vision_nocturna: true, alcance_ir_m: 20 } },
-    { id: nuevoId("x"), tipo: "camara", ...p(29, 19), situacion: "propuesto", camara: { direccion: 225, angulo: 90, alcance: 20 }, ficha: { tipo_camara: "Domo", megapixeles: "8 MP (4K)", lente: "Varifocal", vision_nocturna: true, alcance_ir_m: 30 } },
+    { id: nuevoId("x"), tipo: "camara", ...p(29, 19), situacion: "propuesto", camara: { direccion: 225, angulo: 90, alcance: 20 }, ficha: { tipo_camara: "Domo", megapixeles: "8 MP (4K)", lente: "Varifocal", vision_nocturna: true, alcance_ir_m: 30, alcance_identificacion_m: 12, alcance_reconocimiento_m: 25, ia: true, reconocimiento_facial: true } },
     { id: nuevoId("x"), tipo: "camara", ...p(15, 10), situacion: "propuesto", camara: { direccion: 0, angulo: 360, alcance: 12 }, ficha: { tipo_camara: "Ojo de pez (360°)", megapixeles: "12 MP", lente: "Fija", vision_nocturna: true, alcance_ir_m: 10 } },
     { id: nuevoId("x"), tipo: "cerca_electrica", ...p(15, 20), situacion: "propuesto" },
     { id: nuevoId("x"), tipo: "punto_ciego", ...p(28, 2), nota: "Ejemplo: esquina sin cobertura de cámara" },
