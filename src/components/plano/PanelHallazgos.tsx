@@ -23,7 +23,9 @@ interface Props {
 export function PanelHallazgos({ inm, cambiar, sel, setSel, marcando, setMarcando, volarA }: Props) {
   const hallazgos = inm.hallazgos ?? [];
   const cambiarH = (id: string, c: Partial<Hallazgo>) => cambiar((i) => ({ ...i, hallazgos: (i.hallazgos ?? []).map((h) => (h.id === id ? { ...h, ...c } : h)) }));
-  const elementoDe = (h: Hallazgo) => inm.elementos.find((e) => e.id === h.elementoId);
+  const elementoDe = (h: Hallazgo) =>
+    inm.elementos.find((e) => e.id === h.elementoId) ??
+    inm.croquis.niveles.flatMap((n) => n.simbolos.map((s) => ({ ...s, nivel: n.nombre }))).find((s) => s.id === h.elementoId);
 
   return (
     <section className="rounded-md border border-pn-borde bg-white p-3" aria-label="Hallazgos">
@@ -55,7 +57,7 @@ export function PanelHallazgos({ inm, cambiar, sel, setSel, marcando, setMarcand
                   <span className="block truncate text-[13px] font-medium text-pn-texto">{h.titulo || "Hallazgo sin título"}</span>
                   <span className="block text-[11.5px] text-pn-sub">
                     {h.estado === "propuesta" ? "Pendiente de revisión" : "Revisado"}
-                    {el && ` · ${defSimbolo(el.tipo).etiqueta}`}
+                    {el && ` · ${defSimbolo(el.tipo).etiqueta}${"nivel" in el ? ` (croquis, ${el.nivel})` : ""}`}
                     {h.fotos.length > 0 && ` · ${h.fotos.length} foto${h.fotos.length > 1 ? "s" : ""}`}
                   </span>
                 </span>

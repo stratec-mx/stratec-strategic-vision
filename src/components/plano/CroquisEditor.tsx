@@ -2,7 +2,7 @@
 // Dibujo en SVG con coordenadas en metros; funciona con ratón y con el dedo.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { AppWindow, DoorOpen, Maximize, MousePointer2, PenLine, Redo2, Route, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { AppWindow, ChevronDown, DoorOpen, Maximize, MousePointer2, PenLine, Plus, Redo2, Route, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { useHistorial } from "@/hooks/useHistorial";
 import {
   EPS, ETIQUETA_ABERTURA, ETIQUETA_ESCALERA, GROSOR_INICIAL, SUBTIPOS_PUERTA, TIPOS_ESCALERA, agregarAbertura, agregarEscalera,
@@ -10,7 +10,8 @@ import {
   escaleraInicial, giroConPaso, iman, moverVerticesLibre, muroCercano, nuevoId, predioACroquis,
   type Croquis, type Nivel, type P, type ResultadoIman, type SubtipoPuerta, type TipoEscalera,
 } from "@/lib/plano/croquis";
-import { CAMARA_INICIAL, SIMBOLOS, TIPOS_SIMBOLO, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { CAMARA_INICIAL, defSimbolo, SIMBOLOS, type SimboloPersonal, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { Glifo, SelectorSimbolos } from "./SelectorSimbolos";
 import { CroquisDibujo, type Seleccion } from "./CroquisDibujo";
 import { CroquisPanel } from "./CroquisPanel";
 
@@ -51,7 +52,18 @@ const dibujaTramos = (h: HerramientaCroquis) => h === "muro" || h === "divisoria
 
 const ESPERA_ARRASTRE = 6; // píxeles
 
-export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis; onChange: (c: Croquis) => void; predio?: P[] }) {
+interface PropsEditor {
+  croquis: Croquis;
+  onChange: (c: Croquis) => void;
+  predio?: P[];
+  /** Crear un elemento propio del catálogo. */
+  crearPersonal?: (p: Omit<SimboloPersonal, "id">) => void;
+  /** Marcar un hallazgo ligado a un elemento del croquis. */
+  onHallazgo?: (simboloId: string) => void;
+}
+
+export function CroquisEditor({ croquis, onChange, predio, crearPersonal, onHallazgo }: PropsEditor) {
+  const [catalogoAbierto, setCatalogoAbierto] = useState(false);
   const hist = useHistorial(croquis, onChange);
   const c = hist.valor;
   const [nivelId, setNivelId] = useState(c.niveles[0]?.id ?? "");
@@ -585,14 +597,31 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
           {boton("ventana", "Ventana", <AppWindow className="h-4 w-4" />)}
           {botonConTipo("escalera", "Escalera", <span className="text-[15px] leading-none">⌸</span>, tipoEscalera, TIPOS_ESCALERA, ETIQUETA_ESCALERA, setTipoEscalera, "Tipo de escalera, rampa o elevador")}
           {boton("ruta", "Ruta", <Route className="h-4 w-4" />)}
-          {TIPOS_SIMBOLO.map((t) =>
-            boton(`simbolo:${t}`, SIMBOLOS[t].etiqueta, (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white" style={{ background: SIMBOLOS[t].color }}>
-                {SIMBOLOS[t].glifo}
-              </span>
-            )),
-          )}
+          <button
+            type="button"
+            onClick={() => setCatalogoAbierto((v) => !v)}
+            aria-expanded={catalogoAbierto}
+            className={`flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-[13px] font-medium ${
+              herramienta.startsWith("simbolo:") ? "border-pn-navy bg-pn-navy text-white" : "border-pn-borde bg-white text-pn-texto hover:bg-pn-calido"
+            }`}
+          >
+            {herramienta.startsWith("simbolo:") ? <Glifo tipo={herramienta.slice(8) as TipoSimbolo} tam={16} /> : <Plus className="h-4 w-4" />}
+            {herramienta.startsWith("simbolo:") ? defSimbolo(herramienta.slice(8)).etiqueta : "Elemento"}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
         </div>
+        {catalogoAbierto && (
+          <div className="max-h-[45vh] overflow-y-auto rounded-md border border-pn-borde bg-white p-2.5">
+            <SelectorSimbolos
+              activo={herramienta.startsWith("simbolo:") ? (herramienta.slice(8) as TipoSimbolo) : null}
+              elegir={(t) => {
+                elegir(`simbolo:${t}`);
+                setCatalogoAbierto(false);
+              }}
+              crear={crearPersonal ?? (() => undefined)}
+            />
+          </div>
+        )}
 
         <div ref={cajaRef} className="relative h-[62vh] min-h-[360px] overflow-hidden rounded-md border border-pn-borde bg-white lg:h-[calc(100dvh-300px)]">
           <svg
@@ -708,6 +737,7 @@ export function CroquisEditor({ croquis, onChange, predio }: { croquis: Croquis;
 
       <aside className="w-full shrink-0 lg:w-[330px]">
         <CroquisPanel
+          onHallazgo={onHallazgo}
           croquis={c}
           nivel={nivel}
           setNivelId={(id) => {

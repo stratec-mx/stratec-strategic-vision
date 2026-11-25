@@ -7,7 +7,7 @@
 // - Los elementos de seguridad y tecnología (cámara, torniquete, pluma…) van en la bodega ficticia.
 
 import { aLocal, destino, type LngLat } from "./geo";
-import { agregarAbertura, agregarMuro, cambiarEspacio, dist, nivelVacio, nuevoId, poligonoEspacio, puntoInterior, type Croquis, type Nivel, type P } from "./croquis";
+import { agregarAbertura, agregarMuro, cambiarEspacio, nivelVacio, nuevoId, poligonoEspacio, proyectar, puntoInterior, type Croquis, type Nivel, type P } from "./croquis";
 import type { ElementoMapa, Hallazgo, Inmueble } from "./inmuebles";
 import type { FotoRef } from "./fotos";
 
@@ -46,10 +46,12 @@ function croquisTemixco(): Croquis {
     pb = c.x < corte ? cambiarEspacio(pb, e.id, { nombre: "Atención ciudadana (ejemplo)", tipo: "area_publico" }) : cambiarEspacio(pb, e.id, { nombre: "Oficinas (ejemplo)", tipo: "oficina" });
   }
   // Puerta principal en el muro sur y una puerta en el muro interior.
+  // Muro sur: los dos extremos están sobre el lado entre las esquinas 4 y 5 del contorno.
+  const sobreSur = (q: P) => proyectar(q, pts[3], pts[4]).d < 0.05;
   const muroSur = pb.muros.find((m) => {
     const va = pb.vertices.find((v) => v.id === m.a)!;
     const vb = pb.vertices.find((v) => v.id === m.b)!;
-    return dist(va, pts[3]) < 0.05 || dist(vb, pts[3]) < 0.05 ? dist(va, pts[4]) > 0.05 || dist(vb, pts[4]) > 0.05 : false;
+    return sobreSur(va) && sobreSur(vb);
   });
   if (muroSur) pb = agregarAbertura(pb, muroSur.id, 0.5, "puerta", 1.8);
   const muroInterior = pb.muros.find((m) => {

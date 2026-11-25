@@ -9,7 +9,7 @@ import {
   TIPOS_ESPACIO, type ClaseAbertura, type Croquis, type Nivel, type P, type TipoEscalera, type TipoEspacio,
 } from "@/lib/plano/croquis";
 import { LEYENDA_MEDIDAS } from "@/lib/plano/geo";
-import { SIMBOLOS } from "@/lib/plano/simbolos";
+import { SIMBOLOS, OJO_DE_PEZ } from "@/lib/plano/simbolos";
 import type { Seleccion } from "./CroquisDibujo";
 import { FichaElemento } from "./FichaElemento";
 
@@ -64,6 +64,7 @@ interface Props {
   giroLibre?: boolean;
   setGiroLibre?: (v: boolean) => void;
   predio?: P[];
+  onHallazgo?: (simboloId: string) => void;
 }
 
 const botonSec = "flex items-center gap-1.5 rounded-md border border-pn-borde px-3 py-2 text-[13px]";
@@ -493,7 +494,22 @@ function Propiedades(p: Props) {
           <FichaElemento
             tipo={s.tipo}
             datos={s}
-            cambiar={(c) => aplicarNivel((n) => ({ ...n, simbolos: n.simbolos.map((x) => (x.id === s.id ? { ...x, ...c } : x)) }))}
+            onHallazgo={p.onHallazgo ? () => p.onHallazgo!(s.id) : undefined}
+            cambiar={(c) =>
+              aplicarNivel((n) => ({
+                ...n,
+                simbolos: n.simbolos.map((x) => {
+                  if (x.id !== s.id) return x;
+                  const nuevo = { ...x, ...c };
+                  // Ojo de pez: el cono se abre a 360°; al cambiar a otro tipo vuelve a 90°.
+                  const tipoCam = c.ficha?.tipo_camara;
+                  if (nuevo.camara && tipoCam !== undefined && tipoCam !== x.ficha?.tipo_camara) {
+                    nuevo.camara = { ...nuevo.camara, angulo: tipoCam === OJO_DE_PEZ ? 360 : x.camara?.angulo === 360 ? 90 : nuevo.camara.angulo };
+                  }
+                  return nuevo;
+                }),
+              }))
+            }
           />
         </div>
         {borrar("Borrar")}

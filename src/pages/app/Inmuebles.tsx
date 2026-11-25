@@ -628,7 +628,18 @@ export default function Inmuebles() {
       </div>
 
       {vista === "croquis" && sel && (
-        <CroquisEditor key={sel.id} croquis={sel.croquis} onChange={cambiarCroquis} predio={predio} />
+        <CroquisEditor
+          key={sel.id}
+          croquis={sel.croquis}
+          onChange={cambiarCroquis}
+          predio={predio}
+          crearPersonal={crearPersonal}
+          onHallazgo={(simboloId) => {
+            const id = nuevoId("h");
+            cambiar((i) => ({ ...i, hallazgos: [...(i.hallazgos ?? []), { id, titulo: "", fecha: new Date().toISOString(), elementoId: simboloId, fotos: [], estado: "propuesta" }] }));
+            setHallazgoSel(id);
+          }}
+        />
       )}
     </div>
   );
