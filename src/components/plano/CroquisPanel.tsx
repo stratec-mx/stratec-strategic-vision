@@ -1,11 +1,12 @@
 // Panel lateral del croquis: niveles, opciones de dibujo y propiedades de lo seleccionado.
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Copy, Plus, RotateCw, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUpDown, Copy, FlipHorizontal2, Plus, RotateCw, Trash2 } from "lucide-react";
 import {
-  ANCHO_PUERTA, cambiarAbertura, cambiarEscalera, cambiarEspacio, cambiarGrosor, fijarLargo, largoMuro, nivelVacio,
-  poligonoEspacio, replicarNivel, seSaleDelPredio, superficie, TIPO_ESPACIO_ETIQUETA, TIPOS_ESPACIO,
-  type Croquis, type Nivel, type P, type TipoEspacio,
+  CLASES_ABERTURA, ETIQUETA_ABERTURA, ETIQUETA_ESCALERA, TIPOS_ESCALERA, cambiarAbertura, cambiarClaseAbertura,
+  cambiarEscalera, cambiarEspacio, cambiarGrosor, cambiarTipoMuro, claseAbertura, escaleraInicial, fijarLargo, largoMuro,
+  medidasEscalera, nivelVacio, poligonoEspacio, replicarNivel, seSaleDelPredio, superficie, TIPO_ESPACIO_ETIQUETA,
+  TIPOS_ESPACIO, type ClaseAbertura, type Croquis, type Nivel, type P, type TipoEscalera, type TipoEspacio,
 } from "@/lib/plano/croquis";
 import { LEYENDA_MEDIDAS } from "@/lib/plano/geo";
 import { SIMBOLOS } from "@/lib/plano/simbolos";
@@ -59,8 +60,13 @@ interface Props {
   setAngulos: (v: boolean) => void;
   conIman: boolean;
   setConIman: (v: boolean) => void;
+  /** Girar escaleras con la manija sin saltos de 15°. */
+  giroLibre?: boolean;
+  setGiroLibre?: (v: boolean) => void;
   predio?: P[];
 }
+
+const botonSec = "flex items-center gap-1.5 rounded-md border border-pn-borde px-3 py-2 text-[13px]";
 
 export function CroquisPanel(p: Props) {
   const { croquis, nivel, seleccion, aplicarNivel, aplicarCroquis } = p;
@@ -240,21 +246,46 @@ function Propiedades(p: Props) {
   if (seleccion.k === "muro") {
     const m = nivel.muros.find((w) => w.id === seleccion.id);
     if (!m) return null;
+    const virtual = !!m.virtual;
+    const conAberturas = nivel.aberturas.filter((ab) => ab.muro === m.id).length;
+    const opcion = (activo: boolean, texto: string, alElegir: () => void) => (
+      <button
+        type="button"
+        aria-pressed={activo}
+        onClick={alElegir}
+        className={`flex-1 rounded-md border px-2 py-2 text-[13px] ${activo ? "border-pn-navy bg-pn-navy text-white" : "border-pn-borde bg-white text-pn-texto"}`}
+      >
+        {texto}
+      </button>
+    );
     return caja(
       <>
-        {titulo("Muro")}
+        {titulo(virtual ? "Línea divisoria" : "Muro")}
+        <div className="mb-2 flex gap-1.5" role="group" aria-label="Tipo de trazo">
+          {opcion(!virtual, "Muro físico", () => aplicarNivel((n) => cambiarTipoMuro(n, m.id, false, p.grosor)))}
+          {opcion(virtual, "Línea divisoria", () => aplicarNivel((n) => cambiarTipoMuro(n, m.id, true)))}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <label>
             <span className={etiqueta}>Largo (cota)</span>
-            <Numero etiquetaAria="Largo del muro en metros" valor={largoMuro(nivel, m)} min={0.05} onCambio={(v) => aplicarNivel((n) => fijarLargo(n, m.id, v))} sufijo="m" />
+            <Numero etiquetaAria={virtual ? "Largo de la línea en metros" : "Largo del muro en metros"} valor={largoMuro(nivel, m)} min={0.05} onCambio={(v) => aplicarNivel((n) => fijarLargo(n, m.id, v))} sufijo="m" />
           </label>
-          <label>
-            <span className={etiqueta}>Grosor</span>
-            <Numero etiquetaAria="Grosor del muro en centímetros" valor={m.grosor * 100} min={1} onCambio={(v) => aplicarNivel((n) => cambiarGrosor(n, m.id, v / 100))} sufijo="cm" />
-          </label>
+          {!virtual && (
+            <label>
+              <span className={etiqueta}>Grosor</span>
+              <Numero etiquetaAria="Grosor del muro en centímetros" valor={m.grosor * 100} min={1} onCambio={(v) => aplicarNivel((n) => cambiarGrosor(n, m.id, v / 100))} sufijo="cm" />
+            </label>
+          )}
         </div>
-        <p className="mt-2 text-[12px] text-pn-sub">Al cambiar el largo se mueve la esquina y se ajustan los espacios que comparten el muro.</p>
-        {borrar("Borrar muro")}
+        {virtual ? (
+          <p className="mt-2 text-[12px] text-pn-sub">Delimita pasillos, zonas o cajones donde no hay muro. Divide los espacios igual que un muro, pero no tiene grosor ni lleva puertas o ventanas.</p>
+        ) : (
+          <p className="mt-2 text-[12px] text-pn-sub">
+            Al cambiar el largo se mueve la esquina y se ajustan los espacios que comparten el muro.
+            {conAberturas > 0 && ` Si lo cambias a línea divisoria se quitan sus ${conAberturas === 1 ? "puerta o ventana" : `${conAberturas} puertas o ventanas`}.`}
+          </p>
+        )}
+        {borrar(virtual ? "Borrar línea" : "Borrar muro")}
       </>,
     );
   }
@@ -300,30 +331,41 @@ function Propiedades(p: Props) {
   if (seleccion.k === "abertura") {
     const ab = nivel.aberturas.find((x) => x.id === seleccion.id);
     if (!ab) return null;
+    const clase = claseAbertura(ab);
+    const corre = clase === "corrediza" || clase === "porton_corredizo";
+    const bisagra = () => aplicarNivel((n) => cambiarAbertura(n, ab.id, { bisagra: ab.bisagra === "fin" ? "inicio" : "fin" }));
+    const lado = () => aplicarNivel((n) => cambiarAbertura(n, ab.id, { lado: ab.lado === -1 ? 1 : -1 }));
     return caja(
       <>
-        {titulo(ab.tipo === "puerta" ? "Puerta" : "Ventana")}
-        <label className="mb-2 block">
-          <span className={etiqueta}>Ancho</span>
-          <Numero etiquetaAria="Ancho en metros" valor={ab.ancho} min={0.3} onCambio={(v) => aplicarNivel((n) => cambiarAbertura(n, ab.id, { ancho: v }))} sufijo="m" />
-        </label>
-        {ab.tipo === "puerta" && (
+        {titulo(ETIQUETA_ABERTURA[clase])}
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <label className="col-span-2">
+            <span className={etiqueta}>Tipo</span>
+            <select value={clase} onChange={(e) => aplicarNivel((n) => cambiarClaseAbertura(n, ab.id, e.target.value as ClaseAbertura))} className={campo}>
+              {CLASES_ABERTURA.map((c) => (
+                <option key={c} value={c}>{ETIQUETA_ABERTURA[c]}</option>
+              ))}
+            </select>
+          </label>
+          <label className="col-span-2">
+            <span className={etiqueta}>Ancho</span>
+            <Numero etiquetaAria="Ancho en metros" valor={ab.ancho} min={0.3} onCambio={(v) => aplicarNivel((n) => cambiarAbertura(n, ab.id, { ancho: v }))} sufijo="m" />
+          </label>
+        </div>
+        {clase !== "ventana" && clase !== "cortina" && (
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => aplicarNivel((n) => cambiarAbertura(n, ab.id, { bisagra: ab.bisagra === "fin" ? "inicio" : "fin" }))} className="rounded-md border border-pn-borde px-3 py-2 text-[13px]">
-              Cambiar bisagra
-            </button>
-            <button type="button" onClick={() => aplicarNivel((n) => cambiarAbertura(n, ab.id, { lado: ab.lado === -1 ? 1 : -1 }))} className="rounded-md border border-pn-borde px-3 py-2 text-[13px]">
-              Abrir hacia el otro lado
+            {clase === "abatible" && <button type="button" onClick={bisagra} className={botonSec}>Cambiar bisagra</button>}
+            {corre && <button type="button" onClick={bisagra} className={botonSec}>Correr hacia el otro lado</button>}
+            <button type="button" onClick={lado} className={botonSec}>
+              {corre ? "Hoja del otro lado del muro" : "Abrir hacia el otro lado"}
             </button>
           </div>
         )}
-        {ab.tipo === "ventana" && (
-          <button type="button" onClick={() => aplicarNivel((n) => cambiarAbertura(n, ab.id, { tipo: "puerta", ancho: ANCHO_PUERTA, bisagra: "inicio", lado: 1 }))} className="rounded-md border border-pn-borde px-3 py-2 text-[13px]">
-            Convertir en puerta
-          </button>
+        {(clase === "porton_corredizo" || clase === "porton_abatible") && (
+          <p className="mt-2 text-[12px] text-pn-sub">Portón vehicular: el ancho típico va de 3 a 6 m.</p>
         )}
-        <p className="mt-2 text-[12px] text-pn-sub">Arrástrala a lo largo del muro o a otro muro.</p>
-        {borrar(ab.tipo === "puerta" ? "Borrar puerta" : "Borrar ventana")}
+        <p className="mt-2 text-[12px] text-pn-sub">Arrástrala a lo largo del muro o a otro muro, con cualquier herramienta.</p>
+        {borrar(clase === "ventana" ? "Borrar ventana" : clase === "cortina" ? "Borrar cortina" : clase.startsWith("porton") ? "Borrar portón" : "Borrar puerta")}
       </>,
     );
   }
@@ -332,19 +374,32 @@ function Propiedades(p: Props) {
     const s = nivel.escaleras.find((x) => x.id === seleccion.id);
     if (!s) return null;
     const cambiar = (c: Parameters<typeof cambiarEscalera>[3]) => aplicarCroquis((cc) => cambiarEscalera(cc, nivel.id, s.id, c));
+    const tipo = s.tipo ?? "recta";
+    const elevador = tipo === "elevador";
+    const medidas = medidasEscalera(s);
     return caja(
       <>
-        {titulo("Escalera")}
+        {titulo(ETIQUETA_ESCALERA[tipo])}
         <div className="grid grid-cols-2 gap-2">
-          <label>
-            <span className={etiqueta}>Sentido</span>
-            <select value={s.sentido} onChange={(e) => cambiar({ sentido: e.target.value as "sube" | "baja" })} className={campo}>
-              <option value="sube">Sube</option>
-              <option value="baja">Baja</option>
+          <label className="col-span-2">
+            <span className={etiqueta}>Tipo</span>
+            <select value={tipo} onChange={(e) => cambiar(escaleraInicial(e.target.value as TipoEscalera))} className={campo}>
+              {TIPOS_ESCALERA.map((t) => (
+                <option key={t} value={t}>{ETIQUETA_ESCALERA[t]}</option>
+              ))}
             </select>
           </label>
-          <label>
-            <span className={etiqueta}>Llega a</span>
+          {!elevador && (
+            <label>
+              <span className={etiqueta}>Sentido</span>
+              <select value={s.sentido} onChange={(e) => cambiar({ sentido: e.target.value as "sube" | "baja" })} className={campo}>
+                <option value="sube">Sube</option>
+                <option value="baja">Baja</option>
+              </select>
+            </label>
+          )}
+          <label className={elevador ? "col-span-2" : undefined}>
+            <span className={etiqueta}>{elevador ? "Comunica con" : "Llega a"}</span>
             <select value={s.nivelDestino ?? ""} onChange={(e) => cambiar({ nivelDestino: e.target.value })} className={campo}>
               <option value="">Sin elegir</option>
               {croquis.niveles.filter((n) => n.id !== nivel.id).map((n) => (
@@ -352,20 +407,58 @@ function Propiedades(p: Props) {
               ))}
             </select>
           </label>
+          {tipo === "caracol" ? (
+            <label>
+              <span className={etiqueta}>Diámetro</span>
+              <Numero etiquetaAria="Diámetro de la escalera" valor={medidas.ancho} min={0.8} onCambio={(v) => cambiar({ diametro: v, ancho: v, largo: v })} sufijo="m" />
+            </label>
+          ) : (
+            <>
+              <label>
+                <span className={etiqueta}>Ancho</span>
+                <Numero etiquetaAria="Ancho" valor={s.ancho} min={0.5} onCambio={(v) => cambiar({ ancho: v })} sufijo="m" />
+              </label>
+              <label>
+                <span className={etiqueta}>Largo</span>
+                <Numero etiquetaAria="Largo" valor={s.largo} min={0.5} onCambio={(v) => cambiar({ largo: v })} sufijo="m" />
+              </label>
+            </>
+          )}
+          {tipo === "rampa" && (
+            <label>
+              <span className={etiqueta}>Pendiente</span>
+              <Numero etiquetaAria="Pendiente de la rampa en porcentaje" valor={s.pendiente ?? 8} min={0.5} onCambio={(v) => cambiar({ pendiente: v })} sufijo="%" />
+            </label>
+          )}
           <label>
-            <span className={etiqueta}>Ancho</span>
-            <Numero etiquetaAria="Ancho de la escalera" valor={s.ancho} min={0.5} onCambio={(v) => cambiar({ ancho: v })} sufijo="m" />
-          </label>
-          <label>
-            <span className={etiqueta}>Largo</span>
-            <Numero etiquetaAria="Largo de la escalera" valor={s.largo} min={0.5} onCambio={(v) => cambiar({ largo: v })} sufijo="m" />
+            <span className={etiqueta}>Giro</span>
+            <Numero etiquetaAria="Giro en grados" valor={s.giro} onCambio={(v) => cambiar({ giro: v })} sufijo="°" />
           </label>
         </div>
-        <button type="button" onClick={() => cambiar({ giro: (s.giro + 90) % 360 })} className="mt-2 flex items-center gap-1.5 rounded-md border border-pn-borde px-3 py-2 text-[13px]">
-          <RotateCw className="h-4 w-4" /> Girar 90°
-        </button>
-        {s.nivelDestino && <p className="mt-2 text-[12px] text-pn-sub">También aparece en el nivel al que llega; si la mueves aquí, se mueve allá.</p>}
-        {borrar("Borrar escalera")}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" onClick={() => cambiar({ giro: s.giro + 90 })} className={botonSec}>
+            <RotateCw className="h-4 w-4" /> Girar 90°
+          </button>
+          {!elevador && (
+            <button type="button" onClick={() => cambiar({ giro: s.giro + 180 })} className={botonSec} title="La flecha apunta al lado contrario">
+              <ArrowUpDown className="h-4 w-4" /> Invertir flecha
+            </button>
+          )}
+          {(tipo === "l" || tipo === "u" || tipo === "caracol") && (
+            <button type="button" onClick={() => cambiar({ espejo: !s.espejo })} className={botonSec} title="Gira hacia el otro lado">
+              <FlipHorizontal2 className="h-4 w-4" /> Voltear
+            </button>
+          )}
+        </div>
+        {p.setGiroLibre && (
+          <label className="mt-2 flex items-center gap-2 py-1 text-[13px]">
+            <input type="checkbox" checked={!!p.giroLibre} onChange={(e) => p.setGiroLibre?.(e.target.checked)} className="h-4 w-4" />
+            Giro libre (sin saltos de 15°)
+          </label>
+        )}
+        <p className="mt-1 text-[12px] text-pn-sub">Arrastra el círculo azul para girarla: va de 15° en 15°; con Mayús o la casilla, libre.</p>
+        {s.nivelDestino && <p className="mt-2 text-[12px] text-pn-sub">También aparece en el nivel al que llega; si la mueves o la giras aquí, cambia allá.</p>}
+        {borrar(elevador ? "Borrar elevador" : tipo === "rampa" ? "Borrar rampa" : "Borrar escalera")}
       </>,
     );
   }

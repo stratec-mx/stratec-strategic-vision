@@ -25,9 +25,37 @@ export interface Muro {
   b: string;
   /** Grosor en metros (15 cm de inicio). */
   grosor: number;
+  /**
+   * Línea divisoria sin muro (pasillos, zonas, cajones de estacionamiento): divide y une
+   * espacios igual que un muro, pero no tiene grosor físico ni admite puertas o ventanas.
+   */
+  virtual?: boolean;
 }
 
 export type TipoAbertura = "puerta" | "ventana";
+
+/** Variantes de puerta. Los datos viejos sin subtipo son puertas abatibles. */
+export const SUBTIPOS_PUERTA = ["abatible", "doble", "corrediza", "porton_corredizo", "porton_abatible", "cortina"] as const;
+export type SubtipoPuerta = (typeof SUBTIPOS_PUERTA)[number];
+
+/** Clase de abertura para el selector: una variante de puerta o una ventana. */
+export type ClaseAbertura = SubtipoPuerta | "ventana";
+export const CLASES_ABERTURA: readonly ClaseAbertura[] = [...SUBTIPOS_PUERTA, "ventana"];
+
+export const ETIQUETA_ABERTURA: Record<ClaseAbertura, string> = {
+  abatible: "Puerta abatible",
+  doble: "Puerta de doble hoja",
+  corrediza: "Puerta corrediza",
+  porton_corredizo: "Portón corredizo",
+  porton_abatible: "Portón abatible",
+  cortina: "Cortina metálica",
+  ventana: "Ventana",
+};
+
+/** Ancho típico al colocarla, en metros. */
+export const ANCHO_ABERTURA: Record<ClaseAbertura, number> = {
+  abatible: 0.9, doble: 1.6, corrediza: 0.9, porton_corredizo: 4, porton_abatible: 4, cortina: 3, ventana: 1.2,
+};
 
 export interface Abertura {
   id: string;
@@ -37,21 +65,27 @@ export interface Abertura {
   /** Ancho en metros. */
   ancho: number;
   tipo: TipoAbertura;
-  /** Puertas: de qué extremo sale la bisagra y hacia qué lado abre. */
+  /** Solo puertas: variante. Sin dato = abatible. */
+  subtipo?: SubtipoPuerta;
+  /**
+   * Puertas: de qué extremo sale la bisagra (en las corredizas, hacia dónde corre la hoja)
+   * y hacia qué lado del muro abre.
+   */
   bisagra?: "inicio" | "fin";
   lado?: 1 | -1;
 }
 
 export const TIPOS_ESPACIO = [
-  "oficina", "departamento", "estacionamiento", "lobby", "bodega", "sanitarios",
-  "cuarto_maquinas", "area_publico", "circulacion", "cocina", "otro",
+  "oficina", "departamento", "estacionamiento", "cajon_estacionamiento", "lobby", "bodega", "sanitarios",
+  "cuarto_maquinas", "area_publico", "pasillo", "circulacion", "cocina", "otro",
 ] as const;
 export type TipoEspacio = (typeof TIPOS_ESPACIO)[number];
 
 export const TIPO_ESPACIO_ETIQUETA: Record<TipoEspacio, string> = {
-  oficina: "Oficina", departamento: "Departamento", estacionamiento: "Estacionamiento", lobby: "Lobby",
+  oficina: "Oficina", departamento: "Departamento", estacionamiento: "Estacionamiento",
+  cajon_estacionamiento: "Cajón de estacionamiento", lobby: "Lobby",
   bodega: "Bodega", sanitarios: "Sanitarios", cuarto_maquinas: "Cuarto de máquinas", area_publico: "Área de público",
-  circulacion: "Pasillo o circulación", cocina: "Cocina", otro: "Otro",
+  pasillo: "Pasillo", circulacion: "Circulación (vestíbulo, paso)", cocina: "Cocina", otro: "Otro",
 };
 
 export interface Espacio {
@@ -64,6 +98,13 @@ export interface Espacio {
   pendiente?: boolean;
 }
 
+export const TIPOS_ESCALERA = ["recta", "l", "u", "caracol", "rampa", "elevador"] as const;
+export type TipoEscalera = (typeof TIPOS_ESCALERA)[number];
+
+export const ETIQUETA_ESCALERA: Record<TipoEscalera, string> = {
+  recta: "Escalera recta", l: "Escalera en L", u: "Escalera en U", caracol: "Escalera de caracol", rampa: "Rampa", elevador: "Elevador",
+};
+
 export interface Escalera {
   id: string;
   /** Centro del rectángulo. */
@@ -71,9 +112,17 @@ export interface Escalera {
   y: number;
   ancho: number;
   largo: number;
-  /** Giro en grados (0 = la flecha apunta hacia arriba). */
+  /** Giro en grados, sentido horario (0 = la flecha apunta hacia arriba). */
   giro: number;
   sentido: "sube" | "baja";
+  /** Sin dato = recta (datos guardados antes de que hubiera tipos). */
+  tipo?: TipoEscalera;
+  /** Caracol: diámetro en metros. */
+  diametro?: number;
+  /** Rampa: pendiente en porcentaje. */
+  pendiente?: number;
+  /** En L, en U y caracol: dibujada al revés (gira hacia el otro lado). */
+  espejo?: boolean;
   /** Nivel al que llega. */
   nivelDestino?: string;
   /** Escalera gemela en el nivel destino. */
@@ -125,8 +174,10 @@ export interface Croquis {
 /** Tolerancia geométrica: 1 cm. */
 export const EPS = 0.01;
 export const GROSOR_INICIAL = 0.15;
-export const ANCHO_PUERTA = 0.9;
-export const ANCHO_VENTANA = 1.2;
+/** Grosor de cálculo de una línea divisoria (no tiene grosor físico). */
+export const GROSOR_VIRTUAL = 0.02;
+export const ANCHO_PUERTA = ANCHO_ABERTURA.abatible;
+export const ANCHO_VENTANA = ANCHO_ABERTURA.ventana;
 const AREA_MINIMA = 0.05;
 
 let serie = 0;
@@ -265,7 +316,7 @@ function partirMuro(n: Nivel, muroId: string, verticeId: string): Nivel {
   const v = vs.get(verticeId)!;
   const s = dist(a, v) / dist(a, b);
   const m1: Muro = { ...m, b: verticeId };
-  const m2: Muro = { id: nuevoId("m"), a: verticeId, b: m.b, grosor: m.grosor };
+  const m2: Muro = { ...m, id: nuevoId("m"), a: verticeId, b: m.b };
   return {
     ...n,
     muros: n.muros.flatMap((w) => (w.id === muroId ? [m1, m2] : [w])),
@@ -351,7 +402,14 @@ export function normalizar(nivel: Nivel): Nivel {
     const clave = [m.a, m.b].sort().join("|");
     const previo = vistos.get(clave);
     if (previo) {
-      reasignar.set(m.id, { muro: previo.id, invertido: previo.a !== m.a });
+      if (previo.virtual && !m.virtual) {
+        // Una línea divisoria encima de un muro físico: se queda el muro.
+        muros[muros.indexOf(previo)] = m;
+        vistos.set(clave, m);
+        reasignar.set(previo.id, { muro: m.id, invertido: previo.a !== m.a });
+      } else {
+        reasignar.set(m.id, { muro: previo.id, invertido: previo.a !== m.a });
+      }
       continue;
     }
     vistos.set(clave, m);
@@ -375,13 +433,13 @@ function fusionarAlineados(nivel: Nivel, candidatos: string[]): Nivel {
     let cambio = false;
     for (const v of n.vertices.filter((x) => candidatos.includes(x.id))) {
       const ms = n.muros.filter((m) => m.a === v.id || m.b === v.id);
-      if (ms.length !== 2 || ms[0].grosor !== ms[1].grosor) continue;
+      if (ms.length !== 2 || ms[0].grosor !== ms[1].grosor || !!ms[0].virtual !== !!ms[1].virtual) continue;
       const vs = mapaVertices(n);
       const otro = (m: Muro) => vs.get(m.a === v.id ? m.b : m.a)!;
       const p = otro(ms[0]);
       const q = otro(ms[1]);
       if (proyectar(v, p, q).d > EPS / 2) continue;
-      const nuevo: Muro = { id: ms[0].id, a: p.id, b: q.id, grosor: ms[0].grosor };
+      const nuevo: Muro = { ...ms[0], a: p.id, b: q.id };
       const largo = dist(p, q);
       const aberturas = n.aberturas.map((ab) => {
         if (ab.muro !== ms[0].id && ab.muro !== ms[1].id) return ab;
@@ -519,13 +577,32 @@ function verticeEn(n: Nivel, p: P): [Nivel, string] {
   return [{ ...n, vertices: [...n.vertices, v] }, v.id];
 }
 
-export function agregarMuro(n: Nivel, p: P, q: P, grosor = GROSOR_INICIAL): Nivel {
+/** Agrega un muro de p a q. Con `virtual`, es una línea divisoria sin muro. */
+export function agregarMuro(n: Nivel, p: P, q: P, grosor = GROSOR_INICIAL, virtual = false): Nivel {
   if (dist(p, q) < EPS) return n;
   const [m1, a] = verticeEn(n, p);
   const [m2, b] = verticeEn(m1, q);
   if (a === b) return n;
-  const m3 = { ...m2, muros: [...m2.muros, { id: nuevoId("m"), a, b, grosor }] };
+  const muro: Muro = virtual ? { id: nuevoId("m"), a, b, grosor: GROSOR_VIRTUAL, virtual: true } : { id: nuevoId("m"), a, b, grosor };
+  const m3 = { ...m2, muros: [...m2.muros, muro] };
   return conEspacios(n, normalizar(m3));
+}
+
+/**
+ * Cambia un muro de físico a línea divisoria o al revés. Al volverse línea divisoria pierde
+ * sus puertas y ventanas; al volverse físico toma el grosor indicado. Los espacios no cambian.
+ */
+export function cambiarTipoMuro(n: Nivel, muroId: string, virtual: boolean, grosor = GROSOR_INICIAL): Nivel {
+  const muro = n.muros.find((m) => m.id === muroId);
+  if (!muro || !!muro.virtual === virtual) return n;
+  const nuevo: Muro = virtual
+    ? { id: muro.id, a: muro.a, b: muro.b, grosor: GROSOR_VIRTUAL, virtual: true }
+    : { id: muro.id, a: muro.a, b: muro.b, grosor: grosor > 0 ? grosor : GROSOR_INICIAL };
+  return {
+    ...n,
+    muros: n.muros.map((m) => (m.id === muroId ? nuevo : m)),
+    aberturas: virtual ? n.aberturas.filter((ab) => ab.muro !== muroId) : n.aberturas,
+  };
 }
 
 export function moverVertice(n: Nivel, id: string, p: P): Nivel {
@@ -570,7 +647,7 @@ export function fijarLargo(n: Nivel, muroId: string, largo: number): Nivel {
 
 export function cambiarGrosor(n: Nivel, muroId: string, grosor: number): Nivel {
   if (!(grosor > 0)) return n;
-  return { ...n, muros: n.muros.map((m) => (m.id === muroId ? { ...m, grosor } : m)) };
+  return { ...n, muros: n.muros.map((m) => (m.id === muroId && !m.virtual ? { ...m, grosor } : m)) };
 }
 
 /** Borra un muro: sus puertas y ventanas se van con él y, si dos espacios quedan unidos, se funden. */
@@ -598,17 +675,30 @@ export function acotarT(n: Nivel, muroId: string, t: number, ancho: number): num
   return Math.max(mitad, Math.min(1 - mitad, t));
 }
 
-export function agregarAbertura(n: Nivel, muroId: string, t: number, tipo: TipoAbertura, ancho?: number): Nivel {
-  if (!n.muros.some((m) => m.id === muroId)) return n;
-  const a = ancho ?? (tipo === "puerta" ? ANCHO_PUERTA : ANCHO_VENTANA);
-  const ab: Abertura = {
-    id: nuevoId("a"), muro: muroId, t: acotarT(n, muroId, t, a), ancho: a, tipo,
-    ...(tipo === "puerta" ? { bisagra: "inicio" as const, lado: 1 as const } : {}),
-  };
+/** Variante de una abertura; los datos viejos ("puerta" sin subtipo) son puertas abatibles. */
+export const claseAbertura = (ab: Pick<Abertura, "tipo" | "subtipo">): ClaseAbertura =>
+  ab.tipo === "ventana" ? "ventana" : ab.subtipo ?? "abatible";
+
+const esMuroFisico = (n: Nivel, muroId: string) => n.muros.some((m) => m.id === muroId && !m.virtual);
+
+/**
+ * Pone una puerta o ventana en un muro. `clase` acepta el tipo viejo ("puerta" = abatible) o
+ * una variante. Las líneas divisorias no admiten aberturas.
+ */
+export function agregarAbertura(n: Nivel, muroId: string, t: number, clase: TipoAbertura | ClaseAbertura, ancho?: number): Nivel {
+  if (!esMuroFisico(n, muroId)) return n;
+  const c: ClaseAbertura = clase === "puerta" ? "abatible" : clase;
+  const a = ancho ?? ANCHO_ABERTURA[c];
+  const ab: Abertura =
+    c === "ventana"
+      ? { id: nuevoId("a"), muro: muroId, t: acotarT(n, muroId, t, a), ancho: a, tipo: "ventana" }
+      : { id: nuevoId("a"), muro: muroId, t: acotarT(n, muroId, t, a), ancho: a, tipo: "puerta", subtipo: c, bisagra: "inicio", lado: 1 };
   return { ...n, aberturas: [...n.aberturas, ab] };
 }
 
 export function cambiarAbertura(n: Nivel, id: string, cambios: Partial<Omit<Abertura, "id">>): Nivel {
+  // No se puede pasar a una línea divisoria.
+  if (cambios.muro !== undefined && !esMuroFisico(n, cambios.muro)) return n;
   return {
     ...n,
     aberturas: n.aberturas.map((ab) => {
@@ -617,6 +707,41 @@ export function cambiarAbertura(n: Nivel, id: string, cambios: Partial<Omit<Aber
       return { ...x, t: acotarT(n, x.muro, x.t, x.ancho) };
     }),
   };
+}
+
+/**
+ * Cambia la variante (puerta abatible, doble, corrediza, portón, cortina o ventana). Toma el
+ * ancho típico de la nueva variante, sin pasar del largo del muro.
+ */
+export function cambiarClaseAbertura(n: Nivel, id: string, clase: ClaseAbertura): Nivel {
+  const ab = n.aberturas.find((x) => x.id === id);
+  const muro = ab && n.muros.find((m) => m.id === ab.muro);
+  if (!ab || !muro || claseAbertura(ab) === clase) return n;
+  const ancho = Math.max(0.3, Math.min(ANCHO_ABERTURA[clase], largoMuro(n, muro)));
+  const nueva: Abertura =
+    clase === "ventana"
+      ? { id: ab.id, muro: ab.muro, t: ab.t, ancho, tipo: "ventana" }
+      : { id: ab.id, muro: ab.muro, t: ab.t, ancho, tipo: "puerta", subtipo: clase, bisagra: ab.bisagra ?? "inicio", lado: ab.lado ?? 1 };
+  return {
+    ...n,
+    aberturas: n.aberturas.map((x) => (x.id === id ? { ...nueva, t: acotarT(n, nueva.muro, nueva.t, nueva.ancho) } : x)),
+  };
+}
+
+/**
+ * Arrastre de una puerta o ventana: se desliza por su propio muro mientras el puntero esté
+ * cerca de él (`tol` en metros); si el puntero se aleja y hay otro muro físico cerca, pasa a
+ * ese muro; si no hay ninguno, sigue deslizándose por el suyo.
+ */
+export function deslizarAbertura(n: Nivel, id: string, p: P, tol: number): Nivel {
+  const ab = n.aberturas.find((x) => x.id === id);
+  if (!ab) return n;
+  const propio = n.muros.find((m) => m.id === ab.muro);
+  const enPropio = propio ? proyectar(p, ...extremos(n, propio)) : null;
+  if (enPropio && enPropio.d <= tol) return cambiarAbertura(n, id, { t: enPropio.t });
+  const otro = muroCercano(n, p, tol, { soloFisicos: true });
+  if (otro) return cambiarAbertura(n, id, { muro: otro.muro.id, t: otro.t });
+  return enPropio ? cambiarAbertura(n, id, { t: enPropio.t }) : n;
 }
 
 export const borrarAbertura = (n: Nivel, id: string): Nivel => ({ ...n, aberturas: n.aberturas.filter((ab) => ab.id !== id) });
@@ -641,8 +766,9 @@ const cambiarNivel = (c: Croquis, id: string, f: (n: Nivel) => Nivel): Croquis =
   niveles: c.niveles.map((n) => (n.id === id ? f(n) : n)),
 });
 
-export function agregarEscalera(c: Croquis, nivelId: string, datos: Omit<Escalera, "id" | "enlace">): Croquis {
-  const id = nuevoId("s");
+/** Agrega una escalera (y su gemela en el nivel destino). `datos.id` es opcional, para seleccionarla después. */
+export function agregarEscalera(c: Croquis, nivelId: string, datos: Omit<Escalera, "id" | "enlace"> & { id?: string }): Croquis {
+  const id = datos.id ?? nuevoId("s");
   const destino = datos.nivelDestino && datos.nivelDestino !== nivelId ? c.niveles.find((n) => n.id === datos.nivelDestino) : undefined;
   const gemelaId = destino ? nuevoId("s") : undefined;
   let r = cambiarNivel(c, nivelId, (n) => ({
@@ -672,24 +798,28 @@ export function borrarEscalera(c: Croquis, nivelId: string, id: string): Croquis
   };
 }
 
-/** Cambia una escalera; la posición, el tamaño y el giro se copian a su gemela del otro nivel. */
+/** Datos que se copian tal cual a la escalera gemela del otro nivel (es la misma escalera física). */
+const CAMPOS_GEMELA = ["x", "y", "ancho", "largo", "giro", "tipo", "diametro", "pendiente", "espejo"] as const;
+
+/**
+ * Cambia una escalera; la posición, el tamaño, el giro y el tipo se copian a su gemela del
+ * otro nivel. El sentido se copia invertido (lo que aquí sube, allá baja).
+ */
 export function cambiarEscalera(c: Croquis, nivelId: string, id: string, cambios: Partial<Omit<Escalera, "id" | "enlace">>): Croquis {
   const nivel = c.niveles.find((n) => n.id === nivelId);
   const esc = nivel?.escaleras.find((s) => s.id === id);
   if (!esc) return c;
+  if (cambios.giro !== undefined) cambios = { ...cambios, giro: normalizarGiro(cambios.giro) };
   if (cambios.nivelDestino !== undefined && cambios.nivelDestino !== esc.nivelDestino) {
-    const { nivelDestino, ...resto } = { ...esc, ...cambios };
+    const { nivelDestino, enlace, ...resto } = { ...esc, ...cambios };
     const sinEsta = borrarEscalera(c, nivelId, id);
     return agregarEscalera(sinEsta, nivelId, { ...resto, nivelDestino: nivelDestino || undefined });
   }
-  const geom = (s: Escalera): Escalera => ({
-    ...s,
-    ...(cambios.x !== undefined ? { x: cambios.x } : {}),
-    ...(cambios.y !== undefined ? { y: cambios.y } : {}),
-    ...(cambios.ancho !== undefined ? { ancho: cambios.ancho } : {}),
-    ...(cambios.largo !== undefined ? { largo: cambios.largo } : {}),
-    ...(cambios.giro !== undefined ? { giro: cambios.giro } : {}),
-  });
+  const geom = (s: Escalera): Escalera => {
+    const r: Escalera = { ...s };
+    for (const k of CAMPOS_GEMELA) if (cambios[k] !== undefined) Object.assign(r, { [k]: cambios[k] });
+    return r;
+  };
   return {
     ...c,
     niveles: c.niveles.map((n) => ({
@@ -733,6 +863,127 @@ export function replicarNivel(c: Croquis, nivelId: string, nombre?: string): Cro
   const niveles = [...c.niveles];
   niveles.splice(i + 1, 0, copia);
   return { ...c, niveles };
+}
+
+// ───────────────────────── Forma y giro de escaleras ─────────────────────────
+
+/** Giro entre 0 y 360 (sin incluir 360). */
+export const normalizarGiro = (g: number) => {
+  const r = ((g % 360) + 360) % 360;
+  return Math.abs(r - 360) < 1e-9 ? 0 : r;
+};
+
+/** Ángulo (0 = arriba, sentido horario) del punto p visto desde c, en grados. */
+export const anguloHacia = (c: P, p: P) => normalizarGiro((Math.atan2(p.x - c.x, -(p.y - c.y)) * 180) / Math.PI);
+
+/** Redondea el giro a saltos de `paso` grados, o a grado entero si es libre. */
+export const giroConPaso = (g: number, libre: boolean, paso = 15) => normalizarGiro(libre ? Math.round(g) : Math.round(g / paso) * paso);
+
+/** Medidas iniciales al poner una escalera, rampa o elevador de cada tipo. */
+export function escaleraInicial(tipo: TipoEscalera): Pick<Escalera, "tipo" | "ancho" | "largo"> & Partial<Pick<Escalera, "diametro" | "pendiente">> {
+  switch (tipo) {
+    case "l": return { tipo, ancho: 2.4, largo: 3.2 };
+    case "u": return { tipo, ancho: 2.4, largo: 3.2 };
+    case "caracol": return { tipo, ancho: 1.6, largo: 1.6, diametro: 1.6 };
+    case "rampa": return { tipo, ancho: 1.5, largo: 6, pendiente: 8 };
+    case "elevador": return { tipo, ancho: 1.8, largo: 1.8 };
+    default: return { tipo: "recta", ancho: 1.2, largo: 3 };
+  }
+}
+
+/** Ancho y largo que ocupa la escalera (en la de caracol, el diámetro). */
+export function medidasEscalera(s: Escalera): { ancho: number; largo: number } {
+  if ((s.tipo ?? "recta") === "caracol") {
+    const d = s.diametro ?? Math.max(s.ancho, s.largo);
+    return { ancho: d, largo: d };
+  }
+  return { ancho: s.ancho, largo: s.largo };
+}
+
+export interface TrazoEscalera {
+  /** Polígonos cerrados: el contorno, que se rellena y sirve para tocarla. */
+  contornos: P[][];
+  /** Huellas y líneas interiores. */
+  lineas: [P, P][];
+  circulos: { c: P; r: number }[];
+  /** Recorrido de la flecha; la punta va en el último punto. Vacío en el elevador. */
+  flecha: P[];
+}
+
+const HUELLA = 0.28;
+
+/**
+ * Dibujo de la escalera en su marco local: centro en (0, 0), sin girar, y hacia abajo; el
+ * arranque queda abajo y la flecha de "sube" apunta hacia arriba (y negativa). Si baja, la
+ * flecha va al revés. Con `espejo`, la L, la U y el caracol giran hacia el otro lado.
+ */
+export function trazoEscalera(s: Escalera): TrazoEscalera {
+  const tipo = s.tipo ?? "recta";
+  const { ancho: W, largo: L } = medidasEscalera(s);
+  const x0 = -W / 2;
+  const x1 = W / 2;
+  const y0 = -L / 2;
+  const y1 = L / 2;
+  const rect = (a: number, b: number, c: number, d: number): P[] => [{ x: a, y: b }, { x: c, y: b }, { x: c, y: d }, { x: a, y: d }];
+  const r: TrazoEscalera = { contornos: [], lineas: [], circulos: [], flecha: [] };
+  /** Huellas horizontales de y = desde hacia arriba hasta `hasta`, entre xa y xb. */
+  const huellasH = (xa: number, xb: number, desde: number, hasta: number) => {
+    for (let y = desde - HUELLA; y > hasta + 0.05; y -= HUELLA) r.lineas.push([{ x: xa, y }, { x: xb, y }]);
+  };
+
+  if (tipo === "l") {
+    const f = Math.min(W, L) / 2; // ancho de cada tramo
+    r.contornos.push([{ x: x0, y: y1 }, { x: x0 + f, y: y1 }, { x: x0 + f, y: y0 + f }, { x: x1, y: y0 + f }, { x: x1, y: y0 }, { x: x0, y: y0 }]);
+    r.lineas.push([{ x: x0, y: y0 + f }, { x: x0 + f, y: y0 + f }], [{ x: x0 + f, y: y0 }, { x: x0 + f, y: y0 + f }]);
+    huellasH(x0, x0 + f, y1, y0 + f);
+    for (let x = x0 + f + HUELLA; x < x1 - 0.05; x += HUELLA) r.lineas.push([{ x, y: y0 }, { x, y: y0 + f }]);
+    r.flecha = [{ x: x0 + f / 2, y: y1 - 0.25 }, { x: x0 + f / 2, y: y0 + f / 2 }, { x: x1 - 0.25, y: y0 + f / 2 }];
+  } else if (tipo === "u") {
+    const d = Math.min(W / 2, L / 2); // fondo del descanso
+    r.contornos.push(rect(x0, y0, x1, y1));
+    r.lineas.push([{ x: x0, y: y0 + d }, { x: x1, y: y0 + d }], [{ x: 0, y: y0 + d }, { x: 0, y: y1 }]);
+    huellasH(x0, x1, y1, y0 + d);
+    r.flecha = [{ x: -W / 4, y: y1 - 0.25 }, { x: -W / 4, y: y0 + d / 2 }, { x: W / 4, y: y0 + d / 2 }, { x: W / 4, y: y1 - 0.25 }];
+  } else if (tipo === "caracol") {
+    const R = W / 2;
+    const poste = Math.min(0.12, R * 0.15);
+    r.contornos.push(Array.from({ length: 36 }, (_, i) => polar({ x: 0, y: 0 }, i * 10, R)));
+    r.circulos.push({ c: { x: 0, y: 0 }, r: poste });
+    for (let g = 0; g < 360; g += 30) r.lineas.push([polar({ x: 0, y: 0 }, g, poste), polar({ x: 0, y: 0 }, g, R)]);
+    // Arranca abajo y da casi una vuelta en sentido horario.
+    r.flecha = Array.from({ length: 21 }, (_, i) => polar({ x: 0, y: 0 }, 180 + (300 * i) / 20, R * 0.62));
+  } else if (tipo === "rampa") {
+    r.contornos.push(rect(x0, y0, x1, y1));
+    r.flecha = [{ x: 0, y: y1 - 0.25 }, { x: 0, y: y0 + 0.25 }];
+  } else if (tipo === "elevador") {
+    r.contornos.push(rect(x0, y0, x1, y1));
+    r.lineas.push([{ x: x0, y: y0 }, { x: x1, y: y1 }], [{ x: x1, y: y0 }, { x: x0, y: y1 }]);
+  } else {
+    r.contornos.push(rect(x0, y0, x1, y1));
+    huellasH(x0, x1, y1, y0);
+    r.flecha = [{ x: 0, y: y1 - 0.25 }, { x: 0, y: y0 + 0.25 }];
+  }
+
+  if (s.sentido === "baja") r.flecha = [...r.flecha].reverse();
+  if (s.espejo && (tipo === "l" || tipo === "u" || tipo === "caracol")) {
+    const m = (p: P): P => ({ x: -p.x, y: p.y });
+    r.contornos = r.contornos.map((c) => c.map(m));
+    r.lineas = r.lineas.map(([a, b]) => [m(a), m(b)]);
+    r.circulos = r.circulos.map((c) => ({ ...c, c: m(c.c) }));
+    r.flecha = r.flecha.map(m);
+  }
+  return r;
+}
+
+/** Pasa un punto del marco local de la escalera al del nivel (gira y traslada). */
+export function escaleraAMundo(s: Escalera, p: P): P {
+  const g = (s.giro * Math.PI) / 180;
+  return { x: s.x + p.x * Math.cos(g) - p.y * Math.sin(g), y: s.y + p.x * Math.sin(g) + p.y * Math.cos(g) };
+}
+
+/** Posición de la manija de giro: frente al extremo de llegada, a `sep` metros del borde. */
+export function manijaGiro(s: Escalera, sep: number): P {
+  return polar(s, s.giro, medidasEscalera(s).largo / 2 + sep);
 }
 
 // ───────────────────────── Imán ─────────────────────────
@@ -836,11 +1087,12 @@ export function iman(n: Nivel, raw: P, op: OpcionesIman): ResultadoIman {
   return linea ? { p, guia: "prolongacion", linea } : { p, guia: "rejilla" };
 }
 
-/** Muro más cercano a un punto (para colocar puertas y ventanas). */
-export function muroCercano(n: Nivel, p: P, tol: number): { muro: Muro; t: number; d: number } | null {
+/** Muro más cercano a un punto (para colocar puertas y ventanas: con `soloFisicos`, sin líneas divisorias). */
+export function muroCercano(n: Nivel, p: P, tol: number, op?: { soloFisicos?: boolean }): { muro: Muro; t: number; d: number } | null {
   const vs = mapaVertices(n);
   let mejor: { muro: Muro; t: number; d: number } | null = null;
   for (const m of n.muros) {
+    if (op?.soloFisicos && m.virtual) continue;
     const pr = proyectar(p, vs.get(m.a)!, vs.get(m.b)!);
     if (pr.d < tol && (!mejor || pr.d < mejor.d)) mejor = { muro: m, t: pr.t, d: pr.d };
   }
