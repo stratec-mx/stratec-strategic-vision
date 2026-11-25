@@ -114,6 +114,22 @@ El mapa (capas 1 a 3) resuelve **el exterior**: ubicación, predio, colindancias
 | C-07 | Fotos | Ligadas a cada espacio o elemento, como en el mapa |
 | C-08 | Amarre al predio | El croquis se coloca sobre el perímetro del predio con un punto de origen y un giro, para que el plano exterior y el interior coincidan |
 
+**Cómo se dibuja y cómo reconoce los espacios:**
+
+| Comportamiento | Cómo funciona |
+|---|---|
+| Trazar muros | Tramo por tramo, con el dedo o tecleando el largo. Ángulos de 90° y 45° por defecto. Los muros tienen grosor (15 cm de inicio, editable) y se unen solos en las esquinas |
+| Imán | Al acercarse, el trazo se pega a vértices, a muros existentes, a la prolongación de un muro, a la cuadrícula y al contorno del predio dibujado en el mapa |
+| **Reconoce espacios** | Cuando los muros cierran un recinto, el sistema lo detecta como espacio, calcula su superficie y pide nombre y tipo (oficina, lobby, estacionamiento…) |
+| **Ajusta espacios** | Mover un muro o un vértice actualiza todos los espacios que lo comparten, con sus superficies. Las puertas y ventanas de ese muro se mueven con él |
+| Dividir y unir | Un muro trazado dentro de un espacio lo divide en dos. Borrar un muro une los dos espacios en uno, conservando el nombre del mayor |
+| Cotas | Cada tramo muestra su medida. Editar la cota mueve el muro y ajusta los espacios |
+| Puertas y ventanas | Se colocan sobre un muro y quedan pegadas a él: no pueden quedar sueltas. Tienen ancho y la puerta, sentido de apertura |
+| Escaleras | Rectángulo con flecha de sube o baja y el nivel al que llega; aparece también en ese nivel |
+| Relación con el plano exterior | El contorno del nivel se encaja en el perímetro del predio del mapa (C-08). Si el croquis se sale del predio, el sistema avisa. Cada espacio se liga a las `areas` del expediente, que usan el diagnóstico y los documentos |
+| Replicar planta | Copia muros, espacios, aberturas y escaleras; luego se ajustan las diferencias |
+| Deshacer y rehacer | Siempre disponibles |
+
 **Cómo se guarda:**
 
 - coordenadas **locales en metros** (x, y) por nivel, no latitud y longitud, porque un interior no necesita GPS;
@@ -197,12 +213,6 @@ En el evento: escenario (I.9.3) y apoyo externo (II.7.8). Cada lámina se congel
 | CIVAC, Jiutepec | Calles y avenidas con nombre, colonias, escuelas, comercios y unidades habitacionales. En las zonas residenciales faltan casi todas las construcciones |
 | Tlayacapan | Calles con nombre y edificios principales (presidencia, mercado, ex convento); casi sin construcciones |
 | Tlaltizapán | Calles con nombre, carreteras (MOR 2 y MOR 4), río y clínica; sin construcciones |
-
-**Referencia revisada: Boldr Pro (REEKON Tools).** No es una app para dibujar planos. Sirve para capturar datos de obra: anotar medidas sobre fotos y PDF, llevar listas de medidas y usar calculadoras (área, escaleras), con medidores láser de la marca conectados por Bluetooth. La idea que sí se toma:
-
-- **Fase 2:** capturar medidas desde un distanciómetro láser con Bluetooth directo en el croquis, en lugar de teclearlas;
-- en teléfonos Android con Chrome se puede leer el distanciómetro desde el navegador; en iPhone haría falta una app nativa;
-- en la versión 1, las medidas se teclean.
 
 ## 11. Pendientes antes de construir
 
