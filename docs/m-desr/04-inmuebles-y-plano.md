@@ -280,6 +280,20 @@ El prototipo está publicado en `/app/inmuebles` (main `90a9c92`) y por ahora **
 
 El riesgo lo asume el titular. Queda en esta tabla como registro.
 
+### 14.1 Correspondencia entre el prototipo y la base (para el script 12)
+
+El prototipo (`/app/inmuebles`, guarda en el navegador) ya usa estos campos. Al pasar a la base se traducen así:
+
+| Prototipo | Base de datos |
+|---|---|
+| `situacion` | `plan_features.situation` |
+| `personal:<id>` | `plan_feature_types` con `is_custom = true` |
+| `subtipo` en aberturas | `floor_plan_elements.properties.subtype` (corrediza, doble hoja, portón, cortina…) |
+| `tipo` en escaleras | `floor_plan_elements.properties.stair_type` (recta, L, U, caracol, rampa, elevador) |
+| `virtual` en líneas divisorias | `floor_plan_elements.properties.is_virtual` |
+
+Pendiente en el prototipo: trabajo sin conexión, guardar versión con nota y agrupar espacios en áreas.
+
 ## 12. Pendientes antes de construir
 
 | # | Pendiente | Propuesta |
