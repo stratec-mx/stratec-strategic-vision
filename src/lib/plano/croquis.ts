@@ -681,6 +681,13 @@ export const claseAbertura = (ab: Pick<Abertura, "tipo" | "subtipo">): ClaseAber
 
 const esMuroFisico = (n: Nivel, muroId: string) => n.muros.some((m) => m.id === muroId && !m.virtual);
 
+/** Ancho que cabe en el muro: el pedido, sin pasar del largo del muro (y no menos de 30 cm). */
+function anchoQueCabe(n: Nivel, muroId: string, ancho: number): number {
+  const m = n.muros.find((w) => w.id === muroId);
+  const l = m ? largoMuro(n, m) : Infinity;
+  return Math.max(Math.min(0.3, ancho), Math.min(ancho, l));
+}
+
 /**
  * Pone una puerta o ventana en un muro. `clase` acepta el tipo viejo ("puerta" = abatible) o
  * una variante. Las líneas divisorias no admiten aberturas.
@@ -688,7 +695,8 @@ const esMuroFisico = (n: Nivel, muroId: string) => n.muros.some((m) => m.id === 
 export function agregarAbertura(n: Nivel, muroId: string, t: number, clase: TipoAbertura | ClaseAbertura, ancho?: number): Nivel {
   if (!esMuroFisico(n, muroId)) return n;
   const c: ClaseAbertura = clase === "puerta" ? "abatible" : clase;
-  const a = ancho ?? ANCHO_ABERTURA[c];
+  // No más ancha que el muro: si no, sobresaldría de él.
+  const a = anchoQueCabe(n, muroId, ancho ?? ANCHO_ABERTURA[c]);
   const ab: Abertura =
     c === "ventana"
       ? { id: nuevoId("a"), muro: muroId, t: acotarT(n, muroId, t, a), ancho: a, tipo: "ventana" }
@@ -704,6 +712,7 @@ export function cambiarAbertura(n: Nivel, id: string, cambios: Partial<Omit<Aber
     aberturas: n.aberturas.map((ab) => {
       if (ab.id !== id) return ab;
       const x = { ...ab, ...cambios };
+      if (cambios.ancho !== undefined) x.ancho = anchoQueCabe(n, x.muro, x.ancho);
       return { ...x, t: acotarT(n, x.muro, x.t, x.ancho) };
     }),
   };
@@ -730,16 +739,24 @@ export function cambiarClaseAbertura(n: Nivel, id: string, clase: ClaseAbertura)
 
 /**
  * Arrastre de una puerta o ventana: se desliza por su propio muro mientras el puntero esté
- * cerca de él (`tol` en metros); si el puntero se aleja y hay otro muro físico cerca, pasa a
- * ese muro; si no hay ninguno, sigue deslizándose por el suyo.
+ * cerca de él (`tol` en metros). Pasa a otro muro físico en el que quepa completa si el puntero
+ * se aleja del suyo, o si ya rebasó el extremo del suyo y el otro queda más cerca (así cruza
+ * la unión con el tramo siguiente de un muro partido por una línea divisoria). Si no hay otro
+ * muro cerca, sigue deslizándose por el suyo.
  */
 export function deslizarAbertura(n: Nivel, id: string, p: P, tol: number): Nivel {
   const ab = n.aberturas.find((x) => x.id === id);
   if (!ab) return n;
   const propio = n.muros.find((m) => m.id === ab.muro);
   const enPropio = propio ? proyectar(p, ...extremos(n, propio)) : null;
-  if (enPropio && enPropio.d <= tol) return cambiarAbertura(n, id, { t: enPropio.t });
-  const otro = muroCercano(n, p, tol, { soloFisicos: true });
+  let otro: { muro: Muro; t: number; d: number } | null = null;
+  for (const m of n.muros) {
+    if (m.virtual || m.id === ab.muro || largoMuro(n, m) + EPS < ab.ancho) continue;
+    const pr = proyectar(p, ...extremos(n, m));
+    if (pr.d < tol && (!otro || pr.d < otro.d)) otro = { muro: m, t: pr.t, d: pr.d };
+  }
+  const rebaso = !!enPropio && (enPropio.t <= 0 || enPropio.t >= 1);
+  if (enPropio && enPropio.d <= tol && !(rebaso && otro && otro.d < enPropio.d)) return cambiarAbertura(n, id, { t: enPropio.t });
   if (otro) return cambiarAbertura(n, id, { muro: otro.muro.id, t: otro.t });
   return enPropio ? cambiarAbertura(n, id, { t: enPropio.t }) : n;
 }

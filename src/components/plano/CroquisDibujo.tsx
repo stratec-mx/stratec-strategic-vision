@@ -146,9 +146,10 @@ function AberturaSvg({ n, ab, sel, esc }: { n: Nivel; ab: Abertura; sel: boolean
 function ToqueAbertura({ n, ab, esc }: { n: Nivel; ab: Abertura; esc: number }) {
   const g = geometriaAbertura(n, ab);
   if (!g) return null;
-  const extra = Math.min(g.w * 0.15, 4 * esc);
-  const a = mas(g.j1, g.u, extra);
-  const b = mas(g.j2, g.u, -extra);
+  // A lo largo del muro también mide al menos 20 px, aunque la abertura se vea chica al alejar.
+  const mitad = Math.max(g.w / 2 - Math.min(g.w * 0.15, 4 * esc), 10 * esc);
+  const a = mas(g.c, g.u, -mitad);
+  const b = mas(g.c, g.u, mitad);
   return (
     <line data-k="abertura" data-id={ab.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={Math.max(g.m.grosor + 0.1, 20 * esc)} style={{ cursor: "move" }} />
   );

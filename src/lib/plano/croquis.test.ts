@@ -285,6 +285,35 @@ describe("croquis: arrastrar puertas y ventanas", () => {
     expect(n.aberturas[0].muro).toBe(arriba.id);
     expect(posicionAbertura(n, n.aberturas[0])!.x).toBeCloseTo(7, 6);
   });
+
+  it("cruza la unión de un muro partido por una línea divisoria y no pasa a un muro donde no cabe", () => {
+    let n = cuarto();
+    n = agregarMuro(n, { x: 5, y: 0 }, { x: 5, y: 6 }, 0.15, true);
+    const izq = muroDonde(n, (a, b) => a.y === 0 && b.y === 0 && Math.max(a.x, b.x) === 5);
+    const der = muroDonde(n, (a, b) => a.y === 0 && b.y === 0 && Math.min(a.x, b.x) === 5);
+    n = agregarAbertura(n, izq.id, 0.5, "ventana");
+    const id = n.aberturas[0].id;
+    // El puntero sigue por la misma línea del muro, ya del otro lado de la unión.
+    n = deslizarAbertura(n, id, { x: 5.2, y: 0 }, 0.3);
+    expect(n.aberturas[0].muro).toBe(der.id);
+    expect(n.aberturas.every((ab) => ab.muro !== n.muros.find((m) => m.virtual)!.id)).toBe(true);
+    // Un portón de 4 m no pasa a un muro de 3 m: sigue en el suyo.
+    let chico = cadena(nivelVacio("PB"), [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 3 }, { x: 0, y: 3 }]);
+    chico = agregarAbertura(chico, abajoDe(chico).id, 0.9, "porton_corredizo");
+    const porton = chico.aberturas[0].id;
+    chico = deslizarAbertura(chico, porton, { x: 10.1, y: 1.5 }, 0.3);
+    expect(chico.aberturas[0].muro).toBe(abajoDe(chico).id);
+  });
+
+  it("una puerta o ventana nunca queda más ancha que su muro", () => {
+    let n = cadena(nivelVacio("PB"), [{ x: 0, y: 0 }, { x: 2.5, y: 0 }, { x: 2.5, y: 2 }, { x: 0, y: 2 }]);
+    n = agregarAbertura(n, abajoDe(n).id, 0.5, "porton_abatible");
+    expect(n.aberturas[0].ancho).toBeCloseTo(2.5, 9);
+    n = cambiarAbertura(n, n.aberturas[0].id, { ancho: 8 });
+    expect(n.aberturas[0].ancho).toBeCloseTo(2.5, 9);
+    n = cambiarAbertura(n, n.aberturas[0].id, { ancho: 1 });
+    expect(n.aberturas[0].ancho).toBe(1);
+  });
 });
 
 describe("croquis: líneas divisorias", () => {
