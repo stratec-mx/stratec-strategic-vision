@@ -68,3 +68,31 @@
 .plano-lejos .plano-lado {
   display: none;
 }
+.plano-vertice {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid #0b1f3a;
+  color: #0b1f3a;
+  font: 700 11px/20px system-ui, sans-serif;
+  text-align: center;
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(11, 31, 58, 0.35);
+}
+.plano-vertice-sel {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
+}
+.plano-medio {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font: 700 15px/19px system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.85;
+}

@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 busca su "worker" junto a su propio archivo; en el sitio empaquetado hay que decirle dónde quedó.
 import urlWorker from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "./plano.css";
-import { TerraDraw, TerraDrawLineStringMode, TerraDrawPolygonMode, TerraDrawSelectMode } from "terra-draw";
+import { TerraDraw, TerraDrawLineStringMode } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { cono, destino, distancia, lados, rumbo, ORIENTACION_CORTA, type LngLat } from "@/lib/plano/geo";
 import { ESTADO_INFO, puntoInmueble, TIPO_COLINDANCIA_ETIQUETA, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
@@ -43,8 +43,11 @@ interface Props {
   onErrorSatelite(mensaje: string): void;
   onElegirInmueble(id: string): void;
   onClicMapa(p: LngLat): void;
-  onPerimetroDibujado(coords: LngLat[]): void;
-  onPerimetroEditado(coords: LngLat[]): void;
+  /** Edición del predio con el dedo: mover, insertar y elegir (para borrar) un vértice. */
+  verticeSel: number | null;
+  onMoverVertice(i: number, p: LngLat): void;
+  onInsertarVertice(i: number, p: LngLat): void;
+  onElegirVertice(i: number | null): void;
   onRutaDibujada(coords: LngLat[]): void;
   onElegirElemento(id: string | null): void;
   onMoverElemento(id: string, p: LngLat): void;
@@ -86,7 +89,6 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
   const cb = useRef(props);
   cb.current = props;
   const viaje = useRef(0);
-  const editando = useRef<string | null>(null);
 
   // ── Crear el mapa una sola vez ──
   useEffect(() => {
@@ -132,35 +134,18 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
       const td = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
-          new TerraDrawPolygonMode({ styles: { fillColor: "#0B1F3A", fillOpacity: 0.15, outlineColor: "#0B1F3A", outlineWidth: 3, closingPointColor: "#F59E0B", closingPointWidth: 8, coordinatePointColor: "#FFFFFF", coordinatePointOutlineColor: "#0B1F3A", coordinatePointWidth: 6 } }),
           new TerraDrawLineStringMode({ styles: { lineStringColor: "#1B7F3B", lineStringWidth: 5, closingPointColor: "#1B7F3B", closingPointWidth: 8 } }),
-          new TerraDrawSelectMode({
-            flags: {
-              polygon: { feature: { draggable: false, coordinates: { draggable: true, midpoints: true, deletable: true } } },
-            },
-            styles: { selectedPolygonColor: "#0B1F3A", selectedPolygonFillOpacity: 0.15, selectedPolygonOutlineColor: "#F59E0B", selectedPolygonOutlineWidth: 3, selectionPointWidth: 9, selectionPointColor: "#FFFFFF", selectionPointOutlineColor: "#0B1F3A", selectionPointOutlineWidth: 2, midPointColor: "#F59E0B", midPointWidth: 6 },
-          }),
         ],
       });
       td.start();
       td.on("finish", (id, ctx) => {
         const f = td.getSnapshotFeature(id);
         if (!f) return;
-        if (ctx.mode === "polygon" && f.geometry.type === "Polygon") {
-          const anillo = (f.geometry.coordinates[0] as LngLat[]).slice(0, -1);
-          td.removeFeatures([id]);
-          cb.current.onPerimetroDibujado(anillo);
-        } else if (ctx.mode === "linestring" && f.geometry.type === "LineString") {
+        if (ctx.mode === "linestring" && f.geometry.type === "LineString") {
           const linea = f.geometry.coordinates as LngLat[];
           td.removeFeatures([id]);
           cb.current.onRutaDibujada(linea);
         }
-      });
-      td.on("change", (ids, tipo) => {
-        const id = editando.current;
-        if (!id || tipo !== "update" || !ids.includes(id)) return;
-        const f = td.getSnapshotFeature(id);
-        if (f && f.geometry.type === "Polygon") cb.current.onPerimetroEditado((f.geometry.coordinates[0] as LngLat[]).slice(0, -1));
       });
       draw.current = td;
       // Arranca mostrando toda la cartera.
@@ -179,7 +164,8 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
 
     map.on("click", (e) => {
       const h = cb.current.herramienta;
-      if (h === "ubicar" || h.startsWith("simbolo:")) cb.current.onClicMapa([e.lngLat.lng, e.lngLat.lat]);
+      if (h === "ubicar" || h === "vertices" || h.startsWith("simbolo:")) cb.current.onClicMapa([e.lngLat.lng, e.lngLat.lat]);
+      else if (h === "editar" && e.originalEvent.target === map.getCanvas()) cb.current.onElegirVertice(null);
       else if (h === "navegar" && e.originalEvent.target === map.getCanvas()) cb.current.onElegirElemento(null);
     });
 
@@ -225,33 +211,10 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
     const td = draw.current;
     const map = mapa.current;
     if (!td || !map || !listo) return;
-    map.getCanvas().style.cursor = herramienta === "ubicar" || herramienta.startsWith("simbolo:") ? "crosshair" : "";
-    if (herramienta === "vertices") {
-      td.setMode("polygon");
-      return () => td.setMode("static");
-    }
+    map.getCanvas().style.cursor = herramienta === "ubicar" || herramienta === "vertices" || herramienta.startsWith("simbolo:") ? "crosshair" : "";
     if (herramienta === "ruta") {
       td.setMode("linestring");
       return () => td.setMode("static");
-    }
-    if (herramienta === "editar") {
-      const per = cb.current.sel?.perimetro ?? [];
-      if (per.length < 3) return;
-      const id = td.getFeatureId();
-      const anillo = per.map((v) => [v.lng, v.lat]);
-      td.addFeatures([{ id, type: "Feature", geometry: { type: "Polygon", coordinates: [[...anillo, anillo[0]]] }, properties: { mode: "polygon" } }]);
-      td.setMode("select");
-      td.selectFeature(id);
-      editando.current = String(id);
-      return () => {
-        editando.current = null;
-        try {
-          td.setMode("static");
-          td.clear();
-        } catch {
-          /* mapa ya cerrado */
-        }
-      };
     }
     td.setMode("static");
   }, [herramienta, listo]);
@@ -262,7 +225,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
     const map = mapa.current;
     if (!map || !listo) return;
     const fuente = (id: string) => map.getSource(id) as maplibregl.GeoJSONSource | undefined;
-    const per: LngLat[] = sel && herramienta !== "editar" ? sel.perimetro.map((v) => [v.lng, v.lat]) : [];
+    const per: LngLat[] = sel ? sel.perimetro.map((v) => [v.lng, v.lat]) : [];
     const featuresPredio: GeoJSON.Feature[] = [];
     if (per.length >= 3) featuresPredio.push({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[...per, per[0]]] } });
     if (per.length >= 3 && ladoSel !== null && ladoSel < per.length) {
@@ -306,6 +269,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
 
   // ── Marcadores HTML: cartera, elementos, punta de la cámara y lados ──
   const marcadores = useRef(new Map<string, maplibregl.Marker>());
+  const { verticeSel } = props;
   const arrastrando = useRef(new Set<string>());
   /** Mientras se arrastra un marcador, no se le cambia la posición desde el estado. */
   const vigilarArrastre = (m: maplibregl.Marker, clave: string) => {
@@ -417,6 +381,58 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
       }
     }
 
+    // Edición del predio: un punto por vértice (arrastrar, o tocar para elegirlo) y un "+" a la mitad de cada lado.
+    if (sel && herramienta === "editar" && sel.perimetro.length >= 3) {
+      const per = sel.perimetro;
+      per.forEach((v, i) => {
+        poner(
+          `vert:${i}`,
+          [v.lng, v.lat],
+          () => {
+            const el = elementoMarcador("", "plano-vertice");
+            el.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              cb.current.onElegirVertice(Number(el.dataset.i));
+            });
+            const m = vigilarArrastre(new maplibregl.Marker({ element: el, draggable: true }), `vert:${i}`);
+            m.on("dragstart", () => cb.current.onElegirVertice(Number(el.dataset.i)));
+            m.on("drag", () => {
+              const ll = m.getLngLat();
+              cb.current.onMoverVertice(Number(el.dataset.i), [ll.lng, ll.lat]);
+            });
+            return m;
+          },
+          (m) => {
+            const el = m.getElement();
+            el.dataset.i = String(i);
+            el.textContent = String(i + 1);
+            el.classList.toggle("plano-vertice-sel", verticeSel === i);
+          },
+        );
+        const w = per[(i + 1) % per.length];
+        poner(
+          `medio:${i}`,
+          [(v.lng + w.lng) / 2, (v.lat + w.lat) / 2],
+          () => {
+            const el = elementoMarcador("+", "plano-medio");
+            el.title = "Agregar un vértice aquí";
+            el.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              const k = Number(el.dataset.i);
+              const vs = cb.current.sel?.perimetro ?? [];
+              const a = vs[k];
+              const b = vs[(k + 1) % Math.max(1, vs.length)];
+              if (a && b) cb.current.onInsertarVertice(k + 1, [(a.lng + b.lng) / 2, (a.lat + b.lat) / 2]);
+            });
+            return new maplibregl.Marker({ element: el });
+          },
+          (m) => {
+            m.getElement().dataset.i = String(i);
+          },
+        );
+      });
+    }
+
     // Etiqueta de cada lado del predio con su colindancia.
     if (sel && sel.perimetro.length >= 3 && herramienta !== "editar") {
       const ls = lados(sel.perimetro.map((v) => [v.lng, v.lat]));
@@ -450,7 +466,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
         marcadores.current.delete(clave);
       }
     }
-  }, [inmuebles, sel, elementoSel, ladoSel, herramienta, listo]);
+  }, [inmuebles, sel, elementoSel, ladoSel, herramienta, listo, verticeSel]);
 
   // ── Navegación tipo Prezi (F-15) ──
   useImperativeHandle(

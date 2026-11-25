@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 
 type Res = { data: unknown; error: { code?: string; message: string } | null };
 let tables: Record<string, Res> = {};
+let avisarSesion: ((evento: string, sesion: unknown) => void) | null = null;
 const chain = (table: string) => {
   const q: Record<string, unknown> = {};
   for (const m of ["select", "eq", "in"]) q[m] = () => q;
@@ -14,7 +15,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (t: string) => chain(t),
     auth: {
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      onAuthStateChange: (cb: (evento: string, sesion: unknown) => void) => {
+        avisarSesion = cb;
+        return { data: { subscription: { unsubscribe: () => {} } } };
+      },
       getSession: () => Promise.resolve({ data: { session: { user: { id: "u1" } } } }),
       signOut: vi.fn(),
     },
@@ -77,5 +81,22 @@ describe("useAuth.hasCapability", () => {
     await waitFor(() => expect(screen.getByTestId("missing")).toHaveTextContent("true"));
     expect(screen.getByTestId("prepare")).toHaveTextContent("true");
     expect(screen.getByTestId("approve")).toHaveTextContent("false");
+  });
+
+  it("al renovarse la sesión del mismo usuario no vuelve a mostrar la verificación (no se desmonta el panel)", async () => {
+    tables.user_roles = { data: [{ role: "analyst" }], error: null };
+    montar();
+    await waitFor(() => expect(screen.getByTestId("prepare")).toBeInTheDocument());
+    act(() => avisarSesion?.("TOKEN_REFRESHED", { user: { id: "u1" } }));
+    expect(screen.queryByText("cargando")).toBeNull();
+    expect(screen.getByTestId("prepare")).toBeInTheDocument();
+  });
+
+  it("si entra otra persona sí vuelve a verificar", async () => {
+    tables.user_roles = { data: [{ role: "analyst" }], error: null };
+    montar();
+    await waitFor(() => expect(screen.getByTestId("prepare")).toBeInTheDocument());
+    act(() => avisarSesion?.("SIGNED_IN", { user: { id: "u2" } }));
+    expect(screen.getByText("cargando")).toBeInTheDocument();
   });
 });

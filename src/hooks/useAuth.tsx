@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { RESOURCES, type Action, type Permissions, type Resource } from "@/lib/access";
@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [capabilitiesMissing, setCapabilitiesMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  const usuarioActual = useRef<string | null>(null);
 
   const loadAccess = useCallback(async (uid: string) => {
     try {
@@ -77,8 +78,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         rows = own ?? [];
       }
       setCapabilities(effectiveCapabilities(r, rows));
-    } catch (err: any) {
-      console.warn("[useAuth] Error inesperado cargando accesos:", err.message);
+    } catch (err) {
+      console.warn("[useAuth] Error inesperado cargando accesos:", err instanceof Error ? err.message : err);
       setRoles([]);
       setPermissions({});
       setCapabilities(new Set());
@@ -91,9 +92,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setRolesLoaded(false);
+        // Al volver a la pestaña, Supabase renueva la sesión (TOKEN_REFRESHED o SIGNED_IN del mismo
+        // usuario). Si es la misma persona, los permisos se recargan sin mostrar "Verificando acceso…":
+        // así no se desmonta el panel ni se pierde lo que estaba en pantalla.
+        const mismoUsuario = usuarioActual.current === s.user.id;
+        usuarioActual.current = s.user.id;
+        if (!mismoUsuario) setRolesLoaded(false);
         loadAccess(s.user.id);
       } else {
+        usuarioActual.current = null;
         setRoles([]);
         setPermissions({});
         setCapabilities(new Set());
@@ -105,6 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
+        usuarioActual.current = s.user.id;
         loadAccess(s.user.id).finally(() => setLoading(false));
       } else {
         setRolesLoaded(true);

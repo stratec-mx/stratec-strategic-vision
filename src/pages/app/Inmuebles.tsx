@@ -16,8 +16,8 @@ import { llaveEsri } from "@/lib/plano/satelite";
 
 const AYUDA_MAPA: Partial<Record<HerramientaMapa, string>> = {
   ubicar: "Toca el mapa donde está el inmueble.",
-  vertices: "Toca cada esquina del predio según lo que mides y observas en el sitio. Toca el primer punto para cerrar.",
-  editar: "Arrastra los puntos blancos para mover un vértice; los naranjas agregan uno nuevo.",
+  vertices: "Toca cada esquina del predio, en orden. Usa “Quitar el último” si te equivocas y “Cerrar predio” al terminar.",
+  editar: "Arrastra un vértice para moverlo. Tócalo para elegirlo y borrarlo. El “+” naranja agrega un vértice en ese lado.",
   ruta: "Toca cada punto de la ruta, en orden hacia el punto de reunión. Toca el último punto otra vez para terminar.",
 };
 
@@ -51,10 +51,27 @@ function predioLocal(inm: Inmueble): P[] | undefined {
   return inm.perimetro.map((v) => aLocal(origen, [v.lng, v.lat]));
 }
 
+const leerSesion = (k: string): string | null => {
+  try {
+    return sessionStorage.getItem(`stratec.plano.${k}`);
+  } catch {
+    return null;
+  }
+};
+const guardarSesion = (k: string, v: string | null) => {
+  try {
+    if (v === null) sessionStorage.removeItem(`stratec.plano.${k}`);
+    else sessionStorage.setItem(`stratec.plano.${k}`, v);
+  } catch {
+    /* sin almacenamiento */
+  }
+};
+
 export default function Inmuebles() {
   const [datos, setDatos] = useState<Datos>(cargar);
-  const [selId, setSelId] = useState<string | null>(null);
-  const [vista, setVista] = useState<"mapa" | "croquis">("mapa");
+  const [selId, setSelId] = useState<string | null>(() => leerSesion("sel"));
+  const [vista, setVista] = useState<"mapa" | "croquis">(() => (leerSesion("vista") === "croquis" ? "croquis" : "mapa"));
+  const [verticeSel, setVerticeSel] = useState<number | null>(null);
   const [herramienta, setHerramienta] = useState<HerramientaMapa>("navegar");
   const [elementoSel, setElementoSel] = useState<string | null>(null);
   const [ladoSel, setLadoSel] = useState<number | null>(null);
@@ -145,9 +162,25 @@ export default function Inmuebles() {
   };
 
   const cambiarHerramienta = (h: HerramientaMapa) => {
-    if (h !== "recorrido") setRecorrido([]);
+    if (h !== herramienta) setRecorrido([]);
+    setVerticeSel(null);
     setHerramienta(h);
   };
+
+  // Si la página se recargó con un inmueble abierto, el mapa vuelve a él.
+  useEffect(() => {
+    if (!sel) return;
+    const t = setTimeout(() => mapa.current?.volarInmueble(sel), 900);
+    return () => clearTimeout(t);
+    // Solo al abrir la página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recuerda dónde estabas si la página se recarga (solo en esta pestaña).
+  useEffect(() => {
+    guardarSesion("sel", selId);
+    guardarSesion("vista", vista);
+  }, [selId, vista]);
 
   // ── Eventos del mapa ──
   const alClicMapa = (p: LngLat) => {
@@ -155,6 +188,8 @@ export default function Inmuebles() {
     if (herramienta === "ubicar") {
       cambiar((i) => ({ ...i, ubicacion: { lng: p[0], lat: p[1], fecha: new Date().toISOString() } }));
       setHerramienta("navegar");
+    } else if (herramienta === "vertices") {
+      setRecorrido((r) => [...r, { lng: p[0], lat: p[1], origen: "manual" }]);
     } else if (herramienta.startsWith("simbolo:")) {
       const tipo = herramienta.slice(8) as TipoSimbolo;
       const id = nuevoId("x");
@@ -164,25 +199,30 @@ export default function Inmuebles() {
     }
   };
 
-  const alPerimetroDibujado = (coords: LngLat[]) => {
-    cambiar((i) => ({
-      ...i,
-      perimetro: coords.map(([lng, lat]) => ({ lng, lat, origen: "manual" as const })),
-      metodo: i.metodo === "gps_campo" ? "levantamiento_campo" : i.metodo,
-      colindancias: colindanciasPorOrientacion(i, coords),
-    }));
-    setHerramienta("navegar");
+  // ── Edición del predio con el dedo ──
+  const moverVertice = (k: number, p: LngLat) =>
+    cambiar((i) => ({ ...i, perimetro: i.perimetro.map((v, n) => (n === k ? { lng: p[0], lat: p[1], origen: "manual" as const } : v)) }));
+
+  const insertarVertice = (k: number, p: LngLat) => {
+    cambiar((i) => {
+      const perimetro = [...i.perimetro];
+      perimetro.splice(k, 0, { lng: p[0], lat: p[1], origen: "manual" });
+      // El lado partido conserva su colindancia en las dos mitades.
+      const cols = ajustarColindancias(i.colindancias, i.perimetro.length);
+      cols.splice(k, 0, { ...(cols[k - 1] ?? {}) });
+      return { ...i, perimetro, colindancias: cols };
+    });
+    setVerticeSel(k);
   };
 
-  const alPerimetroEditado = (coords: LngLat[]) => {
-    cambiar((i) => ({
-      ...i,
-      perimetro: coords.map(([lng, lat], k) => {
-        const antes = i.perimetro[k];
-        return antes && Math.abs(antes.lng - lng) < 1e-9 && Math.abs(antes.lat - lat) < 1e-9 ? antes : { lng, lat, origen: "manual" as const };
-      }),
-      colindancias: ajustarColindancias(i.colindancias, coords.length),
-    }));
+  const borrarVertice = (k: number) => {
+    cambiar((i) => {
+      if (i.perimetro.length <= 3) return i;
+      const cols = ajustarColindancias(i.colindancias, i.perimetro.length);
+      cols.splice(k, 1);
+      return { ...i, perimetro: i.perimetro.filter((_, n) => n !== k), colindancias: cols };
+    });
+    setVerticeSel(null);
   };
 
   const alRutaDibujada = (coords: LngLat[]) => {
@@ -209,7 +249,13 @@ export default function Inmuebles() {
   const cerrarRecorrido = () => {
     if (recorrido.length < 3) return;
     const vs = recorrido;
-    cambiar((i) => ({ ...i, perimetro: vs, metodo: "gps_campo", colindancias: colindanciasPorOrientacion(i, vs.map((v) => [v.lng, v.lat])) }));
+    const porGps = herramienta === "recorrido";
+    cambiar((i) => ({
+      ...i,
+      perimetro: vs,
+      metodo: porGps ? "gps_campo" : i.metodo === "gps_campo" ? "levantamiento_campo" : i.metodo,
+      colindancias: colindanciasPorOrientacion(i, vs.map((v) => [v.lng, v.lat])),
+    }));
     setRecorrido([]);
     setHerramienta("navegar");
   };
@@ -324,8 +370,10 @@ export default function Inmuebles() {
             }}
             onElegirInmueble={elegirInmueble}
             onClicMapa={alClicMapa}
-            onPerimetroDibujado={alPerimetroDibujado}
-            onPerimetroEditado={alPerimetroEditado}
+            verticeSel={verticeSel}
+            onMoverVertice={moverVertice}
+            onInsertarVertice={insertarVertice}
+            onElegirVertice={setVerticeSel}
             onRutaDibujada={alRutaDibujada}
             onElegirElemento={setElementoSel}
             onMoverElemento={(id, p) => cambiar((i) => ({ ...i, elementos: i.elementos.map((e) => (e.id === id ? { ...e, lng: p[0], lat: p[1] } : e)) }))}
@@ -361,6 +409,37 @@ export default function Inmuebles() {
               <span>{herramienta.startsWith("simbolo:") ? `Toca el mapa donde va: ${SIMBOLOS[herramienta.slice(8) as TipoSimbolo].etiqueta.toLowerCase()}.` : AYUDA_MAPA[herramienta]}</span>
               <button type="button" onClick={() => setHerramienta("navegar")} className="shrink-0 rounded bg-white/15 px-2 py-0.5 text-[12px]">
                 {herramienta === "editar" ? "Listo" : "Cancelar"}
+              </button>
+            </div>
+          )}
+
+          {/* Trazo a mano: los vértices se ponen tocando el mapa */}
+          {herramienta === "vertices" && (
+            <div className="absolute inset-x-2 bottom-8 rounded-lg border border-pn-borde bg-white/97 p-3 shadow-lg sm:left-auto sm:w-[340px]">
+              <div className="mb-2 text-[13px] font-semibold text-pn-texto">Vértices a mano · {recorrido.length}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setRecorrido((r) => r.slice(0, -1))} disabled={!recorrido.length} className="rounded-md border border-pn-borde py-2.5 text-[13px] disabled:opacity-50">
+                  Quitar el último
+                </button>
+                <button type="button" onClick={cerrarRecorrido} disabled={recorrido.length < 3} className="rounded-md bg-[#287A59] py-2.5 text-[13px] font-medium text-white disabled:opacity-50">
+                  Cerrar predio
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Edición: borrar el vértice elegido */}
+          {herramienta === "editar" && verticeSel !== null && sel && (
+            <div className="absolute inset-x-2 bottom-8 flex items-center justify-between gap-2 rounded-lg border border-pn-borde bg-white/97 p-3 shadow-lg sm:left-auto sm:w-[340px]">
+              <span className="text-[13px] font-semibold text-pn-texto">Vértice {verticeSel + 1}</span>
+              <button
+                type="button"
+                onClick={() => borrarVertice(verticeSel)}
+                disabled={sel.perimetro.length <= 3}
+                title={sel.perimetro.length <= 3 ? "Un predio necesita al menos 3 vértices" : undefined}
+                className="rounded-md border border-[#F1C5C0] px-3 py-2 text-[13px] text-pn-alerta disabled:opacity-50"
+              >
+                Borrar vértice
               </button>
             </div>
           )}
