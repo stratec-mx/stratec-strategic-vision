@@ -97,6 +97,33 @@ Ejemplo: el consultor inspecciona un inmueble en Jiutepec.
 - Un cliente nuevo se da de alta en el módulo Clientes.
 - **Sin conexión con el cotizador en la versión 1.** La liga proyecto–cotización ya existe en el modelo (`projects.quote_id`) y se usará cuando el cotizador lo integre.
 
+### 5.2 Croquis interior por niveles
+
+El mapa (capas 1 a 3) resuelve **el exterior**: ubicación, predio, colindancias y entorno. Pero las láminas del Programa Interno de equipos, señalización y rutas de evacuación son casi siempre **planos interiores por planta**. Para eso hace falta un editor sencillo de croquis, distinto del mapa.
+
+**Qué hace (versión 1):**
+
+| # | Función | Detalle |
+|---|---|---|
+| C-01 | Niveles | Planta baja, nivel 1, sótano, azotea…, con su **nivel de piso** (metros respecto a la planta baja) |
+| C-02 | Perímetro y geometría del nivel | Muros exteriores con medidas **escritas o tomadas con cinta o distanciómetro**: el usuario teclea el largo de cada tramo, con ángulos rectos por defecto y ajuste a cuadrícula. Calcula la superficie aproximada |
+| C-03 | Espacios | Polígonos con nombre y tipo: oficina, departamento X, estacionamiento, lobby, bodega, sanitarios, cuarto de máquinas, área de público… Cada espacio se liga a `areas` del Documento 02 |
+| C-04 | Aberturas y circulaciones | Puertas (ancho y sentido de apertura), ventanas, escaleras (sube o baja y hacia qué nivel), elevador y rampas |
+| C-05 | Replicar planta | “Copiar este nivel” para pisos iguales. Después se ajustan las diferencias, como los nombres de los departamentos |
+| C-06 | Elementos de protección civil y seguridad | Los mismos símbolos del mapa (extintores, salidas, rutas, señales, botiquín, alarmas, cámaras con cobertura y zonas de riesgo), colocados sobre el croquis del nivel |
+| C-07 | Fotos | Ligadas a cada espacio o elemento, como en el mapa |
+| C-08 | Amarre al predio | El croquis se coloca sobre el perímetro del predio con un punto de origen y un giro, para que el plano exterior y el interior coincidan |
+
+**Cómo se guarda:**
+
+- coordenadas **locales en metros** (x, y) por nivel, no latitud y longitud, porque un interior no necesita GPS;
+- tablas nuevas (script 12): `building_levels` (nivel, nombre, nivel de piso, altura y origen del amarre) y `floor_plan_elements` (tipo, geometría local y propiedades: ancho de puerta, sentido, “sube a”…);
+- los espacios reutilizan `areas`, y los equipos reutilizan los tipos de `plan_feature_types`.
+
+**Lo que no hace en la versión 1:** escaneo 3D, LiDAR ni medición automática con la cámara. Si más adelante se usa una app de escaneo, se importará su plano exportado (DXF o SVG) como base del nivel.
+
+**Láminas que produce:** croquis por nivel con rutas de evacuación, equipos y señalización (Programa Interno II.8, II.9 y II.16), con el mismo cajetín, simbología y leyenda de medidas aproximadas que las láminas del mapa (§7).
+
 ## 6. Qué agrega a la base de datos (script 12, probado antes en Supabase de prueba)
 
 | Cambio | Detalle |
