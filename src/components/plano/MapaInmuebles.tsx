@@ -2,7 +2,7 @@
 // MapLibre + OpenStreetMap (OpenFreeMap, estilo liberty) + Terra Draw para dibujar con el dedo.
 // Todo es vectorial: el mapa y los trazos no pierden calidad al acercarse (F-15).
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 busca su "worker" junto a su propio archivo; en el sitio empaquetado hay que decirle dónde quedó.
@@ -11,16 +11,18 @@ import "./plano.css";
 import { TerraDraw, TerraDrawLineStringMode } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { cono, destino, distancia, lados, rumbo, ORIENTACION_CORTA, type LngLat } from "@/lib/plano/geo";
-import { ESTADO_INFO, puntoInmueble, TIPO_COLINDANCIA_ETIQUETA, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
+import { ESTADO_INFO, puntoInmueble, SEVERIDAD_INFO, TIPO_COLINDANCIA_ETIQUETA, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
 import { COLOR_RUTA, CONDICION_INFO, SIMBOLOS, type DatosCamara, type TipoSimbolo } from "@/lib/plano/simbolos";
 import { agregarSatelite, llaveEsri, mostrarSatelite } from "@/lib/plano/satelite";
+import { agregarGoogle, derechosGoogle, llaveGoogle, mostrarGoogle } from "@/lib/plano/google";
+import type { Fondo } from "@/lib/plano/fondos";
 
 maplibregl.setWorkerUrl(urlWorker);
 
 const ESTILO_MAPA = "https://tiles.openfreemap.org/styles/liberty";
 const MORELOS: LngLat = [-99.07, 18.75];
 
-export type HerramientaMapa = "navegar" | "ubicar" | "vertices" | "editar" | "recorrido" | "ruta" | `simbolo:${TipoSimbolo}`;
+export type HerramientaMapa = "navegar" | "ubicar" | "vertices" | "medidas" | "editar" | "recorrido" | "ruta" | "hallazgo" | `simbolo:${TipoSimbolo}`;
 
 export interface MapaHandle {
   volarCartera(): void;
@@ -38,9 +40,11 @@ interface Props {
   ladoSel: number | null;
   gps: { lng: number; lat: number; precision: number } | null;
   recorrido: VerticePredio[];
-  /** Fondo satelital de Esri (solo en pantalla). */
-  satelite: boolean;
-  onErrorSatelite(mensaje: string): void;
+  /** Qué elementos mostrar: todos, solo el diagnóstico (lo que existe) o solo la propuesta. */
+  verSituacion: "todo" | "diagnostico" | "propuesta";
+  /** Fondo del mapa (los de Esri y Google, solo en pantalla). */
+  fondo: Fondo;
+  onErrorFondo(mensaje: string): void;
   onElegirInmueble(id: string): void;
   onClicMapa(p: LngLat): void;
   /** Edición del predio con el dedo: mover, insertar y elegir (para borrar) un vértice. */
@@ -53,6 +57,8 @@ interface Props {
   onMoverElemento(id: string, p: LngLat): void;
   onCamara(id: string, cambios: Partial<DatosCamara>): void;
   onElegirLado(i: number): void;
+  hallazgoSel: string | null;
+  onElegirHallazgo(id: string): void;
 }
 
 const vacio: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -148,9 +154,15 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
         }
       });
       draw.current = td;
-      // Arranca mostrando toda la cartera.
+      // Arranca en el inmueble abierto (si la página se recargó) o mostrando toda la cartera.
+      const abierto = cb.current.sel;
       const pts = cb.current.inmuebles.map(puntoInmueble).filter((p): p is LngLat => !!p);
-      if (pts.length > 1) {
+      if (abierto && abierto.perimetro.length >= 3) {
+        const b = abierto.perimetro.reduce((acc, v) => acc.extend([v.lng, v.lat]), new maplibregl.LngLatBounds([abierto.perimetro[0].lng, abierto.perimetro[0].lat], [abierto.perimetro[0].lng, abierto.perimetro[0].lat]));
+        map.fitBounds(b, { padding: 90, maxZoom: 20, duration: 0 });
+      } else if (abierto && puntoInmueble(abierto)) {
+        map.jumpTo({ center: puntoInmueble(abierto)!, zoom: 18 });
+      } else if (pts.length > 1) {
         const b = pts.reduce((acc, p) => acc.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
         map.fitBounds(b, { padding: 80, maxZoom: 11, duration: 0 });
       }
@@ -164,7 +176,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
 
     map.on("click", (e) => {
       const h = cb.current.herramienta;
-      if (h === "ubicar" || h === "vertices" || h.startsWith("simbolo:")) cb.current.onClicMapa([e.lngLat.lng, e.lngLat.lat]);
+      if (h === "ubicar" || h === "vertices" || h === "medidas" || h === "hallazgo" || h.startsWith("simbolo:")) cb.current.onClicMapa([e.lngLat.lng, e.lngLat.lat]);
       else if (h === "editar" && e.originalEvent.target === map.getCanvas()) cb.current.onElegirVertice(null);
       else if (h === "navegar" && e.originalEvent.target === map.getCanvas()) cb.current.onElegirElemento(null);
     });
@@ -182,28 +194,47 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
     };
   }, []);
 
-  // ── Fondo satelital (Esri, solo en pantalla; Documento 04 §11) ──
-  const { satelite } = props;
+  // ── Fondo: OpenStreetMap, satélite de Esri o Google (solo en pantalla; Documento 04 §11 y §13) ──
+  const { fondo } = props;
+  const [derechos, setDerechos] = useState("");
   useEffect(() => {
     const map = mapa.current;
     if (!map || !listo) return;
-    if (!satelite) {
-      mostrarSatelite(map, false);
-      return;
-    }
-    const llave = llaveEsri();
-    if (!llave) {
-      cb.current.onErrorSatelite("El satélite se activa cuando se configure la llave de Esri en Vercel (ver la guía).");
-      return;
-    }
     let vigente = true;
-    agregarSatelite(map, llave, "gps-precision")
-      .then(() => vigente && mostrarSatelite(map, true))
-      .catch((e: Error) => vigente && cb.current.onErrorSatelite(e.message));
+    const error = (e: Error) => vigente && cb.current.onErrorFondo(e.message);
+    mostrarSatelite(map, false);
+    mostrarGoogle(map, null);
+    setDerechos("");
+    if (fondo === "esri") {
+      const llave = llaveEsri();
+      if (!llave) return;
+      agregarSatelite(map, llave, "gps-precision")
+        .then(() => vigente && mostrarSatelite(map, true))
+        .catch(error);
+    } else if (fondo === "google_sat" || fondo === "google_mapa") {
+      const llave = llaveGoogle();
+      if (!llave) return;
+      const tipo = fondo === "google_sat" ? "satellite" : "roadmap";
+      const actualizar = () => {
+        void derechosGoogle(map, llave, tipo).then((t) => vigente && setDerechos(t));
+      };
+      agregarGoogle(map, llave, tipo, "gps-precision")
+        .then(() => {
+          if (!vigente) return;
+          mostrarGoogle(map, tipo);
+          actualizar();
+        })
+        .catch(error);
+      map.on("moveend", actualizar);
+      return () => {
+        vigente = false;
+        map.off("moveend", actualizar);
+      };
+    }
     return () => {
       vigente = false;
     };
-  }, [satelite, listo]);
+  }, [fondo, listo]);
 
   // ── Herramienta activa: modo de Terra Draw y cursor ──
   const { herramienta } = props;
@@ -211,7 +242,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
     const td = draw.current;
     const map = mapa.current;
     if (!td || !map || !listo) return;
-    map.getCanvas().style.cursor = herramienta === "ubicar" || herramienta === "vertices" || herramienta.startsWith("simbolo:") ? "crosshair" : "";
+    map.getCanvas().style.cursor = herramienta === "ubicar" || herramienta === "vertices" || herramienta === "hallazgo" || herramienta.startsWith("simbolo:") ? "crosshair" : "";
     if (herramienta === "ruta") {
       td.setMode("linestring");
       return () => td.setMode("static");
@@ -220,7 +251,13 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
   }, [herramienta, listo]);
 
   // ── Capas del inmueble seleccionado ──
-  const { sel, elementoSel, ladoSel, recorrido, gps } = props;
+  const { sel: selCompleto, elementoSel, ladoSel, recorrido, gps, verSituacion } = props;
+  // Filtro diagnóstico / propuesta: lo que no toca ver no se dibuja.
+  const sel = useMemo(() => {
+    if (!selCompleto || verSituacion === "todo") return selCompleto;
+    const ver = (s?: string) => (verSituacion === "propuesta" ? s === "propuesto" : s !== "propuesto");
+    return { ...selCompleto, elementos: selCompleto.elementos.filter((e) => ver(e.situacion)) };
+  }, [selCompleto, verSituacion]);
   useEffect(() => {
     const map = mapa.current;
     if (!map || !listo) return;
@@ -347,6 +384,8 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
           el.style.background = def.color;
           el.textContent = def.glifo;
           el.classList.toggle("plano-simbolo-sel", e.id === elementoSel);
+          el.classList.toggle("plano-propuesto", e.situacion === "propuesto");
+          el.classList.toggle("plano-retirar", e.situacion === "retirar");
           // Anillo de color si el elemento está en mal estado.
           el.style.boxShadow = e.condicion === "malo" || e.condicion === "no_funciona" ? `0 0 0 3px ${CONDICION_INFO[e.condicion].color}` : "";
           m.setDraggable(herramienta === "navegar");
@@ -433,6 +472,31 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
       });
     }
 
+    // Hallazgos: rombo con el color de la severidad.
+    for (const h of selCompleto?.hallazgos ?? []) {
+      if (h.lng === undefined || h.lat === undefined) continue;
+      poner(
+        `hal:${h.id}`,
+        [h.lng, h.lat],
+        () => {
+          // El rombo va en un hijo: girar el propio marcador movería su posición en el mapa.
+          const el = elementoMarcador('<span class="plano-hallazgo-rombo">!</span>', "plano-hallazgo");
+          el.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            cb.current.onElegirHallazgo(el.dataset.id!);
+          });
+          return new maplibregl.Marker({ element: el, offset: [14, -14] });
+        },
+        (m) => {
+          const el = m.getElement();
+          el.dataset.id = h.id;
+          el.title = h.titulo || "Hallazgo";
+          (el.firstElementChild as HTMLElement).style.background = h.severidad ? SEVERIDAD_INFO[h.severidad].color : "#B42318";
+          el.classList.toggle("plano-hallazgo-sel", props.hallazgoSel === h.id);
+        },
+      );
+    }
+
     // Etiqueta de cada lado del predio con su colindancia.
     if (sel && sel.perimetro.length >= 3 && herramienta !== "editar") {
       const ls = lados(sel.perimetro.map((v) => [v.lng, v.lat]));
@@ -452,6 +516,9 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
           },
           (m) => {
             const el = m.getElement();
+            // Hacia afuera del predio, para no tapar lo que está sobre el lado.
+            const r = (l.rumboExterior * Math.PI) / 180;
+            m.setOffset([Math.sin(r) * 26, -Math.cos(r) * 26]);
             el.dataset.i = String(l.indice);
             el.textContent = `${ORIENTACION_CORTA[ori]}${col.tipo ? ` · ${TIPO_COLINDANCIA_ETIQUETA[col.tipo]}` : ""} · ${Math.round(l.largo * 10) / 10} m`;
             el.classList.toggle("plano-lado-sel", ladoSel === l.indice);
@@ -466,7 +533,7 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
         marcadores.current.delete(clave);
       }
     }
-  }, [inmuebles, sel, elementoSel, ladoSel, herramienta, listo, verticeSel]);
+  }, [inmuebles, sel, selCompleto, elementoSel, ladoSel, herramienta, listo, verticeSel, props.hallazgoSel]);
 
   // ── Navegación tipo Prezi (F-15) ──
   useImperativeHandle(
@@ -527,6 +594,12 @@ export const MapaInmuebles = forwardRef<MapaHandle, Props>(function MapaInmueble
   return (
     <div className="relative h-full w-full">
       <div ref={caja} className="h-full w-full" />
+      {derechos !== "" || fondo === "google_sat" || fondo === "google_mapa" ? (
+        <div className="pointer-events-none absolute bottom-7 right-2 rounded bg-white/90 px-1.5 py-0.5 text-[10.5px] text-[#3C4043]" aria-label="Google Maps">
+          <b>Google Maps</b>
+          {derechos && ` · ${derechos}`}
+        </div>
+      ) : null}
       {error && (
         <div role="alert" className="absolute left-1/2 top-3 -translate-x-1/2 rounded-md bg-pn-alerta px-3 py-2 text-[13px] text-white shadow">
           {error}

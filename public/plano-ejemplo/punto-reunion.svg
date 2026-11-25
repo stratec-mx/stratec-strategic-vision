@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+<rect width="800" height="600" fill="#E7ECF1"/>
+<rect x="0" y="0" width="800" height="540" fill="#CFE3F2"/>
+<rect x="0" y="380" width="800" height="160" fill="#9DB08E"/>
+<rect x="392" y="140" width="16" height="260" fill="#6B6B6B"/>
+<rect x="300" y="80" width="200" height="200" fill="#1B7F3B"/>
+<g fill="#fff"><circle cx="400" cy="180" r="14"/><circle cx="350" cy="150" r="12"/><circle cx="450" cy="150" r="12"/><circle cx="350" cy="215" r="12"/><circle cx="450" cy="215" r="12"/></g>
+<text x="400" y="265" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="18" fill="#fff">PUNTO DE REUNIÓN</text>
+<rect x="0" y="540" width="800" height="60" fill="#0B1F3A" opacity="0.85"/>
+<text x="24" y="578" font-family="Arial, sans-serif" font-size="24" fill="#fff">Foto de ejemplo · prototipo STRATEC (no es una foto real)</text>
+</svg>

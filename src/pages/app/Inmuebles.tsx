@@ -2,22 +2,24 @@
 // guarda solo en este navegador, con inmuebles ficticios. No escribe en la base de datos.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Map as MapaIcono, PencilRuler, Plus, RotateCcw, X } from "lucide-react";
+import { Building2, ChevronRight, Map as MapaIcono, PencilRuler, Plus, RotateCcw, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGps } from "@/hooks/useGps";
-import { aLocal, area, fmtM2, lados, type LngLat } from "@/lib/plano/geo";
+import { aLocal, area, distancia, fmtM, fmtM2, lados, ORIENTACION_ETIQUETA, ORIENTACIONES, verticesPorTramos, type LngLat } from "@/lib/plano/geo";
 import { borrarTodo, cargar, ESTADO_INFO, ESTADOS, guardar, nuevoInmueble, type Datos, type Inmueble, type VerticePredio } from "@/lib/plano/inmuebles";
-import { CAMARA_INICIAL, SIMBOLOS, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { CAMARA_INICIAL, registrarPersonalizados, SIMBOLOS, type SimboloPersonal, type TipoSimbolo } from "@/lib/plano/simbolos";
 import { nuevoId, type Croquis, type P } from "@/lib/plano/croquis";
 import { MapaInmuebles, type HerramientaMapa, type MapaHandle } from "@/components/plano/MapaInmuebles";
-import { PanelExterior, type Cliente } from "@/components/plano/PanelExterior";
+import { fondosDisponibles, type Fondo } from "@/lib/plano/fondos";
+import { PanelExterior, type Cliente, type VerSituacion } from "@/components/plano/PanelExterior";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { CroquisEditor } from "@/components/plano/CroquisEditor";
-import { llaveEsri } from "@/lib/plano/satelite";
 
 const AYUDA_MAPA: Partial<Record<HerramientaMapa, string>> = {
   ubicar: "Toca el mapa donde está el inmueble.",
   vertices: "Toca cada esquina del predio, en orden. Usa “Quitar el último” si te equivocas y “Cerrar predio” al terminar.",
   editar: "Arrastra un vértice para moverlo. Tócalo para elegirlo y borrarlo. El “+” naranja agrega un vértice en ese lado.",
+  hallazgo: "Toca el lugar del hallazgo. Después pon título y foto en el panel.",
   ruta: "Toca cada punto de la ruta, en orden hacia el punto de reunión. Toca el último punto otra vez para terminar.",
 };
 
@@ -72,19 +74,30 @@ export default function Inmuebles() {
   const [selId, setSelId] = useState<string | null>(() => leerSesion("sel"));
   const [vista, setVista] = useState<"mapa" | "croquis">(() => (leerSesion("vista") === "croquis" ? "croquis" : "mapa"));
   const [verticeSel, setVerticeSel] = useState<number | null>(null);
+  const [verSituacion, setVerSituacion] = useState<VerSituacion>("todo");
+  const [listaAbierta, setListaAbierta] = useState(false);
+  const [hallazgoSel, setHallazgoSel] = useState<string | null>(null);
+  // Predio por medidas: punto de inicio y tramos (largo y rumbo).
+  const [inicioMedidas, setInicioMedidas] = useState<LngLat | null>(null);
+  const [tramos, setTramos] = useState<{ largo: string; rumbo: string }[]>([{ largo: "", rumbo: "90" }]);
+  const verticesMedidas = useMemo(
+    () => (inicioMedidas ? verticesPorTramos(inicioMedidas, tramos.map((t) => ({ largo: Number(t.largo.replace(",", ".")) || 0, rumbo: Number(t.rumbo) || 0 }))) : []),
+    [inicioMedidas, tramos],
+  );
   const [herramienta, setHerramienta] = useState<HerramientaMapa>("navegar");
   const [elementoSel, setElementoSel] = useState<string | null>(null);
   const [ladoSel, setLadoSel] = useState<number | null>(null);
   const [recorrido, setRecorrido] = useState<VerticePredio[]>([]);
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [guardado, setGuardado] = useState<"ok" | "error">("ok");
-  // D-P10: el botón Mapa / Satélite aparece solo si el despliegue tiene la llave de Esri.
-  const hayLlaveEsri = llaveEsri() !== "";
-  const [satelite, setSatelite] = useState<boolean>(() => {
+  // Fondos de Esri y Google: aparecen solo si el despliegue tiene su llave (D-P10).
+  const fondos = fondosDisponibles();
+  const [fondo, setFondo] = useState<Fondo>(() => {
     try {
-      return hayLlaveEsri && localStorage.getItem("stratec.plano.fondo") === "satelite";
+      const f = localStorage.getItem("stratec.plano.fondo") as Fondo | null;
+      return f && fondos.some((x) => x.id === f) ? f : "osm";
     } catch {
-      return false;
+      return "osm";
     }
   });
   const [avisoMapa, setAvisoMapa] = useState<string | null>(null);
@@ -93,11 +106,11 @@ export default function Inmuebles() {
   const sel = datos.inmuebles.find((i) => i.id === selId) ?? null;
   const gps = useGps(herramienta === "recorrido");
 
-  const cambiarFondo = (sat: boolean) => {
-    setSatelite(sat);
+  const cambiarFondo = (f: Fondo) => {
+    setFondo(f);
     setAvisoMapa(null);
     try {
-      localStorage.setItem("stratec.plano.fondo", sat ? "satelite" : "mapa");
+      localStorage.setItem("stratec.plano.fondo", f);
     } catch {
       /* sin almacenamiento */
     }
@@ -163,18 +176,13 @@ export default function Inmuebles() {
 
   const cambiarHerramienta = (h: HerramientaMapa) => {
     if (h !== herramienta) setRecorrido([]);
+    if (h === "medidas") {
+      setInicioMedidas(sel?.ubicacion ? [sel.ubicacion.lng, sel.ubicacion.lat] : (mapa.current?.centro() ?? null));
+      setTramos([{ largo: "", rumbo: "90" }]);
+    }
     setVerticeSel(null);
     setHerramienta(h);
   };
-
-  // Si la página se recargó con un inmueble abierto, el mapa vuelve a él.
-  useEffect(() => {
-    if (!sel) return;
-    const t = setTimeout(() => mapa.current?.volarInmueble(sel), 900);
-    return () => clearTimeout(t);
-    // Solo al abrir la página.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Recuerda dónde estabas si la página se recarga (solo en esta pestaña).
   useEffect(() => {
@@ -188,6 +196,13 @@ export default function Inmuebles() {
     if (herramienta === "ubicar") {
       cambiar((i) => ({ ...i, ubicacion: { lng: p[0], lat: p[1], fecha: new Date().toISOString() } }));
       setHerramienta("navegar");
+    } else if (herramienta === "hallazgo") {
+      const id = nuevoId("h");
+      cambiar((i) => ({ ...i, hallazgos: [...(i.hallazgos ?? []), { id, titulo: "", fecha: new Date().toISOString(), lng: p[0], lat: p[1], fotos: [], estado: "propuesta" }] }));
+      setHallazgoSel(id);
+      setHerramienta("navegar");
+    } else if (herramienta === "medidas") {
+      setInicioMedidas(p);
     } else if (herramienta === "vertices") {
       setRecorrido((r) => [...r, { lng: p[0], lat: p[1], origen: "manual" }]);
     } else if (herramienta.startsWith("simbolo:")) {
@@ -267,6 +282,15 @@ export default function Inmuebles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [herramienta, !!gps.pos]);
 
+  // ── Elementos que crea el usuario ──
+  const crearPersonal = (p: Omit<SimboloPersonal, "id">) => {
+    const nuevo: SimboloPersonal = { ...p, id: nuevoId("p") };
+    const catalogo = [...(datos.catalogo ?? []), nuevo];
+    registrarPersonalizados(catalogo);
+    setDatos((d) => ({ ...d, catalogo }));
+    setHerramienta(`simbolo:personal:${nuevo.id}` as HerramientaMapa);
+  };
+
   // ── Inmuebles ──
   const agregarInmueble = () => {
     const inm = nuevoInmueble(mapa.current?.centro() ?? [-99.2342, 18.9186]);
@@ -333,7 +357,16 @@ export default function Inmuebles() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {migas}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setListaAbierta(true)}
+            className={`flex items-center gap-1.5 rounded-md border border-pn-borde bg-white px-3 py-2 text-[13px] font-medium text-pn-texto ${vista === "mapa" ? "lg:hidden" : ""}`}
+          >
+            <Building2 className="h-4 w-4" /> Inmuebles ({datos.inmuebles.length})
+          </button>
+          {migas}
+        </div>
         {sel && (
           <div className="flex rounded-md border border-pn-borde bg-white p-0.5" role="tablist" aria-label="Vista">
             {([["mapa", "Exterior (mapa)", MapaIcono], ["croquis", "Croquis interior", PencilRuler]] as const).map(([v, t, Icono]) => (
@@ -352,7 +385,30 @@ export default function Inmuebles() {
         )}
       </div>
 
+      <Sheet open={listaAbierta} onOpenChange={setListaAbierta}>
+        <SheetContent side="left" className="w-[300px] overflow-y-auto p-3">
+          <SheetTitle className="mb-2 text-[14px]">Inmuebles registrados</SheetTitle>
+          <ListaInmuebles
+            datos={datos}
+            selId={selId}
+            elegir={(id) => {
+              setListaAbierta(false);
+              setVista("mapa");
+              elegirInmueble(id);
+            }}
+            agregar={() => {
+              setListaAbierta(false);
+              agregarInmueble();
+            }}
+          />
+        </SheetContent>
+      </Sheet>
+
       <div className={vista === "mapa" ? "flex flex-col gap-3 lg:flex-row" : "hidden"}>
+        <aside className="hidden w-56 shrink-0 overflow-y-auto rounded-md border border-pn-borde bg-white p-2 lg:block lg:h-[calc(100dvh-230px)]" aria-label="Inmuebles registrados">
+          <h3 className="px-1.5 pb-1.5 pt-1 text-[12px] font-semibold uppercase tracking-wide text-pn-sub">Inmuebles registrados</h3>
+          <ListaInmuebles datos={datos} selId={selId} elegir={elegirInmueble} agregar={agregarInmueble} compacta />
+        </aside>
         <div className="relative h-[58vh] min-h-[340px] w-full overflow-hidden rounded-md border border-pn-borde lg:h-[calc(100dvh-230px)] lg:w-auto lg:min-w-0 lg:flex-1">
           <MapaInmuebles
             ref={mapa}
@@ -362,11 +418,12 @@ export default function Inmuebles() {
             elementoSel={elementoSel}
             ladoSel={ladoSel}
             gps={herramienta === "recorrido" ? gps.pos : null}
-            recorrido={recorrido}
-            satelite={satelite}
-            onErrorSatelite={(m) => {
+            recorrido={herramienta === "medidas" ? verticesMedidas.map(([lng, lat]) => ({ lng, lat, origen: "manual" as const })) : recorrido}
+            verSituacion={verSituacion}
+            fondo={fondo}
+            onErrorFondo={(m) => {
               setAvisoMapa(m);
-              setSatelite(false);
+              setFondo("osm");
             }}
             onElegirInmueble={elegirInmueble}
             onClicMapa={alClicMapa}
@@ -379,23 +436,25 @@ export default function Inmuebles() {
             onMoverElemento={(id, p) => cambiar((i) => ({ ...i, elementos: i.elementos.map((e) => (e.id === id ? { ...e, lng: p[0], lat: p[1] } : e)) }))}
             onCamara={(id, c) => cambiar((i) => ({ ...i, elementos: i.elementos.map((e) => (e.id === id && e.camara ? { ...e, camara: { ...e.camara, ...c } } : e)) }))}
             onElegirLado={(i) => setLadoSel((l) => (l === i ? null : i))}
+            hallazgoSel={hallazgoSel}
+            onElegirHallazgo={setHallazgoSel}
           />
 
           {/* Fondo: mapa de calles (OpenStreetMap) o satélite (Esri, solo en pantalla) */}
-          {hayLlaveEsri && (
-          <div className="absolute bottom-9 left-2 flex rounded-md border border-pn-borde bg-white p-0.5 shadow-sm" role="group" aria-label="Fondo del mapa">
-            {([[false, "Mapa"], [true, "Satélite"]] as const).map(([v, t]) => (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={satelite === v}
-                onClick={() => cambiarFondo(v)}
-                className={`rounded px-3 py-1.5 text-[12.5px] font-medium ${satelite === v ? "bg-pn-navy text-white" : "text-pn-texto hover:bg-pn-calido"}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          {fondos.length > 1 && (
+            <div className="absolute bottom-9 left-2 flex flex-wrap rounded-md border border-pn-borde bg-white p-0.5 shadow-sm" role="group" aria-label="Fondo del mapa">
+              {fondos.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={fondo === f.id}
+                  onClick={() => cambiarFondo(f.id)}
+                  className={`rounded px-2.5 py-1.5 text-[12px] font-medium ${fondo === f.id ? "bg-pn-navy text-white" : "text-pn-texto hover:bg-pn-calido"}`}
+                >
+                  {f.etiqueta}
+                </button>
+              ))}
+            </div>
           )}
           {avisoMapa && (
             <div role="status" className="absolute bottom-20 left-2 right-2 rounded-md bg-pn-navy px-3 py-2 text-[12.5px] text-white shadow sm:right-auto sm:max-w-sm">
@@ -410,6 +469,70 @@ export default function Inmuebles() {
               <button type="button" onClick={() => setHerramienta("navegar")} className="shrink-0 rounded bg-white/15 px-2 py-0.5 text-[12px]">
                 {herramienta === "editar" ? "Listo" : "Cancelar"}
               </button>
+            </div>
+          )}
+
+          {/* Predio por medidas: cada lado con su largo y su rumbo (del plano del cliente o de cinta/distanciómetro) */}
+          {herramienta === "medidas" && (
+            <div className="absolute inset-x-2 bottom-8 max-h-[70%] overflow-y-auto rounded-lg border border-pn-borde bg-white/97 p-3 shadow-lg sm:left-auto sm:w-[380px]">
+              <div className="mb-1 text-[13px] font-semibold text-pn-texto">Predio por medidas</div>
+              <p className="mb-2 text-[12px] text-pn-sub">Toca el mapa para mover el punto de inicio (esquina 1). Cada lado: largo y hacia dónde va. El último lado se cierra solo.</p>
+              <ol className="flex flex-col gap-1.5">
+                {tramos.map((t, k) => (
+                  <li key={k} className="flex items-center gap-1.5">
+                    <span className="w-12 shrink-0 text-[12px] text-pn-sub">Lado {k + 1}</span>
+                    <input
+                      inputMode="decimal"
+                      value={t.largo}
+                      onChange={(e) => setTramos((ts) => ts.map((x, n) => (n === k ? { ...x, largo: e.target.value } : x)))}
+                      placeholder="m"
+                      aria-label={`Largo del lado ${k + 1} en metros`}
+                      className="w-20 rounded-md border border-pn-borde px-2 py-1.5 text-[14px]"
+                    />
+                    <select
+                      value={t.rumbo}
+                      onChange={(e) => setTramos((ts) => ts.map((x, n) => (n === k ? { ...x, rumbo: e.target.value } : x)))}
+                      aria-label={`Hacia dónde va el lado ${k + 1}`}
+                      className="min-w-0 flex-1 rounded-md border border-pn-borde px-2 py-1.5 text-[13px]"
+                    >
+                      {ORIENTACIONES.map((o, n) => (
+                        <option key={o} value={String(n * 45)}>Hacia el {ORIENTACION_ETIQUETA[o].toLowerCase()} ({n * 45}°)</option>
+                      ))}
+                      {!ORIENTACIONES.some((_, n) => String(n * 45) === t.rumbo) && <option value={t.rumbo}>{t.rumbo}°</option>}
+                    </select>
+                    <input
+                      inputMode="numeric"
+                      value={t.rumbo}
+                      onChange={(e) => setTramos((ts) => ts.map((x, n) => (n === k ? { ...x, rumbo: e.target.value.replace(/[^0-9.]/g, "") } : x)))}
+                      aria-label={`Rumbo exacto del lado ${k + 1} en grados`}
+                      className="w-14 rounded-md border border-pn-borde px-1.5 py-1.5 text-[13px]"
+                    />
+                  </li>
+                ))}
+              </ol>
+              {verticesMedidas.length >= 3 && (
+                <p className="mt-1.5 text-[12px] text-pn-sub">Cierre: {fmtM(distancia(verticesMedidas[verticesMedidas.length - 1], verticesMedidas[0]))} hasta la esquina 1.</p>
+              )}
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                <button type="button" onClick={() => setTramos((ts) => [...ts, { largo: "", rumbo: String(((Number(ts[ts.length - 1]?.rumbo) || 0) + 90) % 360) }])} className="rounded-md border border-pn-borde py-2 text-[12.5px]">
+                  + Lado
+                </button>
+                <button type="button" onClick={() => setTramos((ts) => (ts.length > 1 ? ts.slice(0, -1) : ts))} className="rounded-md border border-pn-borde py-2 text-[12.5px]">
+                  Quitar lado
+                </button>
+                <button
+                  type="button"
+                  disabled={verticesMedidas.length < 3}
+                  onClick={() => {
+                    const vs = verticesMedidas.map(([lng, lat]) => ({ lng, lat, origen: "manual" as const }));
+                    cambiar((i) => ({ ...i, perimetro: vs, metodo: "plano_cliente", colindancias: colindanciasPorOrientacion(i, verticesMedidas) }));
+                    setHerramienta("navegar");
+                  }}
+                  className="rounded-md bg-[#287A59] py-2 text-[12.5px] font-medium text-white disabled:opacity-50"
+                >
+                  Cerrar predio
+                </button>
+              </div>
             </div>
           )}
 
@@ -492,6 +615,11 @@ export default function Inmuebles() {
               gpsBuscando={gps.buscando}
               gpsError={gps.error}
               volarA={(p, z) => mapa.current?.volarA(p, z)}
+              verSituacion={verSituacion}
+              setVerSituacion={setVerSituacion}
+              crearPersonal={crearPersonal}
+              hallazgoSel={hallazgoSel}
+              setHallazgoSel={setHallazgoSel}
             />
           ) : (
             <Cartera datos={datos} elegir={elegirInmueble} agregar={agregarInmueble} />
@@ -502,6 +630,34 @@ export default function Inmuebles() {
       {vista === "croquis" && sel && (
         <CroquisEditor key={sel.id} croquis={sel.croquis} onChange={cambiarCroquis} predio={predio} />
       )}
+    </div>
+  );
+}
+
+/** Lista lateral de inmuebles: acceso directo a cada uno desde cualquier vista. */
+function ListaInmuebles({ datos, selId, elegir, agregar, compacta }: { datos: Datos; selId: string | null; elegir: (id: string) => void; agregar: () => void; compacta?: boolean }) {
+  return (
+    <div className="flex flex-col gap-1">
+      {datos.inmuebles.map((i) => (
+        <button
+          key={i.id}
+          type="button"
+          onClick={() => elegir(i.id)}
+          aria-current={i.id === selId ? "true" : undefined}
+          className={`flex items-start gap-2 rounded-md px-2 py-2 text-left ${i.id === selId ? "bg-pn-navy text-white" : "hover:bg-pn-calido"}`}
+        >
+          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ESTADO_INFO[i.estado].color }} aria-hidden="true" />
+          <span className="min-w-0">
+            <span className={`block text-[13px] font-medium leading-snug ${compacta ? "" : "truncate"}`}>{i.nombre}</span>
+            <span className={`block text-[11.5px] ${i.id === selId ? "text-white/75" : "text-pn-sub"}`}>
+              {i.municipio || "Sin municipio"} · {ESTADO_INFO[i.estado].etiqueta}
+            </span>
+          </span>
+        </button>
+      ))}
+      <button type="button" onClick={agregar} className="mt-1 flex items-center justify-center gap-1 rounded-md border border-dashed border-pn-acero px-2 py-2 text-[12.5px] text-pn-texto">
+        <Plus className="h-3.5 w-3.5" /> Nuevo inmueble
+      </button>
     </div>
   );
 }

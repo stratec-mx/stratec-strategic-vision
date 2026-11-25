@@ -2,7 +2,7 @@
 // y elementos (F-05 a F-07).
 
 import { useState } from "react";
-import { Crosshair, Loader2, LocateFixed, MapPin, Pencil, Route, Search, Trash2, Footprints, ZoomIn } from "lucide-react";
+import { Ruler, Crosshair, Loader2, LocateFixed, MapPin, Pencil, Route, Search, Trash2, Footprints, ZoomIn } from "lucide-react";
 import {
   area, fmtM, fmtM2, lados, largoLinea, leerCoordenadas, perimetro, LEYENDA_MEDIDAS, ORIENTACION_ETIQUETA, ORIENTACIONES,
   type LngLat, type Orientacion,
@@ -11,7 +11,12 @@ import {
   ESTADO_INFO, ESTADOS, METODO_ETIQUETA, TIPO_COLINDANCIA_ETIQUETA, TIPOS_COLINDANCIA,
   type EstadoProyecto, type Inmueble, type MetodoMedicion, type TipoColindancia,
 } from "@/lib/plano/inmuebles";
-import { avisosElemento, CONDICION_INFO, SIMBOLOS, TIPOS_SIMBOLO, type DatosCamara } from "@/lib/plano/simbolos";
+import { avisosElemento, CONDICION_INFO, OJO_DE_PEZ, SIMBOLOS, SITUACION_ETIQUETA, type DatosCamara, type SimboloPersonal, type TipoSimbolo } from "@/lib/plano/simbolos";
+import { SelectorSimbolos } from "./SelectorSimbolos";
+import { PanelHallazgos } from "./PanelHallazgos";
+import { nuevoId } from "@/lib/plano/croquis";
+
+export type VerSituacion = "todo" | "diagnostico" | "propuesta";
 import type { HerramientaMapa } from "./MapaInmuebles";
 import { FichaElemento } from "./FichaElemento";
 
@@ -55,6 +60,11 @@ interface Props {
   gpsBuscando: boolean;
   gpsError: string | null;
   volarA: (p: LngLat, zoom?: number) => void;
+  verSituacion: VerSituacion;
+  setVerSituacion: (v: VerSituacion) => void;
+  crearPersonal: (p: Omit<SimboloPersonal, "id">) => void;
+  hallazgoSel: string | null;
+  setHallazgoSel: (id: string | null) => void;
 }
 
 export function PanelExterior(p: Props) {
@@ -249,6 +259,9 @@ export function PanelExterior(p: Props) {
           <button type="button" onClick={() => setHerramienta(herramienta === "vertices" ? "navegar" : "vertices")} className={herramienta === "vertices" ? botonPri : botonSec}>
             <Crosshair className="h-4 w-4" /> Vértices a mano
           </button>
+          <button type="button" onClick={() => setHerramienta(herramienta === "medidas" ? "navegar" : "medidas")} className={herramienta === "medidas" ? botonPri : botonSec}>
+            <Ruler className="h-4 w-4" /> Por medidas
+          </button>
           {tienePredio && (
             <button type="button" onClick={() => setHerramienta(herramienta === "editar" ? "navegar" : "editar")} className={herramienta === "editar" ? botonPri : botonSec}>
               <Pencil className="h-4 w-4" /> {herramienta === "editar" ? "Listo" : "Mover vértices"}
@@ -326,20 +339,25 @@ export function PanelExterior(p: Props) {
       {/* Elementos */}
       <section className={tarjeta} aria-label="Elementos">
         <h3 className="mb-2 text-[13px] font-semibold text-pn-texto">4 · Símbolos y elementos</h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          {TIPOS_SIMBOLO.map((t) => {
+        <label className="mb-2 block">
+          <span className={etiqueta}>Ver en el mapa</span>
+          <select value={p.verSituacion} onChange={(e) => p.setVerSituacion(e.target.value as VerSituacion)} className={campo}>
+            <option value="todo">Todo</option>
+            <option value="diagnostico">Diagnóstico: lo que existe</option>
+            <option value="propuesta">Propuesta: lo que se recomienda</option>
+          </select>
+        </label>
+        <SelectorSimbolos
+          activo={herramienta.startsWith("simbolo:") ? (herramienta.slice(8) as TipoSimbolo) : null}
+          elegir={(t) => {
             const h = `simbolo:${t}` as HerramientaMapa;
-            return (
-              <button key={t} type="button" onClick={() => setHerramienta(herramienta === h ? "navegar" : h)} className={herramienta === h ? botonPri : botonSec}>
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: SIMBOLOS[t].color }}>{SIMBOLOS[t].glifo}</span>
-                {SIMBOLOS[t].etiqueta}
-              </button>
-            );
-          })}
-          <button type="button" onClick={() => setHerramienta(herramienta === "ruta" ? "navegar" : "ruta")} className={`${herramienta === "ruta" ? botonPri : botonSec} col-span-2`}>
-            <Route className="h-4 w-4" /> Ruta de evacuación
-          </button>
-        </div>
+            setHerramienta(herramienta === h ? "navegar" : h);
+          }}
+          crear={p.crearPersonal}
+        />
+        <button type="button" onClick={() => setHerramienta(herramienta === "ruta" ? "navegar" : "ruta")} className={`${herramienta === "ruta" ? botonPri : botonSec} mt-2 w-full`}>
+          <Route className="h-4 w-4" /> Ruta de evacuación
+        </button>
 
         {elSel && (
           <div className="mt-3 rounded-md border-2 border-[#1D4ED8]/40 p-2.5">
@@ -360,7 +378,7 @@ export function PanelExterior(p: Props) {
                 </label>
                 <label>
                   <span className={etiqueta}>Ángulo de visión: {elSel.camara.angulo}°</span>
-                  <input type="range" min={10} max={180} value={elSel.camara.angulo} onChange={(e) => setCamara({ angulo: Number(e.target.value) })} className="w-full" />
+                  <input type="range" min={10} max={360} value={elSel.camara.angulo} onChange={(e) => setCamara({ angulo: Number(e.target.value) })} className="w-full" />
                 </label>
                 <label>
                   <span className={etiqueta}>Alcance: {elSel.camara.alcance} m</span>
@@ -373,7 +391,29 @@ export function PanelExterior(p: Props) {
               <FichaElemento
                 tipo={elSel.tipo}
                 datos={elSel}
-                cambiar={(c) => cambiar((x) => ({ ...x, elementos: x.elementos.map((el) => (el.id === elSel.id ? { ...el, ...c } : el)) }))}
+                onHallazgo={() => {
+                  const id = nuevoId("h");
+                  cambiar((x) => ({
+                    ...x,
+                    hallazgos: [...(x.hallazgos ?? []), { id, titulo: "", fecha: new Date().toISOString(), elementoId: elSel.id, lng: elSel.lng, lat: elSel.lat, fotos: [], estado: "propuesta" }],
+                  }));
+                  p.setHallazgoSel(id);
+                }}
+                cambiar={(c) =>
+                  cambiar((x) => ({
+                    ...x,
+                    elementos: x.elementos.map((el) => {
+                      if (el.id !== elSel.id) return el;
+                      const nuevo = { ...el, ...c };
+                      // Ojo de pez: el cono se abre a 360°; al cambiar a otro tipo vuelve a 90°.
+                      const tipoCam = c.ficha?.tipo_camara;
+                      if (nuevo.camara && tipoCam !== undefined && tipoCam !== el.ficha?.tipo_camara) {
+                        nuevo.camara = { ...nuevo.camara, angulo: tipoCam === OJO_DE_PEZ ? 360 : el.camara?.angulo === 360 ? 90 : nuevo.camara.angulo };
+                      }
+                      return nuevo;
+                    }),
+                  }))
+                }
               />
             </div>
             <button
@@ -403,6 +443,7 @@ export function PanelExterior(p: Props) {
                 >
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: SIMBOLOS[e.tipo].color }}>{SIMBOLOS[e.tipo].glifo}</span>
                   {SIMBOLOS[e.tipo].etiqueta} {i + 1}
+                  {e.situacion && <span className="shrink-0 rounded bg-pn-calido px-1.5 py-0.5 text-[11px] text-pn-texto">{SITUACION_ETIQUETA[e.situacion]}</span>}
                   {e.condicion && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CONDICION_INFO[e.condicion].color }} title={CONDICION_INFO[e.condicion].etiqueta} />}
                   {avisosElemento(e.tipo, e, hoy).length > 0 && <span className="shrink-0 rounded bg-[#FDECEA] px-1.5 py-0.5 text-[11px] text-pn-alerta">{avisosElemento(e.tipo, e, hoy)[0]}</span>}
                   {e.nota && <span className="truncate text-pn-sub">· {e.nota}</span>}
@@ -422,6 +463,16 @@ export function PanelExterior(p: Props) {
           </ul>
         )}
       </section>
+
+      <PanelHallazgos
+        inm={inm}
+        cambiar={cambiar}
+        sel={p.hallazgoSel}
+        setSel={p.setHallazgoSel}
+        marcando={herramienta === "hallazgo"}
+        setMarcando={(v) => setHerramienta(v ? "hallazgo" : "navegar")}
+        volarA={p.volarA}
+      />
 
       <p className="text-[11.5px] leading-snug text-pn-sub">
         {LEYENDA_MEDIDAS} Cartografía base: © colaboradores de OpenStreetMap.

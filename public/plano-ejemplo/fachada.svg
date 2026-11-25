@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+<rect width="800" height="600" fill="#CFE3F2"/>
+<rect x="0" y="420" width="800" height="120" fill="#B9C2CC"/>
+<rect x="120" y="150" width="560" height="270" fill="#F3EEE4" stroke="#8A7F6E" stroke-width="4"/>
+<rect x="120" y="130" width="560" height="26" fill="#C9B79C"/>
+<g fill="#7FA6C9" stroke="#5C6B7A" stroke-width="3">
+<rect x="160" y="180" width="80" height="80"/><rect x="280" y="180" width="80" height="80"/><rect x="440" y="180" width="80" height="80"/><rect x="560" y="180" width="80" height="80"/>
+<rect x="160" y="300" width="80" height="80"/><rect x="560" y="300" width="80" height="80"/></g>
+<rect x="350" y="290" width="100" height="130" fill="#6B4F3A"/>
+<rect x="300" y="250" width="200" height="30" fill="#0B1F3A"/><text x="400" y="272" text-anchor="middle" font-family="Arial" font-size="18" fill="#fff">PALACIO MUNICIPAL</text>
+<rect x="0" y="540" width="800" height="60" fill="#0B1F3A" opacity="0.85"/>
+<text x="24" y="578" font-family="Arial, sans-serif" font-size="24" fill="#fff">Foto de ejemplo · prototipo STRATEC (no es una foto real)</text>
+</svg>

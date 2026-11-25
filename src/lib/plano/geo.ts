@@ -45,6 +45,13 @@ export function largoLinea(linea: LngLat[]): number {
   return total;
 }
 
+/** Vértices de un predio dibujado por medidas: desde un origen, cada tramo con su largo (m) y rumbo (grados). */
+export function verticesPorTramos(origen: LngLat, tramos: { largo: number; rumbo: number }[]): LngLat[] {
+  const pts: LngLat[] = [origen];
+  for (const t of tramos) if (t.largo > 0) pts.push(destino(pts[pts.length - 1], t.largo, t.rumbo));
+  return pts;
+}
+
 /** Rumbo inicial de a hacia b, en grados (0 = norte, 90 = oriente). */
 export function rumbo(a: LngLat, b: LngLat): number {
   const y = Math.sin(rad(b[0] - a[0])) * Math.cos(rad(b[1]));

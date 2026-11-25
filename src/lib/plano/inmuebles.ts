@@ -6,7 +6,9 @@
 
 import { destino, type LngLat, type Orientacion } from "./geo";
 import { agregarMuro, cambiarEspacio, nivelVacio, nuevoId, type Croquis, type Nivel, type P } from "./croquis";
-import { tipoSimbolo, type DatosCamara, type DatosElemento, type TipoSimbolo } from "./simbolos";
+import type { FotoRef } from "./fotos";
+import { ejemploTemixco, elementosTecnologiaBodega, ID_EJEMPLO_TEMIXCO } from "./ejemplos";
+import { registrarPersonalizados, tipoSimbolo, type DatosCamara, type DatosElemento, type SimboloPersonal, type TipoSimbolo } from "./simbolos";
 
 export const ESTADOS = ["prospecto", "en_curso", "entregado", "suspendido"] as const;
 export type EstadoProyecto = (typeof ESTADOS)[number];
@@ -55,6 +57,33 @@ export interface ElementoMapa extends DatosElemento {
   camara?: DatosCamara;
 }
 
+export const SEVERIDADES = ["baja", "media", "alta", "critica"] as const;
+export type Severidad = (typeof SEVERIDADES)[number];
+export const SEVERIDAD_INFO: Record<Severidad, { etiqueta: string; color: string }> = {
+  baja: { etiqueta: "Baja", color: "#287A59" },
+  media: { etiqueta: "Media", color: "#B7791F" },
+  alta: { etiqueta: "Alta", color: "#C2410C" },
+  critica: { etiqueta: "Crítica", color: "#B42318" },
+};
+
+/**
+ * Hallazgo capturado en campo (Documento 04 F-09 y §13 D-P7): rápido (foto, título y ubicación);
+ * se completa después en cualquier equipo. Queda "propuesta" hasta que el elaborador lo revisa.
+ */
+export interface Hallazgo {
+  id: string;
+  titulo: string;
+  fecha: string;
+  /** Elemento del mapa o del croquis al que se liga (puede haber varios hallazgos por elemento). */
+  elementoId?: string;
+  lng?: number;
+  lat?: number;
+  fotos: FotoRef[];
+  estado: "propuesta" | "revisado";
+  severidad?: Severidad;
+  descripcion?: string;
+}
+
 export interface RutaMapa {
   id: string;
   coords: LngLat[];
@@ -75,12 +104,17 @@ export interface Inmueble {
   elementos: ElementoMapa[];
   rutas: RutaMapa[];
   croquis: Croquis;
+  hallazgos?: Hallazgo[];
   actualizado: string;
 }
 
 export interface Datos {
   version: 1;
   inmuebles: Inmueble[];
+  /** Elementos que creó el usuario. */
+  catalogo?: SimboloPersonal[];
+  /** Ya se agregó una vez el ejemplo del ayuntamiento (si el usuario lo borra, no vuelve). */
+  ejemploTemixco?: boolean;
 }
 
 const CLAVE = "stratec.plano.prototipo.v1";
@@ -130,7 +164,7 @@ export function datosIniciales(): Datos {
     perimetro: rect([-99.19066, 18.89335], 30, 20, 0),
     metodo: "levantamiento_campo",
     colindancias: [{ tipo: "calle", descripcion: "Calle de acceso" }, {}, {}, {}],
-    elementos: [],
+    elementos: elementosTecnologiaBodega([-99.19066, 18.89335]),
     rutas: [],
     croquis: croquisDemo(),
     actualizado: ahora(),
@@ -142,7 +176,9 @@ export function datosIniciales(): Datos {
   });
   return {
     version: 1,
+    ejemploTemixco: true,
     inmuebles: [
+      ejemploTemixco(),
       bodega,
       otro("Oficinas de prueba (ficticias)", "Cuernavaca", "entregado", -99.2342, 18.9214),
       otro("Escuela de prueba (ficticia)", "Cuautla", "prospecto", -98.9535, 18.8121),
@@ -202,7 +238,15 @@ export function cargar(): Datos {
     const crudo = localStorage.getItem(CLAVE);
     if (crudo) {
       const d = JSON.parse(crudo) as Datos;
-      if (d && d.version === 1 && Array.isArray(d.inmuebles)) return normalizarDatos(d);
+      if (d && d.version === 1 && Array.isArray(d.inmuebles)) {
+        registrarPersonalizados(d.catalogo ?? []);
+        const n = normalizarDatos(d);
+        // El ejemplo del ayuntamiento se agrega una vez a quien ya tenía datos guardados.
+        if (!n.ejemploTemixco && !n.inmuebles.some((i) => i.id === ID_EJEMPLO_TEMIXCO)) {
+          return { ...n, ejemploTemixco: true, inmuebles: [ejemploTemixco(), ...n.inmuebles] };
+        }
+        return n;
+      }
     }
   } catch {
     /* almacenamiento bloqueado o dañado: se empieza de nuevo */

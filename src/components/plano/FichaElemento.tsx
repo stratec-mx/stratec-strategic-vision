@@ -1,9 +1,10 @@
 // Ficha de un elemento (Documento 04 §13, D-P6): estado de un toque, datos fijos según el tipo y nota.
 // La usan el mapa exterior y el croquis interior.
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Flag } from "lucide-react";
+import { FotosElemento } from "./FotosElemento";
 import {
-  avisosElemento, CONDICION_INFO, CONDICIONES, FICHAS, SIMBOLOS,
+  avisosElemento, CONDICION_INFO, CONDICIONES, defSimbolo, FICHAS, SITUACION_ETIQUETA, SITUACIONES,
   type Campo, type DatosElemento, type Ficha, type TipoSimbolo,
 } from "@/lib/plano/simbolos";
 
@@ -72,12 +73,31 @@ function CampoFicha({ c, valor, cambiar }: { c: Campo; valor: Ficha[string]; cam
   );
 }
 
-export function FichaElemento({ tipo, datos, cambiar }: { tipo: TipoSimbolo; datos: DatosElemento; cambiar: (c: Partial<DatosElemento>) => void }) {
+export function FichaElemento({ tipo, datos, cambiar, onHallazgo }: { tipo: TipoSimbolo; datos: DatosElemento; cambiar: (c: Partial<DatosElemento>) => void; onHallazgo?: () => void }) {
   const campos = FICHAS[tipo] ?? [];
   const avisos = avisosElemento(tipo, datos, new Date());
   const ficha = datos.ficha ?? {};
   return (
     <div className="flex flex-col gap-2.5">
+      <div>
+        <span className={etiqueta}>Situación</span>
+        <div className="grid grid-cols-3 gap-1" role="group" aria-label="Situación del elemento">
+          {SITUACIONES.map((s) => {
+            const activo = (datos.situacion ?? "existente") === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => cambiar({ situacion: s === "existente" ? undefined : s })}
+                className={`rounded-md border px-1 py-2 text-[12px] font-medium ${activo ? "border-pn-navy bg-pn-navy text-white" : "border-pn-borde bg-white text-pn-texto"}`}
+              >
+                {SITUACION_ETIQUETA[s]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div>
         <span className={etiqueta}>Estado</span>
         <div className="grid grid-cols-4 gap-1" role="group" aria-label="Estado del elemento">
@@ -112,10 +132,16 @@ export function FichaElemento({ tipo, datos, cambiar }: { tipo: TipoSimbolo; dat
         <input
           value={datos.nota ?? ""}
           onChange={(e) => cambiar({ nota: e.target.value })}
-          placeholder={SIMBOLOS[tipo].sensible ? "Ubicación, marca o modelo" : "Observaciones"}
+          placeholder={defSimbolo(tipo).sensible ? "Ubicación, marca o modelo" : "Observaciones"}
           className={campo}
         />
       </label>
+      <FotosElemento fotos={datos.fotos ?? []} cambiar={(fotos) => cambiar({ fotos })} />
+      {onHallazgo && (
+        <button type="button" onClick={onHallazgo} className="flex items-center justify-center gap-1.5 rounded-md border border-[#F1C5C0] bg-white px-3 py-2 text-[13px] font-medium text-pn-alerta">
+          <Flag className="h-4 w-4" /> Marcar hallazgo en este elemento
+        </button>
+      )}
       {avisos.length > 0 && (
         <p className="flex items-start gap-1.5 rounded-md bg-[#FDECEA] px-2.5 py-2 text-[12.5px] text-pn-alerta" role="alert">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {avisos.join(" · ")}

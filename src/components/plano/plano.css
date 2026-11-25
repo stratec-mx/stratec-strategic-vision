@@ -65,7 +65,13 @@
   border-color: #f59e0b;
   color: #fff;
 }
-.plano-lejos .plano-lado {
+/* Lejos del predio, los detalles estorban: se ocultan. */
+.plano-lejos .plano-lado,
+.plano-lejos .plano-simbolo,
+.plano-lejos .plano-hallazgo,
+.plano-lejos .plano-vertice,
+.plano-lejos .plano-medio,
+.plano-lejos .plano-punta {
   display: none;
 }
 .plano-vertice {
@@ -95,4 +101,35 @@
   text-align: center;
   cursor: pointer;
   opacity: 0.85;
+}
+/* Propuesta: borde punteado; por retirar: tachado. */
+.plano-propuesto {
+  border-style: dashed;
+  opacity: 0.9;
+  outline: 2px dashed #0b1f3a;
+  outline-offset: 2px;
+}
+.plano-retirar {
+  filter: grayscale(0.7);
+  background-image: linear-gradient(45deg, transparent 45%, #b42318 45%, #b42318 55%, transparent 55%);
+}
+.plano-hallazgo {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+.plano-hallazgo-rombo {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 2px;
+  transform: rotate(45deg);
+  border: 2px solid #fff;
+  color: #fff;
+  font: 800 11px/14px system-ui, sans-serif;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(11, 31, 58, 0.4);
+}
+.plano-hallazgo-sel .plano-hallazgo-rombo {
+  box-shadow: 0 0 0 3px #f59e0b;
 }
