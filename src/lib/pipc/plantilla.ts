@@ -244,7 +244,7 @@ const BLOQUES: PipcBlock[] = [
   A("II.11", "Electricidad estática: condiciones de seguridad", "T + E", "cond", "Inspección.", { condicion: "según el giro", norma: "NOM-022-STPS-2015" }),
   A("II.12", "Dictámenes", "", "si", ""),
   A("II.12.1", "Dictamen de seguridad estructural", "A", "si", "Documento de tercero. Confirmar con la CEPCM si es obligatorio.", { restriccion: TERCERO }),
-  A("II.12.2", "Dictamen de verificación de instalaciones eléctricas", "A", "si", "Documento de tercero. Confirmar con la CEPCM si es obligatorio.", { norma: "NOM-001-SEDE (verificar la versión vigente)", restriccion: TERCERO }),
+  A("II.12.2", "Dictamen de verificación de instalaciones eléctricas", "A", "si", "Documento de tercero. Confirmar con la CEPCM si es obligatorio. Verificar la versión vigente de la NOM-001-SEDE.", { norma: "NOM-001-SEDE", restriccion: TERCERO }),
   A("II.12.3", "Dictamen de aprovechamiento de gas L.P.", "A", "cond", "Documento de tercero.", { condicion: "si hay gas L.P.", norma: "NOM-004-SEDG-2004", restriccion: TERCERO }),
   A("II.12.4", "Evaluación de espesores por pulso-eco", "A", "cond", "Documento de tercero.", { condicion: "si hay tanques o recipientes que la requieran", restriccion: TERCERO }),
   A("II.12.5", "Estaciones de gas L.P. para carburación", "A", "cond", "Documento de tercero.", { condicion: "según el giro", norma: "NOM-003-SEDG-2004", restriccion: TERCERO }),

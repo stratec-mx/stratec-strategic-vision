@@ -90,6 +90,8 @@ describe("No aplica y contenido generado", () => {
     const todas = bibliografia(PIPC_MORELOS.blocks, pipcInicial());
     expect(todas[0]).toMatch(/Ley Estatal/);
     expect(todas.filter((n) => n === "NOM-002-STPS-2010")).toHaveLength(1);
+    // Solo números de norma: las notas internas no salen en el documento.
+    expect(todas.every((n) => !/verificar|confirmar/i.test(n))).toBe(true);
     const sinGas = bibliografia(PIPC_MORELOS.blocks, normalizePipc({ noAplica: { "II.12.3": "Sin gas" } }));
     expect(sinGas).not.toContain("NOM-004-SEDG-2004");
   });

@@ -32,6 +32,8 @@ type RGB = [number, number, number];
 type Block = DocumentTemplate["blocks"][number];
 
 const ROJO: RGB = [180, 35, 24];
+/** Vistas que empiezan con una lámina (imagen alta). */
+const CON_LAMINA = new Set<VistaPlano>(["areas", "riesgos_internos", "riesgos_externos", "equipos_localizacion", "senalizacion_localizacion"]);
 
 /** Bloque del índice: apartados del PIPC y tablas de M-DESR que abren apartado propio. */
 const codigoDe = (b: Block): string | undefined => ("code" in b ? b.code : undefined);
@@ -823,7 +825,8 @@ export async function buildPipcPdf(input: DocumentPdfInput, fileName: string): P
 
     const depth = profundidad(b.code);
     if (depth === 0) tituloCapitulo(b.code, b.title);
-    else tituloApartado(b.code, b.title, depth, b.type === "plano" ? 200 : 30);
+    // Un apartado con lámina no deja su título solo al pie de la hoja: pide espacio para la imagen.
+    else tituloApartado(b.code, b.title, depth, b.type === "plano" ? (CON_LAMINA.has(b.vista) ? 340 : 120) : 30);
     paginaDe[b.code] = paginaActual();
     if (!b.contenido) continue; // solo encabezado
 
