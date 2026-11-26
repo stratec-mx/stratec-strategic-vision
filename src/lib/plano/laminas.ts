@@ -2,10 +2,14 @@
 // La lámina NUNCA usa Google ni Esri: solo OpenStreetMap (licencia que permite reproducirla en documentos).
 
 import * as maplibregl from "maplibre-gl";
+import urlWorker from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { cono, lados, type LngLat } from "./geo";
 import { claseAbertura, largoMuro, poligonoEspacio, posicionAbertura, puntoInterior, superficie, type Nivel, type P } from "./croquis";
 import type { ElementoMapa, Inmueble } from "./inmuebles";
 import { COLOR_RUTA, defSimbolo } from "./simbolos";
+
+// Documentos arma el anexo sin abrir el mapa: el motor necesita su worker también aquí.
+maplibregl.setWorkerUrl(urlWorker);
 
 const ESTILO_OSM = "https://tiles.openfreemap.org/styles/liberty";
 
