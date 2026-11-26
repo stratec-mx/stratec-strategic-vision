@@ -70,17 +70,18 @@ async function cargarFoto(f: FotoRef): Promise<Imagen | null> {
 export const planoFileName = (inm: Inmueble, tipo: TipoDocumentoPlano, fecha: Date) =>
   ["Plano_STRATEC", tipo === "diagnostico" ? "Diagnostico" : "Programa-Interno", slug(inm.nombre) || "Inmueble", hoyIso(fecha)].join("_") + ".pdf";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF se carga desde CDN y no trae tipos (igual que en quotePdf.ts).
-async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName: string }> {
+/* eslint-disable @typescript-eslint/no-explicit-any -- jsPDF se carga desde CDN y no trae tipos (igual que en quotePdf.ts). */
+async function buildPlanoPdf(input: PlanoPdfInput, anexo?: { doc: any; folio: string; titulo: string }): Promise<{ doc: any; fileName: string }> {
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const { inm, tipo } = input;
   const ahora = new Date();
-  const folio = `PL-${(slug(inm.nombre).replace(/-/g, "").slice(0, 8) || "INM").toUpperCase()}-${hoyIso(ahora)}`;
+  const folio = anexo?.folio ?? `PL-${(slug(inm.nombre).replace(/-/g, "").slice(0, 8) || "INM").toUpperCase()}-${hoyIso(ahora)}`;
   const { elementos, niveles, hallazgos } = contenidoDocumento(inm, tipo);
 
   const [jsPDF, mark] = await Promise.all([loadJsPdf(), loadImageDataUrl("/brand/stratec-mark-white.png")]);
   const exterior = inm.perimetro.length >= 3 || elementos.length ? await laminaExterior(inm, elementos).catch(() => null) : null;
 
-  const doc = new jsPDF({ unit: "pt", format: "letter", compress: true });
+  const doc = anexo?.doc ?? new jsPDF({ unit: "pt", format: "letter", compress: true });
   // La fuente estándar del PDF no trae "≈" ni subíndices: se cambian por texto equivalente.
   const limpio = (t: unknown): unknown =>
     typeof t === "string" ? t.replace(/≈\s?/g, "aprox. ").replace(/₂/g, "2").replace(/→/g, "->") : Array.isArray(t) ? t.map(limpio) : t;
@@ -116,7 +117,7 @@ async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName
     doc.text("STRATEC", M + 26, 23, { charSpace: 2 });
     font("helvetica", "normal", 7.5);
     color(MUTED);
-    textRight(`PLANO Y LEVANTAMIENTO · ${folio}`, W - M, 23, 1);
+    textRight(anexo ? `${anexo.titulo.toUpperCase()} · ${folio}` : `PLANO Y LEVANTAMIENTO · ${folio}`, W - M, 23, 1);
   };
   const nuevaHoja = () => {
     doc.addPage();
@@ -244,7 +245,17 @@ async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName
     y += l.length * 9 + 10;
   };
 
-  // ── Portada (igual que la propuesta económica) ──
+  // ── Portada (igual que la propuesta económica); como anexo, empieza en hoja nueva con su título ──
+  if (anexo) {
+    nuevaHoja();
+    font("times", "bold", 16);
+    color(NAVY);
+    doc.text(anexo.titulo, M, y + 6);
+    font("helvetica", "normal", 9);
+    color(STEEL);
+    doc.text(`${inm.nombre}${inm.municipio ? ` · ${inm.municipio}` : ""}`, M, y + 22);
+    y += 44;
+  } else {
   fill(NAVY_DEEP);
   doc.rect(0, 0, W, 120, "F");
   fill(GOLD);
@@ -296,6 +307,7 @@ async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName
     y + 22 + td.length * 14,
   );
   y = Math.max(yl, y + 70) + 14;
+  }
 
   // ── Datos del predio ──
   const anillo: LngLat[] = inm.perimetro.map((v) => [v.lng, v.lat]);
@@ -492,6 +504,8 @@ async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName
   color(STEEL);
   ll.forEach((l, i) => drawJustified(doc, l, M + 14, y + 15 + i * 10, CW - 26, i < ll.length - 1));
   y += lh + 40;
+  // Como anexo, las firmas ya están en el documento que lo contiene.
+  if (anexo) return { doc, fileName: "" };
   sectionTitle("Elaboró y revisó");
   y += 30;
   const sw = (CW - 40) / 2;
@@ -507,6 +521,9 @@ async function buildPlanoPdf(input: PlanoPdfInput): Promise<{ doc: any; fileName
   color(STEEL);
   doc.text("Nombre, cargo y firma", M, y + 24);
   doc.text("Nombre, cargo y firma", M + sw + 40, y + 24);
+
+  // Como anexo, el documento que lo contiene pone el pie y las propiedades.
+  if (anexo) return { doc, fileName: "" };
 
   // ── Pie de página en todas las hojas (igual que la propuesta) ──
   const pages = doc.getNumberOfPages();
@@ -532,4 +549,13 @@ export async function previewPlanoPdf(input: PlanoPdfInput): Promise<{ url: stri
   const { doc, fileName } = await buildPlanoPdf(input);
   const blob: Blob = doc.output("blob");
   return { url: URL.createObjectURL(blob), fileName, blob };
+}
+
+/**
+ * Agrega el plano como anexo al final de otro documento (el diagnóstico o el estudio de riesgo),
+ * en hojas nuevas y con el mismo diseño. El documento que lo llama pone después el pie de página.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF sin tipos.
+export async function agregarAnexoPlano(doc: any, input: PlanoPdfInput, folio: string, titulo = "Anexo · Plano y levantamiento") {
+  await buildPlanoPdf(input, { doc, folio, titulo });
 }

@@ -41,6 +41,8 @@ export interface DocumentMeta {
   issueDate?: string; // YYYY-MM-DD
   consultant?: string;
   recipient?: string;
+  /** Inmueble del módulo Inmuebles y plano: su plano va como anexo y de él se traen descripción y hallazgos. */
+  inmuebleId?: string;
 }
 
 export interface DocumentData {

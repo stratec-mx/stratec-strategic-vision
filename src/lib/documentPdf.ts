@@ -18,6 +18,9 @@ export interface DocumentPdfInput {
   folio: string;
   data: DocumentData;
   client: { name: string; contact?: string | null };
+  /** Anexos que se dibujan al final, antes del pie de página (por ejemplo, el plano del inmueble). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF sin tipos.
+  anexos?: (doc: any, folio: string) => Promise<void>;
 }
 
 export const documentFileName = (i: Pick<DocumentPdfInput, "template" | "folio" | "client">) =>
@@ -553,6 +556,9 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
   color(STEEL);
   doc.text(`Elaboró · ${STRATEC_CONTACT.legalName}`, M, y + 24);
   doc.text(`Recibió · ${client.name}`.slice(0, 70), M + sw + 40, y + 24);
+
+  // ── Anexos (plano y levantamiento) ──
+  if (input.anexos) await input.anexos(doc, folio);
 
   // ── Pie de página (excepto portada) ──
   const pages = doc.getNumberOfPages();

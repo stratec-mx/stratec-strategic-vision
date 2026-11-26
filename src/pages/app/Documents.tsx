@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { describeDbError } from "@/lib/dbErrors";
-import { ArrowLeft, Eye, FilePlus2, FileStack, Loader2, Plus, Trash2, Check, AlertTriangle, Pencil } from "lucide-react";
+import { ArrowLeft, Eye, FilePlus2, FileStack, Loader2, Plus, Trash2, Check, AlertTriangle, Pencil, MapPinned } from "lucide-react";
 import {
   DOCUMENT_TEMPLATES, findTemplate, emptyDocumentData, normalizeDocumentData,
   newFinding, newRisk, newAction, riskScore, riskLevel,
@@ -21,6 +21,9 @@ import {
   type DocumentData, type DocumentTemplate, type Finding, type Risk, type Action, type Severity, type Priority, type Term, type Verdict,
 } from "@/lib/documentTemplates";
 import { previewDocumentPdf } from "@/lib/documentPdf";
+import { cargar as cargarInmuebles } from "@/lib/plano/inmuebles";
+import { descripcionDesdePlano, fusionarHallazgos, hallazgosDesdePlano, tipoPlanoPara, ubicacionDesdePlano } from "@/lib/plano/aDocumento";
+import { agregarAnexoPlano } from "@/lib/plano/planoPdf";
 
 type ClientRow = { id: string; name: string; contact_name: string | null };
 
@@ -325,6 +328,21 @@ export const DocumentEditor = () => {
     setData((d) => (d ? fn(d) : d));
   }, []);
   const setMeta = (k: keyof DocumentData["meta"], v: string) => patch((d) => ({ ...d, meta: { ...d.meta, [k]: v } }));
+  // Inmuebles capturados en el módulo Inmuebles y plano (por ahora viven en este navegador).
+  const inmuebles = useMemo(() => cargarInmuebles().inmuebles, []);
+  const traerDelPlano = () => {
+    const inm = inmuebles.find((i) => i.id === data?.meta.inmuebleId);
+    if (!inm || !template) return;
+    const tieneDescripcion = template.blocks.some((b) => b.type === "text" && b.key === "descripcion");
+    const tieneHallazgos = template.blocks.some((b) => b.type === "findings");
+    patch((d) => ({
+      ...d,
+      meta: { ...d.meta, location: d.meta.location?.trim() ? d.meta.location : ubicacionDesdePlano(inm) },
+      sections: tieneDescripcion ? { ...d.sections, descripcion: descripcionDesdePlano(inm, template.id) } : d.sections,
+      findings: tieneHallazgos ? fusionarHallazgos(d.findings, hallazgosDesdePlano(inm, template.id)) : d.findings,
+    }));
+    toast({ title: "Datos traídos del plano", description: "Descripción del inmueble y hallazgos actualizados. El plano va como anexo en el PDF." });
+  };
   const setSection = (k: string, v: string) => patch((d) => ({ ...d, sections: { ...d.sections, [k]: v } }));
 
   function listOps<K extends "findings" | "risks" | "actions">(key: K, make: () => DocumentData[K][number]) {
@@ -345,7 +363,18 @@ export const DocumentEditor = () => {
     try {
       const c = clients.find((x) => x.id === clientId);
       if (preview) URL.revokeObjectURL(preview.url);
-      setPreview(await previewDocumentPdf({ template, folio: row.folio, data, client: { name: c?.name ?? "Cliente", contact: c?.contact_name } }));
+      const inm = data.meta.inmuebleId ? inmuebles.find((i) => i.id === data.meta.inmuebleId) : undefined;
+      setPreview(
+        await previewDocumentPdf({
+          template,
+          folio: row.folio,
+          data,
+          client: { name: c?.name ?? "Cliente", contact: c?.contact_name },
+          anexos: inm
+            ? (doc, folio) => agregarAnexoPlano(doc, { inm, tipo: tipoPlanoPara(template.id), elaboro: data.meta.consultant || undefined }, folio)
+            : undefined,
+        }),
+      );
     } catch (e: any) {
       toast({ title: "No se pudo generar el PDF", description: e?.message ?? "Intenta de nuevo.", variant: "destructive" });
     } finally {
@@ -396,6 +425,23 @@ export const DocumentEditor = () => {
             </Field>
             <Field label="Elaboró (consultor)">
               <Input className="rounded-none" value={data.meta.consultant ?? ""} placeholder="Nombre y cargo" onChange={(e) => setMeta("consultant", e.target.value)} />
+            </Field>
+            <Field label="Inmueble del plano (anexo)">
+              <div className="flex gap-2">
+                <Select value={data.meta.inmuebleId ?? "ninguno"} onValueChange={(v) => setMeta("inmuebleId", v === "ninguno" ? "" : v)}>
+                  <SelectTrigger className="rounded-none"><SelectValue placeholder="Sin plano" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ninguno">Sin plano</SelectItem>
+                    {inmuebles.map((i) => <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" onClick={traerDelPlano} disabled={!data.meta.inmuebleId || !inmuebles.some((i) => i.id === data.meta.inmuebleId)} className="rounded-none shrink-0 text-xs">
+                  <MapPinned className="h-4 w-4 mr-1.5" /> Traer del plano
+                </Button>
+              </div>
+              {data.meta.inmuebleId && !inmuebles.some((i) => i.id === data.meta.inmuebleId) && (
+                <p className="mt-1 text-[11px] text-steel">Ese plano se capturó en otro equipo o navegador; mientras no exista la base de datos solo se ve donde se capturó.</p>
+              )}
             </Field>
             <Field label="Ubicación del inmueble">
               <Input className="rounded-none" value={data.meta.location ?? ""} placeholder="Calle, colonia, municipio, estado" onChange={(e) => setMeta("location", e.target.value)} />
