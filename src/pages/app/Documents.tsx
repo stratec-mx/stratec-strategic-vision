@@ -24,6 +24,7 @@ import { previewDocumentPdf } from "@/lib/documentPdf";
 import { cargar as cargarInmuebles } from "@/lib/plano/inmuebles";
 import { descripcionDesdePlano, fusionarHallazgos, hallazgosDesdePlano, tipoPlanoPara, ubicacionDesdePlano } from "@/lib/plano/aDocumento";
 import { agregarAnexoPlano } from "@/lib/plano/planoPdf";
+import { PipcBloque, PipcDatos } from "@/components/app/pipc/PipcEditor";
 
 type ClientRow = { id: string; name: string; contact_name: string | null };
 
@@ -457,8 +458,11 @@ export const DocumentEditor = () => {
           </div>
         </Card>
 
+        {data.pipc && <PipcDatos template={template} data={data} patch={patch} />}
+
         {template.blocks.map((b, i) => {
-          const n = String(i + 1).padStart(2, "0");
+          if (b.type === "apartado" || b.type === "plano") return <PipcBloque key={b.key} block={b} data={data} patch={patch} />;
+          const n = ("code" in b && b.code) || String(i + 1).padStart(2, "0");
           if (b.type === "text")
             return (
               <Card key={b.key} n={n} title={b.title} hint={b.hint}>

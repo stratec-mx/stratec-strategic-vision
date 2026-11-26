@@ -10,6 +10,7 @@ import {
   SEVERITY_LABEL, PRIORITY_LABEL, TERM_LABEL, VERDICT_LABEL, RISK_LEVEL_LABEL, LEVEL_RGB, SEVERITY_TO_LEVEL,
   PROBABILITY_LABEL, IMPACT_LABEL, riskScore, riskLevel,
 } from "@/lib/documentTemplates";
+import { PIPC_TEMPLATE_ID } from "@/lib/pipc/plantilla";
 
 type RGB = [number, number, number];
 
@@ -582,7 +583,11 @@ async function buildDocumentPdf(input: DocumentPdfInput): Promise<{ doc: any; fi
 }
 
 export async function previewDocumentPdf(input: DocumentPdfInput): Promise<{ url: string; fileName: string; blob: Blob }> {
-  const { doc, fileName } = await buildDocumentPdf(input);
+  // El Programa Interno tiene su propio armado (índice con páginas, capítulos y láminas del plano).
+  const { doc, fileName } =
+    input.template.id === PIPC_TEMPLATE_ID
+      ? await (await import("@/lib/pipc/pipcPdf")).buildPipcPdf(input, documentFileName(input))
+      : await buildDocumentPdf(input);
   const blob: Blob = doc.output("blob");
   return { url: URL.createObjectURL(blob), fileName, blob };
 }

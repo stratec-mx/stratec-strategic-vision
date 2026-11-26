@@ -2,6 +2,8 @@
 // Cada plantilla define los bloques (apartados) del documento y su orden.
 // El editor del dashboard y el generador de PDF leen esta misma definición.
 
+import { PIPC_MORELOS, normalizePipc, pipcInicial, type PipcBlock, type PipcData } from "./pipc/plantilla";
+
 export type Severity = "baja" | "media" | "alta" | "critica";
 export type Priority = "alta" | "media" | "baja";
 export type Term = "inmediato" | "corto" | "mediano" | "largo";
@@ -52,15 +54,18 @@ export interface DocumentData {
   risks: Risk[];
   actions: Action[];
   verdict?: Verdict;
+  /** Datos propios del Programa Interno (solo en esa plantilla). */
+  pipc?: PipcData;
 }
 
 export type Block =
   | { type: "text"; key: string; title: string; hint: string; defaultText?: string }
   | { type: "findings"; title: string; hint: string }
-  | { type: "risks"; title: string; hint: string }
-  | { type: "heatmap"; title: string }
-  | { type: "actions"; title: string; hint: string }
-  | { type: "verdict"; title: string; hint: string };
+  | { type: "risks"; title: string; hint: string; code?: string }
+  | { type: "heatmap"; title: string; code?: string }
+  | { type: "actions"; title: string; hint: string; code?: string }
+  | { type: "verdict"; title: string; hint: string }
+  | PipcBlock;
 
 export interface DocumentTemplate {
   id: string;
@@ -246,6 +251,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { type: "text", key: "conclusiones", title: "Conclusiones", hint: CONCLUSIONES_HINT },
     ],
   },
+  PIPC_MORELOS,
 ];
 
 export const findTemplate = (id: string) => {
@@ -301,7 +307,7 @@ export const newAction = (): Action => ({ id: uid(), action: "", priority: "medi
 
 export function emptyDocumentData(t: DocumentTemplate): DocumentData {
   const sections: Record<string, string> = {};
-  for (const b of t.blocks) if (b.type === "text") sections[b.key] = b.defaultText ?? "";
+  for (const b of t.blocks) if (b.type === "text" || b.type === "apartado") sections[b.key] = b.defaultText ?? "";
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return {
@@ -311,6 +317,7 @@ export function emptyDocumentData(t: DocumentTemplate): DocumentData {
     risks: [],
     actions: [],
     verdict: t.blocks.some((b) => b.type === "verdict") ? "condicionado" : undefined,
+    ...(t.blocks.some((b) => b.type === "apartado") ? { pipc: pipcInicial() } : {}),
   };
 }
 
@@ -325,5 +332,6 @@ export function normalizeDocumentData(t: DocumentTemplate, raw: unknown): Docume
     risks: Array.isArray(d.risks) ? d.risks : [],
     actions: Array.isArray(d.actions) ? d.actions : [],
     verdict: d.verdict ?? base.verdict,
+    ...(base.pipc ? { pipc: normalizePipc(d.pipc) } : {}),
   };
 }
